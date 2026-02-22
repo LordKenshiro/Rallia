@@ -19,7 +19,8 @@ interface AdminWithProfile {
   assigned_at: string;
   notes: string | null;
   profile: {
-    full_name: string | null;
+    first_name: string;
+    last_name: string | null;
     display_name: string | null;
     is_active: boolean;
     created_at: string;
@@ -30,7 +31,8 @@ interface TransformedAdmin {
   id: string;
   role: 'super_admin' | 'moderator' | 'support';
   assigned_at: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   display_name: string | null;
   is_active: boolean;
   created_at: string;
@@ -89,7 +91,8 @@ export default async function AdminUsersPage({
         assigned_at,
         notes,
         profile (
-          full_name,
+          first_name,
+          last_name,
           display_name,
           is_active,
           created_at
@@ -108,7 +111,8 @@ export default async function AdminUsersPage({
       id: admin.id,
       role: admin.role,
       assigned_at: admin.assigned_at,
-      full_name: admin.profile?.full_name || null,
+      first_name: admin.profile?.first_name || null,
+      last_name: admin.profile?.last_name || null,
       display_name: admin.profile?.display_name || null,
       is_active: admin.profile?.is_active ?? true,
       created_at: admin.profile?.created_at || admin.assigned_at,
@@ -196,7 +200,8 @@ export default async function AdminUsersPage({
                           id: admin.id,
                           role: admin.role,
                           assigned_at: admin.assigned_at,
-                          full_name: admin.full_name,
+                          first_name: admin.first_name,
+                          last_name: admin.last_name,
                           display_name: admin.display_name,
                           email: admin.email,
                           is_active: admin.is_active,

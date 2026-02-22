@@ -4,7 +4,15 @@
  * Supports search highlighting, navigation, and scroll-to-bottom button
  */
 
-import React, { useCallback, useMemo, memo, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  memo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useState,
+} from 'react';
 import {
   View,
   FlatList,
@@ -84,29 +92,32 @@ function shouldShowSenderInfo(
   if (currentMessage.sender_id === currentUserId) return false;
   if (!previousMessage) return true;
   if (previousMessage.sender_id !== currentMessage.sender_id) return true;
-  
+
   // Also show if there's been a significant time gap (5 minutes)
-  const timeDiff = new Date(currentMessage.created_at).getTime() -
-    new Date(previousMessage.created_at).getTime();
+  const timeDiff =
+    new Date(currentMessage.created_at).getTime() - new Date(previousMessage.created_at).getTime();
   if (timeDiff > 5 * 60 * 1000) return true;
-  
+
   return false;
 }
 
-function MessageListComponent({
-  messages = [],
-  currentUserId,
-  onReact,
-  onLoadMore,
-  isLoadingMore,
-  hasMore,
-  reactions = new Map(),
-  onReplyToMessage,
-  onLongPressMessage,
-  searchQuery = '',
-  highlightedMessageIds = [],
-  currentHighlightedId,
-}: MessageListProps, ref: React.Ref<MessageListRef>) {
+function MessageListComponent(
+  {
+    messages = [],
+    currentUserId,
+    onReact,
+    onLoadMore,
+    isLoadingMore,
+    hasMore,
+    reactions = new Map(),
+    onReplyToMessage,
+    onLongPressMessage,
+    searchQuery = '',
+    highlightedMessageIds = [],
+    currentHighlightedId,
+  }: MessageListProps,
+  ref: React.Ref<MessageListRef>
+) {
   const { colors } = useThemeStyles();
   const flatListRef = useRef<FlatList>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -136,12 +147,12 @@ function MessageListComponent({
     // In inverted list: first item (newest) appears at bottom, last item (oldest) at top
     // We want: DateSeparator to appear ABOVE its day's messages
     // In data terms: DateSeparator should come AFTER its day's messages
-    
+
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
       const messageDate = new Date(message.created_at);
       const nextMessage = messages[i + 1]; // Older message (appears above in UI)
-      
+
       // Determine if we should show sender info
       const showSenderInfo = shouldShowSenderInfo(message, nextMessage, currentUserId);
 
@@ -155,8 +166,9 @@ function MessageListComponent({
 
       // Check if we need a date separator AFTER this message (appears ABOVE in UI)
       // Add separator if this is the last message OR the next message is from a different day
-      const needsSeparator = !nextMessage || !isSameDay(messageDate, new Date(nextMessage.created_at));
-      
+      const needsSeparator =
+        !nextMessage || !isSameDay(messageDate, new Date(nextMessage.created_at));
+
       if (needsSeparator) {
         result.push({
           type: 'dateSeparator',
@@ -170,20 +182,23 @@ function MessageListComponent({
   }, [messages, currentUserId]);
 
   // Handle scroll to track if user scrolled up
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    // In an inverted list, contentOffset.y increases as you scroll UP (away from bottom)
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const shouldShow = offsetY > SCROLL_THRESHOLD;
-    
-    if (shouldShow !== showScrollButton) {
-      setShowScrollButton(shouldShow);
-      Animated.timing(scrollButtonOpacity, {
-        toValue: shouldShow ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [showScrollButton, scrollButtonOpacity]);
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // In an inverted list, contentOffset.y increases as you scroll UP (away from bottom)
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const shouldShow = offsetY > SCROLL_THRESHOLD;
+
+      if (shouldShow !== showScrollButton) {
+        setShowScrollButton(shouldShow);
+        Animated.timing(scrollButtonOpacity, {
+          toValue: shouldShow ? 1 : 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+    [showScrollButton, scrollButtonOpacity]
+  );
 
   // Scroll to bottom (index 0 in inverted list)
   const scrollToBottom = useCallback(() => {
@@ -196,22 +211,26 @@ function MessageListComponent({
   }, [processedMessages.length]);
 
   // Expose scrollToMessage and scrollToBottom methods to parent
-  useImperativeHandle(ref, () => ({
-    scrollToMessage: (messageId: string) => {
-      // Find the index of the message in processedMessages
-      const index = processedMessages.findIndex(
-        item => item.type === 'message' && item.id === messageId
-      );
-      if (index !== -1 && flatListRef.current) {
-        flatListRef.current.scrollToIndex({
-          index,
-          animated: true,
-          viewPosition: 0.5, // Center the message on screen
-        });
-      }
-    },
-    scrollToBottom,
-  }), [processedMessages, scrollToBottom]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToMessage: (messageId: string) => {
+        // Find the index of the message in processedMessages
+        const index = processedMessages.findIndex(
+          item => item.type === 'message' && item.id === messageId
+        );
+        if (index !== -1 && flatListRef.current) {
+          flatListRef.current.scrollToIndex({
+            index,
+            animated: true,
+            viewPosition: 0.5, // Center the message on screen
+          });
+        }
+      },
+      scrollToBottom,
+    }),
+    [processedMessages, scrollToBottom]
+  );
 
   const handleReact = useCallback(
     (messageId: string) => (emoji: string) => {
@@ -221,14 +240,12 @@ function MessageListComponent({
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: typeof processedMessages[0] }) => {
+    ({ item }: { item: (typeof processedMessages)[0] }) => {
       if (item.type === 'dateSeparator') {
         return (
           <View style={styles.dateSeparatorContainer}>
             <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>
-              {item.date}
-            </Text>
+            <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>{item.date}</Text>
             <View style={[styles.dateSeparatorLine, { backgroundColor: colors.border }]} />
           </View>
         );
@@ -238,7 +255,7 @@ function MessageListComponent({
         const messageReactions = reactions.get(item.message.id) || [];
         const isHighlighted = highlightedSet.has(item.message.id);
         const isCurrentHighlight = item.message.id === currentHighlightedId;
-        
+
         return (
           <MessageBubble
             message={item.message}
@@ -247,7 +264,11 @@ function MessageListComponent({
             onReact={handleReact(item.message.id)}
             reactions={messageReactions}
             onReplyPress={onReplyToMessage ? () => onReplyToMessage(item.message!) : undefined}
-            onLongPress={onLongPressMessage ? (pageY: number) => onLongPressMessage(item.message!, pageY) : undefined}
+            onLongPress={
+              onLongPressMessage
+                ? (pageY: number) => onLongPressMessage(item.message!, pageY)
+                : undefined
+            }
             searchQuery={searchQuery}
             isHighlighted={isHighlighted}
             isCurrentHighlight={isCurrentHighlight}
@@ -257,7 +278,17 @@ function MessageListComponent({
 
       return null;
     },
-    [colors, currentUserId, handleReact, reactions, onReplyToMessage, onLongPressMessage, searchQuery, highlightedSet, currentHighlightedId]
+    [
+      colors,
+      currentUserId,
+      handleReact,
+      reactions,
+      onReplyToMessage,
+      onLongPressMessage,
+      searchQuery,
+      highlightedSet,
+      currentHighlightedId,
+    ]
   );
 
   const renderFooter = useCallback(() => {
@@ -269,7 +300,7 @@ function MessageListComponent({
     );
   }, [isLoadingMore, colors]);
 
-  const keyExtractor = useCallback((item: typeof processedMessages[0]) => item.id, []);
+  const keyExtractor = useCallback((item: (typeof processedMessages)[0]) => item.id, []);
 
   const handleEndReached = useCallback(() => {
     if (hasMore && !isLoadingMore) {
@@ -278,22 +309,21 @@ function MessageListComponent({
   }, [hasMore, isLoadingMore, onLoadMore]);
 
   // Handle scroll to index failure (item not rendered yet)
-  const handleScrollToIndexFailed = useCallback((info: {
-    index: number;
-    highestMeasuredFrameIndex: number;
-    averageItemLength: number;
-  }) => {
-    // Wait and try again
-    setTimeout(() => {
-      if (flatListRef.current && processedMessages.length > 0) {
-        flatListRef.current.scrollToIndex({
-          index: Math.min(info.index, processedMessages.length - 1),
-          animated: true,
-          viewPosition: 0.5,
-        });
-      }
-    }, 100);
-  }, [processedMessages.length]);
+  const handleScrollToIndexFailed = useCallback(
+    (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
+      // Wait and try again
+      setTimeout(() => {
+        if (flatListRef.current && processedMessages.length > 0) {
+          flatListRef.current.scrollToIndex({
+            index: Math.min(info.index, processedMessages.length - 1),
+            animated: true,
+            viewPosition: 0.5,
+          });
+        }
+      }, 100);
+    },
+    [processedMessages.length]
+  );
 
   return (
     <View style={styles.container}>
@@ -319,13 +349,10 @@ function MessageListComponent({
         onScroll={handleScroll}
         scrollEventThrottle={16}
       />
-      
+
       {/* Scroll to Bottom Button */}
       <Animated.View
-        style={[
-          styles.scrollButtonContainer,
-          { opacity: scrollButtonOpacity },
-        ]}
+        style={[styles.scrollButtonContainer, { opacity: scrollButtonOpacity }]}
         pointerEvents={showScrollButton ? 'auto' : 'none'}
       >
         <TouchableOpacity

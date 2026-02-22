@@ -5,15 +5,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
+import { SportIcon } from '../../../../components/SportIcon';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
 import { primary } from '@rallia/design-system';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -34,9 +29,9 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
   const [sport, setSport] = useState<Sport>(formData.sport || 'tennis');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const sports: { value: Sport; label: string; icon: string }[] = [
-    { value: 'tennis', label: 'Tennis', icon: 'tennisball' },
-    { value: 'pickleball', label: 'Pickleball', icon: 'ellipse' }, // No direct pickleball icon
+  const sports: { value: Sport; label: string }[] = [
+    { value: 'tennis', label: 'Tennis' },
+    { value: 'pickleball', label: 'Pickleball' },
   ];
 
   const handleDateChange = useCallback((_event: unknown, selectedDate?: Date) => {
@@ -68,19 +63,22 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {t('addScore.matchDetails.title' as TranslationKey)}
+        {t('addScore.matchDetails.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('addScore.matchDetails.whenAndWhere' as TranslationKey)}
+        {t('addScore.matchDetails.whenAndWhere')}
       </Text>
 
       {/* Date picker */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.datePlayed' as TranslationKey)}
+          {t('addScore.matchDetails.datePlayed')}
         </Text>
         <TouchableOpacity
-          style={[styles.dateButton, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+          style={[
+            styles.dateButton,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
           onPress={() => setShowDatePicker(true)}
         >
           <Ionicons name="calendar" size={20} color={colors.primary} />
@@ -105,14 +103,22 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Location (optional) */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.location' as TranslationKey)}
-          <Text size="sm" style={{ color: colors.textMuted }}> {t('addScore.matchDetails.locationOptional' as TranslationKey)}</Text>
+          {t('addScore.matchDetails.location')}
+          <Text size="sm" style={{ color: colors.textMuted }}>
+            {' '}
+            {t('addScore.matchDetails.locationOptional')}
+          </Text>
         </Text>
-        <View style={[styles.inputContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.inputContainer,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <Ionicons name="location" size={20} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
-            placeholder={t('addScore.matchDetails.enterLocation' as TranslationKey)}
+            placeholder={t('addScore.matchDetails.enterLocation')}
             placeholderTextColor={colors.textMuted}
             value={location}
             onChangeText={setLocation}
@@ -123,10 +129,10 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
       {/* Sport selection */}
       <View style={styles.section}>
         <Text weight="semibold" style={[styles.sectionLabel, { color: colors.text }]}>
-          {t('addScore.matchDetails.sport' as TranslationKey)}
+          {t('addScore.matchDetails.sport')}
         </Text>
         <View style={styles.sportOptions}>
-          {sports.map((sportOption) => {
+          {sports.map(sportOption => {
             const isSelected = sport === sportOption.value;
             return (
               <TouchableOpacity
@@ -135,7 +141,9 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
                   styles.sportButton,
                   {
                     backgroundColor: isSelected
-                      ? isDark ? primary[900] : primary[50]
+                      ? isDark
+                        ? primary[900]
+                        : primary[50]
                       : colors.cardBackground,
                     borderColor: isSelected ? colors.primary : colors.border,
                   },
@@ -143,12 +151,16 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
                 onPress={() => setSport(sportOption.value)}
                 activeOpacity={0.7}
               >
-                <View style={[
-                  styles.sportIcon,
-                  { backgroundColor: isSelected ? colors.primary : isDark ? '#2C2C2E' : '#F0F0F0' }
-                ]}>
-                  <Ionicons
-                    name={sportOption.icon as keyof typeof Ionicons.glyphMap}
+                <View
+                  style={[
+                    styles.sportIcon,
+                    {
+                      backgroundColor: isSelected ? colors.primary : isDark ? '#2C2C2E' : '#F0F0F0',
+                    },
+                  ]}
+                >
+                  <SportIcon
+                    sportName={sportOption.value}
                     size={20}
                     color={isSelected ? '#FFFFFF' : colors.textMuted}
                   />
@@ -161,7 +173,7 @@ export function MatchDetailsStep({ onContinue }: MatchDetailsStepProps) {
                 </Text>
                 {isSelected && (
                   <View style={[styles.checkmark, { backgroundColor: colors.primary }]}>
-                    <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                    <Ionicons name="checkmark-outline" size={12} color="#FFFFFF" />
                   </View>
                 )}
               </TouchableOpacity>

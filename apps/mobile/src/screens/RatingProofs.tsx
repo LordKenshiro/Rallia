@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -13,12 +7,9 @@ import { Text, Button, Skeleton, useToast } from '@rallia/shared-components';
 import { lightHaptic, warningHaptic } from '@rallia/shared-utils';
 import { supabase, Logger } from '@rallia/shared-services';
 import { RatingProofWithFile, RatingProofsScreenParams } from '@rallia/shared-types';
-import AddRatingProofOverlay from '../features/ratings/components/AddRatingProofOverlay';
-import ExternalLinkProofOverlay from '../features/ratings/components/ExternalLinkProofOverlay';
-import ImageProofOverlay from '../features/ratings/components/ImageProofOverlay';
-import VideoProofOverlay from '../features/ratings/components/VideoProofOverlay';
-import DocumentProofOverlay from '../features/ratings/components/DocumentProofOverlay';
+import { SheetManager } from 'react-native-actions-sheet';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
+import { getSafeAreaEdges } from '../utils';
 import { useThemeStyles, useTranslation } from '../hooks';
 import { formatDateShort } from '../utils/dateFormatting';
 import {
@@ -48,23 +39,22 @@ const RatingProofs: React.FC = () => {
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
-  
+
   // Track current rating_score_id to identify current-level proofs
   const [currentRatingScoreId, setCurrentRatingScoreId] = useState<string | null>(null);
 
   const [proofs, setProofs] = useState<RatingProofWithRatingScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
-  const [showAddProofOverlay, setShowAddProofOverlay] = useState(false);
-  const [showExternalLinkOverlay, setShowExternalLinkOverlay] = useState(false);
-  const [showImageOverlay, setShowImageOverlay] = useState(false);
-  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
-  const [showDocumentOverlay, setShowDocumentOverlay] = useState(false);
 
   // Define handleAddProof before useLayoutEffect that uses it
   const handleAddProof = useCallback(() => {
     lightHaptic();
-    setShowAddProofOverlay(true);
+    SheetManager.show('add-rating-proof', {
+      payload: {
+        onSelectProofType: handleSelectProofType,
+      },
+    });
   }, []);
 
   // Configure header right button for add action
@@ -73,7 +63,7 @@ const RatingProofs: React.FC = () => {
       navigation.setOptions({
         headerRight: () => (
           <TouchableOpacity onPress={handleAddProof} style={{ marginRight: spacingPixels[2] }}>
-            <Ionicons name="add" size={28} color={colors.headerForeground} />
+            <Ionicons name="add-outline" size={28} color={colors.headerForeground} />
           </TouchableOpacity>
         ),
       });
@@ -98,7 +88,7 @@ const RatingProofs: React.FC = () => {
         .select('rating_score_id')
         .eq('id', playerRatingScoreId)
         .single();
-      
+
       if (playerRatingScore) {
         setCurrentRatingScoreId(playerRatingScore.rating_score_id);
       }
@@ -147,23 +137,46 @@ const RatingProofs: React.FC = () => {
 
   const handleSelectProofType = (type: 'external_link' | 'video' | 'image' | 'document') => {
     Logger.logUserAction('select_proof_type', { type, playerRatingScoreId });
-    setShowAddProofOverlay(false);
-    
-    // Open the corresponding overlay based on type
-    switch (type) {
-      case 'external_link':
-        setShowExternalLinkOverlay(true);
-        break;
-      case 'video':
-        setShowVideoOverlay(true);
-        break;
-      case 'image':
-        setShowImageOverlay(true);
-        break;
-      case 'document':
-        setShowDocumentOverlay(true);
-        break;
-    }
+    SheetManager.hide('add-rating-proof');
+
+    // Wait for the sheet to close before opening the next one
+    setTimeout(() => {
+      // Open the corresponding overlay based on type
+      switch (type) {
+        case 'external_link':
+          SheetManager.show('external-link-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'video':
+          SheetManager.show('video-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'image':
+          SheetManager.show('image-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+        case 'document':
+          SheetManager.show('document-proof', {
+            payload: {
+              onSuccess: handleProofSuccess,
+              playerRatingScoreId,
+            },
+          });
+          break;
+      }
+    }, 300); // Wait for sheet close animation to complete
   };
 
   const handleProofSuccess = () => {
@@ -248,18 +261,18 @@ const RatingProofs: React.FC = () => {
 
   const renderProofCard = ({ item }: { item: RatingProofWithRatingScore }) => {
     const verificationBadge = getVerificationBadge(item.status);
-    
+
     // Get the proof's original rating label (when it was uploaded)
     const proofRatingScore = item.rating_score;
     const proofRatingLabel = proofRatingScore?.label ?? ratingValue.toFixed(1);
-    
+
     // Check if this proof is for the current rating level
     const isCurrentLevelProof = item.rating_score_id === currentRatingScoreId;
 
     return (
       <View
         style={[
-          styles.proofCard, 
+          styles.proofCard,
           { backgroundColor: colors.card, borderColor: colors.border },
           // Subtle visual distinction for old-level proofs
           !isCurrentLevelProof && { opacity: 0.85 },
@@ -281,10 +294,12 @@ const RatingProofs: React.FC = () => {
 
           {/* Rating Badge - shows the rating level when proof was uploaded */}
           <View style={styles.ratingBadgeContainer}>
-            <View style={[
-              styles.ratingBadge, 
-              { backgroundColor: isCurrentLevelProof ? colors.primary : colors.textMuted }
-            ]}>
+            <View
+              style={[
+                styles.ratingBadge,
+                { backgroundColor: isCurrentLevelProof ? colors.primary : colors.textMuted },
+              ]}
+            >
               <Text size="sm" weight="bold" color={colors.primaryForeground}>
                 {proofRatingLabel}
               </Text>
@@ -357,22 +372,47 @@ const RatingProofs: React.FC = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['bottom']}
+      edges={getSafeAreaEdges(['bottom'])}
     >
       {/* Content */}
       {loading ? (
         <View style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
           {/* Rating Proofs Skeleton */}
           <View style={[styles.titleSection, { backgroundColor: colors.card }]}>
-            <Skeleton width={140} height={20} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={140}
+              height={20}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
           </View>
           <View style={{ padding: 16, gap: 12 }}>
             {[...Array(3)].map((_, index) => (
               <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Skeleton width={60} height={60} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                <Skeleton
+                  width={60}
+                  height={60}
+                  borderRadius={8}
+                  backgroundColor={colors.cardBackground}
+                  highlightColor={colors.border}
+                />
                 <View style={{ flex: 1 }}>
-                  <Skeleton width={150} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                  <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 4 }} />
+                  <Skeleton
+                    width={150}
+                    height={16}
+                    borderRadius={4}
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
+                  />
+                  <Skeleton
+                    width={100}
+                    height={14}
+                    borderRadius={4}
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
+                    style={{ marginTop: 4 }}
+                  />
                 </View>
               </View>
             ))}
@@ -401,45 +441,6 @@ const RatingProofs: React.FC = () => {
           />
         </View>
       )}
-
-      {/* Add Proof Overlay */}
-      <AddRatingProofOverlay
-        visible={showAddProofOverlay}
-        onClose={() => setShowAddProofOverlay(false)}
-        onSelectProofType={handleSelectProofType}
-      />
-
-      {/* External Link Proof Overlay */}
-      <ExternalLinkProofOverlay
-        visible={showExternalLinkOverlay}
-        onClose={() => setShowExternalLinkOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Image Proof Overlay */}
-      <ImageProofOverlay
-        visible={showImageOverlay}
-        onClose={() => setShowImageOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Video Proof Overlay */}
-      <VideoProofOverlay
-        visible={showVideoOverlay}
-        onClose={() => setShowVideoOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
-
-      {/* Document Proof Overlay */}
-      <DocumentProofOverlay
-        visible={showDocumentOverlay}
-        onClose={() => setShowDocumentOverlay(false)}
-        onSuccess={handleProofSuccess}
-        playerRatingScoreId={playerRatingScoreId}
-      />
     </SafeAreaView>
   );
 };

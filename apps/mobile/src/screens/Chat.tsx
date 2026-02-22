@@ -12,19 +12,37 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  TextInput,
   TouchableOpacity,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, SkeletonConversation } from '@rallia/shared-components';
 import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, useTourSequence, type TranslationKey } from '../hooks';
+import { getSafeAreaEdges } from '../utils';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useRequireOnboarding,
+  useTourSequence,
+  type TranslationKey,
+} from '../hooks';
+import { useActionsSheet, useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
-import { spacingPixels, fontSizePixels, primary, neutral } from '@rallia/design-system';
+import SignInPrompt from '../components/SignInPrompt';
+import { SearchBar } from '../components/SearchBar';
+import {
+  spacingPixels,
+  fontSizePixels,
+  fontWeightNumeric,
+  primary,
+  neutral,
+  radiusPixels,
+} from '@rallia/design-system';
 import {
   usePlayerConversations,
   useConversationsRealtime,
@@ -35,28 +53,32 @@ import {
   useBlockedUserIds,
   type ConversationPreview,
 } from '@rallia/shared-hooks';
-import { ConversationItem, ConversationActionsSheet, CreateGroupChatModal } from '../features/chat';
-import type { ChatStackParamList } from '../navigation/types';
-
-type NavigationProp = NativeStackNavigationProp<ChatStackParamList>;
+import { ConversationItem } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
+import { useAppNavigation, useChatNavigation } from '../navigation/hooks';
 
 type TabKey = 'direct' | 'groups' | 'matches';
 
 const TAB_CONFIGS: { key: TabKey; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'direct', icon: 'chatbubble-outline' },
   { key: 'groups', icon: 'people-outline' },
-  { key: 'matches', icon: 'tennisball-outline' },
+  { key: 'matches', icon: 'tennisball-outline' }, // Rendered as SportIcon when key === 'matches'
 ];
 
 const Chat = () => {
   const { colors, isDark } = useThemeStyles();
-  const navigation = useNavigation<NavigationProp>();
-  const { session } = useAuth();
+  const insets = useSafeAreaInsets();
+  const rootNavigation = useAppNavigation();
+  const chatNavigation = useChatNavigation();
+  const { session, isAuthenticated, loading: isLoadingAuth } = useAuth();
   const { t } = useTranslation();
+  const { openSheet } = useActionsSheet();
+  const { selectedSport } = useSport();
+  const { guardAction, isReady: isOnboarded } = useRequireOnboarding();
   const playerId = session?.user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('direct');
-  
+
   // Chat screen tour - triggers after main navigation tour is completed
   const { shouldShowTour: _shouldShowChatTour } = useTourSequence({
     screenId: 'chat',
@@ -64,12 +86,12 @@ const Chat = () => {
     delay: 800,
     autoStart: true,
   });
-  
-  // State for conversation actions sheet
-  const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(null);
+
+  // Track selected conversation for action handlers
+  const [selectedConversation, setSelectedConversation] = useState<ConversationPreview | null>(
+    null
+  );
   const [showActionsSheet, setShowActionsSheet] = useState(false);
-  
-  // State for create group chat modal
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
   const {
@@ -96,18 +118,21 @@ const Chat = () => {
   // Categorize conversations into tabs
   const categorizedConversations = useMemo(() => {
     if (!conversations) return { direct: [], groups: [], matches: [] };
-    
+
     const direct: ConversationPreview[] = [];
     const groups: ConversationPreview[] = [];
     const matches: ConversationPreview[] = [];
-    
-    conversations.forEach((conv) => {
+
+    conversations.forEach(conv => {
       // Match chats: has match_id (both direct and group types)
       if (conv.match_id) {
         matches.push(conv);
       }
       // Groups & Communities: networks with type 'player_group', 'club', or 'community'
-      else if (conv.network_type && ['player_group', 'club', 'community'].includes(conv.network_type)) {
+      else if (
+        conv.network_type &&
+        ['player_group', 'club', 'community'].includes(conv.network_type)
+      ) {
         groups.push(conv);
       }
       // Direct chats: direct messages not linked to matches + manually created groups (network_type = 'friends')
@@ -115,7 +140,7 @@ const Chat = () => {
         direct.push(conv);
       }
     });
-    
+
     return { direct, groups, matches };
   }, [conversations]);
 
@@ -133,7 +158,7 @@ const Chat = () => {
     if (!conversations) return { filteredConversations: [], archivedCount: 0 };
 
     // Count total archived conversations across all categories
-    const archivedCount = conversations.filter((c) => c.is_archived).length;
+    const archivedCount = conversations.filter(c => c.is_archived).length;
 
     // Get conversations for active tab
     const tabConversations = categorizedConversations[activeTab];
@@ -141,7 +166,7 @@ const Chat = () => {
     // When searching, search across current tab only
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      const filtered = tabConversations.filter((conversation) => {
+      const filtered = tabConversations.filter(conversation => {
         // Search by conversation title (group name)
         if (conversation.title?.toLowerCase().includes(query)) {
           return true;
@@ -168,86 +193,93 @@ const Chat = () => {
     }
 
     // Filter out archived conversations for normal view
-    const filtered = tabConversations.filter((c) => !c.is_archived);
+    const filtered = tabConversations.filter(c => !c.is_archived);
     return { filteredConversations: filtered, archivedCount };
   }, [conversations, categorizedConversations, activeTab, searchQuery]);
 
   // Navigate to archived chats
   const handleArchivedPress = useCallback(() => {
     lightHaptic();
-    navigation.navigate('ArchivedChats');
-  }, [navigation]);
+    chatNavigation.navigate('ArchivedChats');
+  }, [chatNavigation]);
 
   // Handle new group button press
   const handleNewGroupPress = useCallback(() => {
+    if (!guardAction()) return;
     lightHaptic();
-    setShowCreateGroupModal(true);
-  }, []);
-
-  // Handle group creation success - navigate to the new chat
-  const handleGroupCreated = useCallback((conversationId: string) => {
-    // Refetch conversations to include the new group
-    refetch();
-    // Navigate to the new conversation
-    navigation.navigate('ChatScreen', {
-      conversationId,
-      title: undefined, // Will be loaded from conversation
+    SheetManager.show('create-group-chat', {
+      payload: {
+        onSuccess: (conversationId: string) => {
+          // Refetch conversations to include the new group
+          refetch();
+          // Navigate to the new conversation
+          rootNavigation.navigate('ChatConversation', {
+            conversationId,
+            title: undefined, // Will be loaded from conversation
+          });
+        },
+      },
     });
-  }, [refetch, navigation]);
+  }, [guardAction, refetch, rootNavigation]);
 
   const handleConversationPress = useCallback(
     (conversation: ConversationPreview) => {
       lightHaptic();
-      navigation.navigate('ChatScreen', {
+      rootNavigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: conversation.title || undefined,
       });
     },
-    [navigation]
+    [rootNavigation]
   );
 
-  const handleConversationLongPress = useCallback((conversation: ConversationPreview) => {
-    selectionHaptic();
-    setSelectedConversation(conversation);
-    setShowActionsSheet(true);
-  }, []);
+  const handleConversationLongPress = useCallback(
+    (conversation: ConversationPreview) => {
+      selectionHaptic();
+      setSelectedConversation(conversation);
 
-  const handleTogglePin = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    togglePin({
-      conversationId: selectedConversation.id,
-      playerId,
-      isPinned: !selectedConversation.is_pinned,
-    });
-  }, [selectedConversation, playerId, togglePin]);
-
-  const handleToggleMute = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleMute({
-      conversationId: selectedConversation.id,
-      playerId,
-      isMuted: !selectedConversation.is_muted,
-    });
-  }, [selectedConversation, playerId, toggleMute]);
-
-  const handleToggleArchive = useCallback(() => {
-    if (!selectedConversation || !playerId) return;
-    toggleArchive({
-      conversationId: selectedConversation.id,
-      playerId,
-      isArchived: !selectedConversation.is_archived,
-    });
-  }, [selectedConversation, playerId, toggleArchive]);
+      SheetManager.show('conversation-actions', {
+        payload: {
+          conversation,
+          onTogglePin: () => {
+            if (!playerId) return;
+            togglePin({
+              conversationId: conversation.id,
+              playerId,
+              isPinned: !conversation.is_pinned,
+            });
+          },
+          onToggleMute: () => {
+            if (!playerId) return;
+            toggleMute({
+              conversationId: conversation.id,
+              playerId,
+              isMuted: !conversation.is_muted,
+            });
+          },
+          onToggleArchive: () => {
+            if (!playerId) return;
+            toggleArchive({
+              conversationId: conversation.id,
+              playerId,
+              isArchived: !conversation.is_archived,
+            });
+          },
+        },
+      });
+    },
+    [playerId, togglePin, toggleMute, toggleArchive]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: ConversationPreview }) => {
       // Check if the other user in a direct chat is blocked
       const isOtherUserBlocked = Boolean(
-        item.conversation_type === 'direct' && 
-        item.other_participant?.id && 
+        item.conversation_type === 'direct' &&
+        item.other_participant?.id &&
         blockedUserIds.has(item.other_participant.id)
       );
-      
+
       return (
         <ConversationItem
           conversation={item}
@@ -264,7 +296,7 @@ const Chat = () => {
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
-    
+
     // Show different message when searching vs no conversations
     if (searchQuery.trim()) {
       return (
@@ -279,7 +311,7 @@ const Chat = () => {
         </View>
       );
     }
-    
+
     // Tab-specific empty messages
     const emptyMessages = {
       direct: {
@@ -298,21 +330,25 @@ const Chat = () => {
         subtitle: t('chat.empty.matches.subtitle'),
       },
     };
-    
+
     const { icon, title, subtitle } = emptyMessages[activeTab];
-    
+
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name={icon} size={64} color={colors.textMuted} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>
-          {title}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-          {subtitle}
-        </Text>
+        {activeTab === 'matches' ? (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={64}
+            color={colors.textMuted}
+          />
+        ) : (
+          <Ionicons name={icon} size={64} color={colors.textMuted} />
+        )}
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       </View>
     );
-  }, [isLoading, colors, searchQuery, activeTab, t]);
+  }, [isLoading, colors, searchQuery, activeTab, t, selectedSport?.name]);
 
   const renderSeparator = useCallback(
     () => <View style={[styles.separator, { backgroundColor: colors.border }]} />,
@@ -331,18 +367,19 @@ const Chat = () => {
           onPress={handleArchivedPress}
           activeOpacity={0.7}
         >
-          <View style={[styles.archivedIconContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}>
-            <Ionicons name="archive" size={20} color={colors.textMuted} />
+          <View
+            style={[
+              styles.archivedIconContainer,
+              { backgroundColor: isDark ? colors.card : '#F0F0F0' },
+            ]}
+          >
+            <Ionicons name="archive-outline" size={20} color={colors.textMuted} />
           </View>
           <View style={styles.archivedContent}>
-            <Text style={[styles.archivedText, { color: colors.text }]}>
-              {t('chat.archived')}
-            </Text>
+            <Text style={[styles.archivedText, { color: colors.text }]}>{t('chat.archived')}</Text>
           </View>
           <View style={styles.archivedBadge}>
-            <Text style={[styles.archivedCount, { color: colors.textMuted }]}>
-              {archivedCount}
-            </Text>
+            <Text style={[styles.archivedCount, { color: colors.textMuted }]}>{archivedCount}</Text>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
           </View>
         </TouchableOpacity>
@@ -351,66 +388,74 @@ const Chat = () => {
     );
   }, [searchQuery, archivedCount, colors, isDark, handleArchivedPress, t]);
 
+  // Show loading spinner while auth state is being determined
+  if (isLoadingAuth) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <View style={styles.authLoadingContainer}>
+          <ActivityIndicator size="large" color={primary[500]} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <SignInPrompt
+        variant="chat"
+        title={t('chat.signInRequired')}
+        description={t('chat.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
+    );
+  }
+
+  // Show onboarding prompt if authenticated but not onboarded
+  if (!isOnboarded) {
+    return (
+      <SignInPrompt
+        variant="chat"
+        title={t('chat.onboardingRequired')}
+        description={t('chat.onboardingPrompt')}
+        buttonText={t('chat.completeOnboarding')}
+        onSignIn={openSheet}
+        icon="person-add"
+      />
+    );
+  }
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={['top']}
+      edges={getSafeAreaEdges(['top'])}
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('chat.inbox')}</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="create-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.headerForeground }]}>
+          {t('chat.inbox')}
+        </Text>
       </View>
 
       {/* Search bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep
-        text={t('tour.chatScreen.search.description' as TranslationKey)}
-        order={30}
-        name="chat_search"
-      >
+      <CopilotStep text={t('tour.chatScreen.search.description')} order={30} name="chat_search">
         <WalkthroughableView style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchInputContainer,
-              { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-            ]}
-          >
-            <Ionicons name="search" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('chat.searchConversations')}
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity style={styles.newGroupButton} onPress={handleNewGroupPress}>
-            <Text style={[styles.newGroupText, { color: primary[500] }]}>
-              {t('chat.newGroup')}
-            </Text>
-          </TouchableOpacity>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('chat.searchConversations')}
+            style={styles.searchBar}
+          />
         </WalkthroughableView>
       </CopilotStep>
 
       {/* Tab Bar - Wrapped with CopilotStep for tour */}
-      <CopilotStep
-        text={t('tour.chatScreen.tabs.description' as TranslationKey)}
-        order={31}
-        name="chat_tabs"
-      >
-        <WalkthroughableView style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {TAB_CONFIGS.map((tab) => {
+      <CopilotStep text={t('tour.chatScreen.tabs.description')} order={31} name="chat_tabs">
+        <WalkthroughableView
+          style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}
+        >
+          {TAB_CONFIGS.map(tab => {
             const isActive = activeTab === tab.key;
             const count = tabCounts[tab.key];
             const label = t(`chat.tabs.${tab.key}`);
@@ -419,8 +464,7 @@ const Chat = () => {
                 key={tab.key}
                 style={[
                   styles.tab,
-                  isActive && styles.activeTab,
-                  isActive && { borderBottomColor: primary[500] },
+                  isActive && [styles.activeTab, { backgroundColor: colors.cardBackground }],
                 ]}
                 onPress={() => {
                   selectionHaptic();
@@ -428,20 +472,25 @@ const Chat = () => {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={tab.icon}
-                  size={18}
-                  color={isActive ? primary[500] : colors.textMuted}
-                  style={styles.tabIcon}
-                />
+                {tab.key === 'matches' ? (
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={18}
+                    color={isActive ? colors.primary : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                ) : (
+                  <Ionicons
+                    name={tab.icon}
+                    size={18}
+                    color={isActive ? colors.primary : colors.textMuted}
+                    style={styles.tabIcon}
+                  />
+                )}
                 <Text
-                  style={[
-                    styles.tabLabel,
-                    { 
-                      color: isActive ? primary[500] : colors.textMuted,
-                      fontWeight: isActive ? '600' : '500',
-                    },
-                  ]}
+                  size="sm"
+                  weight={isActive ? 'semibold' : 'medium'}
+                  style={[styles.tabLabel, { color: isActive ? colors.primary : colors.textMuted }]}
                 >
                   {label}
                 </Text>
@@ -449,12 +498,10 @@ const Chat = () => {
                   <View
                     style={[
                       styles.tabBadge,
-                      { backgroundColor: isActive ? primary[500] : neutral[400] },
+                      { backgroundColor: isActive ? colors.primary : neutral[400] },
                     ]}
                   >
-                    <Text style={styles.tabBadgeText}>
-                      {count > 99 ? '99+' : count}
-                    </Text>
+                    <Text style={styles.tabBadgeText}>{count > 99 ? '99+' : count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -466,8 +513,8 @@ const Chat = () => {
       {/* Content - Conversations List */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <SkeletonConversation 
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <SkeletonConversation
               key={i}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
@@ -492,31 +539,29 @@ const Chat = () => {
             />
           }
           contentContainerStyle={
-            filteredConversations?.length === 0 && archivedCount === 0 ? styles.emptyListContent : undefined
+            filteredConversations?.length === 0 && archivedCount === 0
+              ? styles.emptyListContent
+              : undefined
           }
           keyboardShouldPersistTaps="handled"
         />
       )}
 
-      {/* Conversation Actions Sheet */}
-      <ConversationActionsSheet
-        visible={showActionsSheet}
-        conversation={selectedConversation}
-        onClose={() => {
-          setShowActionsSheet(false);
-          setSelectedConversation(null);
-        }}
-        onTogglePin={handleTogglePin}
-        onToggleMute={handleToggleMute}
-        onToggleArchive={handleToggleArchive}
-      />
-
-      {/* Create Group Chat Modal */}
-      <CreateGroupChatModal
-        visible={showCreateGroupModal}
-        onClose={() => setShowCreateGroupModal(false)}
-        onSuccess={handleGroupCreated}
-      />
+      {/* New group FAB */}
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          {
+            backgroundColor: primary[500],
+            bottom: Platform.OS === 'android' ? insets.bottom + 16 : 16,
+            right: spacingPixels[5],
+          },
+        ]}
+        onPress={handleNewGroupPress}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add-outline" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -525,49 +570,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  authLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[2],
   },
   headerTitle: {
-    fontSize: fontSizePixels['2xl'],
-    fontWeight: '700',
-  },
-  headerActions: {
-    flexDirection: 'row',
-  },
-  headerButton: {
-    padding: spacingPixels[0],
+    fontSize: fontSizePixels.lg,
+    fontWeight: String(fontWeightNumeric.semibold) as '600',
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingBottom: spacingPixels[2],
   },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
+  searchBar: {
+    width: '100%',
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[2],
-    marginRight: spacingPixels[3],
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacingPixels[2],
-    fontSize: fontSizePixels.base,
-  },
-  newGroupButton: {
-    paddingVertical: spacingPixels[2],
-  },
-  newGroupText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: '500',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -627,26 +665,32 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
     textAlign: 'center',
   },
-  // Tab bar styles
-  tabBar: {
+  // Tab bar styles (pill container – matches Communities)
+  tabContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    paddingHorizontal: spacingPixels[2],
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacingPixels[3],
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   activeTab: {
-    borderBottomWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabIcon: {
-    marginRight: spacingPixels[1],
+    marginRight: 6,
   },
   tabLabel: {
     fontSize: fontSizePixels.sm,
@@ -662,8 +706,10 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: {
     fontSize: 10,
+    lineHeight: 12,
     fontWeight: '600',
     color: '#FFFFFF',
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center' as const }),
   },
 });
 

@@ -21,7 +21,6 @@ import { useThemeStyles, useTranslation, type TranslationKey } from '../../../..
 import { useProfile } from '@rallia/shared-hooks';
 import { primary } from '@rallia/design-system';
 import { useAddScore } from './AddScoreContext';
-import { MatchResultConfirmModal } from './MatchResultConfirmModal';
 import type { SetScore } from './types';
 
 interface WinnerScoresStepProps {
@@ -38,16 +37,12 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   const isDoubles = formData.matchType === 'double';
   const isFriendly = formData.expectation === 'friendly';
 
-  // Confirmation modal state
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingSubmit, setPendingSubmit] = useState<{ winner: 'team1' | 'team2'; sets: SetScore[] } | null>(null);
-
   // For doubles: Team 1 = You + Partner, Team 2 = remaining 2 opponents
   // For singles: Team 1 = You, Team 2 = Opponent
   const team2Players = useMemo(() => {
     const opponents = formData.opponents || [];
     if (isDoubles && partner) {
-      return opponents.filter((p) => p.id !== partner.id);
+      return opponents.filter(p => p.id !== partner.id);
     }
     return opponents;
   }, [isDoubles, partner, formData.opponents]);
@@ -55,9 +50,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
   // Team 1 = current user (and partner for doubles)
   // Team 2 = opponents
   const [winner, setWinner] = useState<'team1' | 'team2' | null>(
-    formData.winnerId === 'team1' || formData.winnerId === 'team2' 
-      ? formData.winnerId 
-      : null
+    formData.winnerId === 'team1' || formData.winnerId === 'team2' ? formData.winnerId : null
   );
   const [sets, setSets] = useState<SetScore[]>(
     formData.sets?.length ? formData.sets : [{ team1Score: null, team2Score: null }]
@@ -69,11 +62,14 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
     }
   }, [sets]);
 
-  const handleRemoveSet = useCallback((index: number) => {
-    if (sets.length > 1) {
-      setSets(sets.filter((_, i) => i !== index));
-    }
-  }, [sets]);
+  const handleRemoveSet = useCallback(
+    (index: number) => {
+      if (sets.length > 1) {
+        setSets(sets.filter((_, i) => i !== index));
+      }
+    },
+    [sets]
+  );
 
   const handleScoreChange = useCallback(
     (setIndex: number, team: 'team1' | 'team2', value: string) => {
@@ -81,7 +77,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
       if (numValue !== null && (isNaN(numValue) || numValue < 0 || numValue > 7)) {
         return;
       }
-      setSets((prev) =>
+      setSets(prev =>
         prev.map((set, i) =>
           i === setIndex
             ? { ...set, [team === 'team1' ? 'team1Score' : 'team2Score']: numValue }
@@ -92,80 +88,105 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
     []
   );
 
-  // Get team names for display
-  const getTeam1Name = useCallback(() => {
-    if (isDoubles && partner) {
-      return `${t('addScore.winnerScores.you' as TranslationKey)}, ${partner.firstName}`;
-    }
-    return t('addScore.winnerScores.you' as TranslationKey);
-  }, [isDoubles, partner, t]);
-
-  const getTeam2Name = useCallback(() => {
-    if (isDoubles && team2Players.length >= 2) {
-      return `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`;
-    }
-    return team2Players[0]?.displayName || team2Players[0]?.firstName || t('addScore.winnerScores.opponent' as TranslationKey);
-  }, [isDoubles, team2Players, t]);
-
   const handleSubmit = useCallback(() => {
     // Validate
     if (!winner && !isFriendly) {
       Alert.alert(
-        t('addScore.winnerScores.selectWinner' as TranslationKey), 
-        t('addScore.winnerScores.selectWinnerMessage' as TranslationKey)
+        t('addScore.winnerScores.selectWinner'),
+        t('addScore.winnerScores.selectWinnerMessage')
       );
       return;
     }
 
     if (!isFriendly) {
       // Validate at least one set has scores
-      const hasValidScores = sets.some(
-        (set) => set.team1Score !== null && set.team2Score !== null
-      );
+      const hasValidScores = sets.some(set => set.team1Score !== null && set.team2Score !== null);
       if (!hasValidScores) {
         Alert.alert(
-          t('addScore.winnerScores.enterScores' as TranslationKey), 
-          t('addScore.winnerScores.enterScoresMessage' as TranslationKey)
+          t('addScore.winnerScores.enterScores'),
+          t('addScore.winnerScores.enterScoresMessage')
         );
         return;
       }
     }
 
     const finalWinner = winner || 'team1';
-    const finalSets = isFriendly ? [] : sets.filter((s) => s.team1Score !== null && s.team2Score !== null);
-    
-    // Store pending submit data and show confirmation modal
-    setPendingSubmit({ winner: finalWinner, sets: finalSets });
-    setShowConfirmModal(true);
-  }, [winner, sets, isFriendly, t]);
+    const finalSets = isFriendly
+      ? []
+      : sets.filter(s => s.team1Score !== null && s.team2Score !== null);
 
-  // Handle confirmation from the modal
-  const handleConfirmSubmit = useCallback(() => {
-    if (!pendingSubmit) return;
-    
-    updateFormData({
-      winnerId: pendingSubmit.winner,
-      sets: pendingSubmit.sets,
-    });
-    // Pass values directly to avoid React state async issues
-    onSubmit(pendingSubmit.winner, pendingSubmit.sets);
-    setShowConfirmModal(false);
-  }, [pendingSubmit, updateFormData, onSubmit]);
+    // Inline team name logic to avoid dependency issues
+    const team1Name =
+      isDoubles && partner
+        ? `${t('addScore.winnerScores.you')}, ${partner.firstName}`
+        : t('addScore.winnerScores.you');
+    const team2Name =
+      isDoubles && team2Players.length >= 2
+        ? `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`
+        : team2Players[0]?.displayName ||
+          team2Players[0]?.firstName ||
+          t('addScore.winnerScores.opponent');
 
-  // Close confirmation modal
-  const handleCloseConfirmModal = useCallback(() => {
-    setShowConfirmModal(false);
-    setPendingSubmit(null);
-  }, []);
+    // Build summary message
+    const winnerTeamName = finalWinner === 'team1' ? team1Name : team2Name;
+    const loserTeamName = finalWinner === 'team1' ? team2Name : team1Name;
+    const matchDate = formData.matchDate
+      ? formData.matchDate.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : t('addScore.winnerScores.today');
 
-  // Get match date formatted
-  const matchDateFormatted = useMemo(() => {
-    return formData.matchDate 
-      ? formData.matchDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-      : t('addScore.winnerScores.today' as TranslationKey);
-  }, [formData.matchDate, t]);
+    let scoresSummary = '';
+    if (!isFriendly && finalSets.length > 0) {
+      const scoresText = finalSets
+        .map((s, i) => {
+          const team1 = finalWinner === 'team1' ? s.team1Score : s.team2Score;
+          const team2 = finalWinner === 'team1' ? s.team2Score : s.team1Score;
+          return `${t('addScore.winnerScores.set', { number: i + 1 })}: ${team1}-${team2}`;
+        })
+        .join('\n');
+      scoresSummary = `\n\n${scoresText}`;
+    }
 
-  const canSubmit = isFriendly || (winner !== null);
+    const summaryMessage = `${winnerTeamName} ${t('addScore.winnerScores.defeated', {
+      winner: '',
+      loser: '',
+    })
+      .replace('{winner}', '')
+      .replace('{loser}', '')
+      .trim()} ${loserTeamName}\n${t('addScore.winnerScores.date', { date: matchDate })}${isFriendly ? `\n\n${t('addScore.winnerScores.friendlyMatch')}` : scoresSummary}`;
+
+    // Show confirmation dialog
+    Alert.alert(t('addScore.winnerScores.confirmMatchResult'), summaryMessage, [
+      { text: t('addScore.winnerScores.edit'), style: 'cancel' },
+      {
+        text: t('addScore.winnerScores.submit'),
+        onPress: () => {
+          updateFormData({
+            winnerId: finalWinner,
+            sets: finalSets,
+          });
+          // Pass values directly to avoid React state async issues
+          onSubmit(finalWinner, finalSets);
+        },
+      },
+    ]);
+  }, [
+    winner,
+    sets,
+    isFriendly,
+    updateFormData,
+    onSubmit,
+    formData.matchDate,
+    t,
+    isDoubles,
+    partner,
+    team2Players,
+  ]);
+
+  const canSubmit = isFriendly || winner !== null;
 
   // Helper to render avatar with fallback
   const renderAvatar = (
@@ -184,12 +205,36 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
       {imageUrl ? (
         <Image source={{ uri: imageUrl }} style={styles.avatarImage} />
       ) : (
-        <Text weight="bold" size="lg" style={{ color: isPrimary ? colors.primary : colors.textMuted }}>
+        <Text
+          weight="bold"
+          size="lg"
+          style={{ color: isPrimary ? colors.primary : colors.textMuted }}
+        >
           {(name || 'P')[0].toUpperCase()}
         </Text>
       )}
     </View>
   );
+
+  // Get team 1 display name
+  const getTeam1Name = () => {
+    if (isDoubles && partner) {
+      return `${t('addScore.winnerScores.you')}, ${partner.firstName}`;
+    }
+    return t('addScore.winnerScores.you');
+  };
+
+  // Get team 2 display name
+  const getTeam2Name = () => {
+    if (isDoubles && team2Players.length >= 2) {
+      return `${team2Players[0]?.firstName}, ${team2Players[1]?.firstName}`;
+    }
+    return (
+      team2Players[0]?.displayName ||
+      team2Players[0]?.firstName ||
+      t('addScore.winnerScores.opponent')
+    );
+  };
 
   return (
     <ScrollView
@@ -199,10 +244,10 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
     >
       {/* Title */}
       <Text weight="bold" size="xl" style={[styles.title, { color: colors.text }]}>
-        {t('addScore.winnerScores.title' as TranslationKey)}
+        {t('addScore.winnerScores.title')}
       </Text>
       <Text size="sm" style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('addScore.winnerScores.subtitle' as TranslationKey)}
+        {t('addScore.winnerScores.subtitle')}
       </Text>
 
       {/* Team selection */}
@@ -212,9 +257,8 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
           style={[
             styles.teamCard,
             {
-              backgroundColor: winner === 'team1'
-                ? isDark ? primary[900] : primary[50]
-                : colors.cardBackground,
+              backgroundColor:
+                winner === 'team1' ? (isDark ? primary[900] : primary[50]) : colors.cardBackground,
               borderColor: winner === 'team1' ? colors.primary : colors.border,
             },
           ]}
@@ -223,16 +267,18 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
         >
           {winner === 'team1' && (
             <View style={styles.winnerBadge}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
+              <Ionicons name="trophy-outline" size={16} color="#FFD700" />
             </View>
           )}
-          
+
           {/* Team 1 avatars */}
           <View style={styles.teamAvatarsRow}>
             {renderAvatar(profile?.profile_picture_url, 'You', true)}
-            {isDoubles && partner && renderAvatar(partner.profilePictureUrl, partner.firstName, true, true)}
+            {isDoubles &&
+              partner &&
+              renderAvatar(partner.profilePictureUrl, partner.firstName, true, true)}
           </View>
-          
+
           <Text
             weight={winner === 'team1' ? 'semibold' : 'regular'}
             size="sm"
@@ -248,9 +294,8 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
           style={[
             styles.teamCard,
             {
-              backgroundColor: winner === 'team2'
-                ? isDark ? primary[900] : primary[50]
-                : colors.cardBackground,
+              backgroundColor:
+                winner === 'team2' ? (isDark ? primary[900] : primary[50]) : colors.cardBackground,
               borderColor: winner === 'team2' ? colors.primary : colors.border,
             },
           ]}
@@ -259,16 +304,24 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
         >
           {winner === 'team2' && (
             <View style={styles.winnerBadge}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
+              <Ionicons name="trophy-outline" size={16} color="#FFD700" />
             </View>
           )}
-          
+
           {/* Team 2 avatars */}
           <View style={styles.teamAvatarsRow}>
-            {team2Players[0] && renderAvatar(team2Players[0].profilePictureUrl, team2Players[0].firstName, false)}
-            {isDoubles && team2Players[1] && renderAvatar(team2Players[1].profilePictureUrl, team2Players[1].firstName, false, true)}
+            {team2Players[0] &&
+              renderAvatar(team2Players[0].profilePictureUrl, team2Players[0].firstName, false)}
+            {isDoubles &&
+              team2Players[1] &&
+              renderAvatar(
+                team2Players[1].profilePictureUrl,
+                team2Players[1].firstName,
+                false,
+                true
+              )}
           </View>
-          
+
           <Text
             weight={winner === 'team2' ? 'semibold' : 'regular'}
             size="sm"
@@ -284,7 +337,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
       {!isFriendly && winner !== null && (
         <View style={styles.scoresSection}>
           <Text weight="semibold" style={[styles.scoresTitle, { color: colors.text }]}>
-            {t('addScore.winnerScores.scores' as TranslationKey)}
+            {t('addScore.winnerScores.scores')}
           </Text>
 
           {sets.map((set, index) => (
@@ -300,7 +353,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
                   },
                 ]}
                 value={set.team1Score?.toString() || ''}
-                onChangeText={(value) => handleScoreChange(index, 'team1', value)}
+                onChangeText={value => handleScoreChange(index, 'team1', value)}
                 keyboardType="number-pad"
                 maxLength={1}
                 placeholder="-"
@@ -331,7 +384,7 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
                   },
                 ]}
                 value={set.team2Score?.toString() || ''}
-                onChangeText={(value) => handleScoreChange(index, 'team2', value)}
+                onChangeText={value => handleScoreChange(index, 'team2', value)}
                 keyboardType="number-pad"
                 maxLength={1}
                 placeholder="-"
@@ -342,12 +395,9 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
 
           {/* Add set button */}
           {sets.length < 5 && (
-            <TouchableOpacity
-              style={styles.addSetRow}
-              onPress={handleAddSet}
-            >
+            <TouchableOpacity style={styles.addSetRow} onPress={handleAddSet}>
               <View style={styles.emptyScoreInput} />
-              <Text style={{ color: colors.primary }}>{t('addScore.winnerScores.newSet' as TranslationKey)}</Text>
+              <Text style={{ color: colors.primary }}>{t('addScore.winnerScores.newSet')}</Text>
               <View style={styles.emptyScoreInput} />
             </TouchableOpacity>
           )}
@@ -362,33 +412,9 @@ export function WinnerScoresStep({ onSubmit, isSubmitting }: WinnerScoresStepPro
           disabled={!canSubmit || isSubmitting}
           loading={isSubmitting}
         >
-          {isSubmitting ? t('addScore.winnerScores.saving' as TranslationKey) : t('addScore.winnerScores.continue' as TranslationKey)}
+          {isSubmitting ? t('addScore.winnerScores.saving') : t('addScore.winnerScores.continue')}
         </Button>
       </View>
-
-      {/* Match Result Confirmation Modal */}
-      {pendingSubmit && (
-        <MatchResultConfirmModal
-          visible={showConfirmModal}
-          onClose={handleCloseConfirmModal}
-          onConfirm={handleConfirmSubmit}
-          winnerName={pendingSubmit.winner === 'team1' ? getTeam1Name() : getTeam2Name()}
-          loserName={pendingSubmit.winner === 'team1' ? getTeam2Name() : getTeam1Name()}
-          matchDate={matchDateFormatted}
-          sets={pendingSubmit.sets}
-          isFriendly={isFriendly}
-          winnerId={pendingSubmit.winner}
-          isLoading={isSubmitting}
-          labels={{
-            title: t('addScore.winnerScores.confirmMatchResult' as TranslationKey),
-            editButton: t('addScore.winnerScores.edit' as TranslationKey),
-            submitButton: t('addScore.winnerScores.submit' as TranslationKey),
-            setLabel: t('addScore.winnerScores.set' as TranslationKey, { number: '{number}' }),
-            friendlyMatch: t('addScore.winnerScores.friendlyMatch' as TranslationKey),
-            savingLabel: t('addScore.winnerScores.saving' as TranslationKey),
-          }}
-        />
-      )}
     </ScrollView>
   );
 }

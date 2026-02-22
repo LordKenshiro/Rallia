@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth, type OAuthProvider } from '@rallia/shared-hooks';
 import { Loader2, Shield } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -22,6 +22,7 @@ export function AdminSignInForm({
 }) {
   const t = useTranslations('signIn');
   const tErrors = useTranslations('admin.errors');
+  const locale = useLocale();
   const router = useRouter();
   // Use SSR-aware Supabase client for proper cookie handling
   const supabase = useMemo(() => createClient(), []);
@@ -40,12 +41,19 @@ export function AdminSignInForm({
   );
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
 
-  const handleOAuthSignIn = async (provider: 'google' | 'azure') => {
+  const handleOAuthSignIn = async (provider: 'google' | 'azure' | 'facebook') => {
     setLoadingProvider(provider);
     setErrorMessage(null);
 
+    // Build callback URL with redirect and invitation token if present
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    callbackUrl.searchParams.set('redirect', 'admin');
+    if (token) {
+      callbackUrl.searchParams.set('invitation_token', token);
+    }
+
     const result = await signInWithProvider(provider, {
-      redirectTo: `${window.location.origin}/api/auth/callback?redirect=admin`,
+      redirectTo: callbackUrl.toString(),
     });
 
     if (!result.success) {
@@ -63,8 +71,16 @@ export function AdminSignInForm({
       // Send OTP
       setAuthState('loading');
 
+      // Build callback URL with redirect and invitation token if present
+      const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('redirect', 'admin');
+      if (token) {
+        callbackUrl.searchParams.set('invitation_token', token);
+      }
+
       const result = await signInWithEmail(email, {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect=admin`,
+        emailRedirectTo: callbackUrl.toString(),
+        data: { locale },
       });
 
       if (!result.success) {
@@ -97,7 +113,8 @@ export function AdminSignInForm({
 
   const isEmailLoading = authState === 'loading' && !loadingProvider;
   const isGoogleLoading = loadingProvider === 'google';
-  const isMicrosoftLoading = loadingProvider === 'azure';
+  // const isFacebookLoading = loadingProvider === 'facebook'; // Facebook auth commented out
+  const isAnyOAuthLoading = isGoogleLoading; // was: isGoogleLoading || isFacebookLoading
 
   return (
     <Card className="w-full max-w-md border-[var(--secondary-200)] dark:border-[var(--secondary-800)]">
@@ -131,7 +148,7 @@ export function AdminSignInForm({
                 size="lg"
                 className="w-full"
                 onClick={() => handleOAuthSignIn('google')}
-                disabled={isGoogleLoading || isMicrosoftLoading}
+                disabled={isAnyOAuthLoading}
               >
                 {isGoogleLoading ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -158,26 +175,28 @@ export function AdminSignInForm({
                 {t('signInWithGoogle')}
               </Button>
 
+              {/* Facebook auth commented out - re-enable by uncommenting and restoring isFacebookLoading / isAnyOAuthLoading
               <Button
                 type="button"
                 variant="outline"
                 size="lg"
                 className="w-full"
-                onClick={() => handleOAuthSignIn('azure')}
-                disabled={isGoogleLoading || isMicrosoftLoading}
+                onClick={() => handleOAuthSignIn('facebook')}
+                disabled={isAnyOAuthLoading}
               >
-                {isMicrosoftLoading ? (
+                {isFacebookLoading ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
-                  <svg className="mr-2 size-4" viewBox="0 0 23 23" fill="currentColor">
-                    <path d="M0 0h10.977v10.977H0z" fill="#f25022" />
-                    <path d="M12.023 0H23v10.977H12.023z" fill="#00a4ef" />
-                    <path d="M0 12.023h10.977V23H0z" fill="#7fba00" />
-                    <path d="M12.023 12.023H23V23H12.023z" fill="#ffb900" />
+                  <svg className="mr-2 size-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
+                      fill="#1877F2"
+                    />
                   </svg>
                 )}
-                {t('signInWithMicrosoft')}
+                {t('signInWithFacebook')}
               </Button>
+              */}
             </div>
 
             <div className="relative flex items-center gap-3">
@@ -239,7 +258,7 @@ export function AdminSignInForm({
             type="submit"
             size="lg"
             className="w-full bg-[var(--primary-600)] hover:bg-[var(--primary-700)] dark:bg-[var(--primary-500)] dark:hover:bg-[var(--primary-600)]"
-            disabled={isEmailLoading || isGoogleLoading || isMicrosoftLoading}
+            disabled={isEmailLoading || isAnyOAuthLoading}
           >
             {isEmailLoading ? (
               <>

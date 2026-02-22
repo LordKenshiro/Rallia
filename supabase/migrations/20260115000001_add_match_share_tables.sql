@@ -6,17 +6,25 @@
 -- ============================================================================
 
 -- Share channel for tracking how the share was sent
-CREATE TYPE share_channel_enum AS ENUM ('sms', 'email', 'whatsapp', 'share_sheet', 'copy_link');
+DO $$ BEGIN
+    CREATE TYPE share_channel_enum AS ENUM ('sms', 'email', 'whatsapp', 'share_sheet', 'copy_link');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Share status for tracking the invitation lifecycle
-CREATE TYPE share_status_enum AS ENUM ('pending', 'sent', 'viewed', 'accepted', 'expired', 'cancelled');
+DO $$ BEGIN
+    CREATE TYPE share_status_enum AS ENUM ('pending', 'sent', 'viewed', 'accepted', 'expired', 'cancelled');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================================
 -- TABLES
 -- ============================================================================
 
 -- Match share records - tracks each share action
-CREATE TABLE match_share (
+CREATE TABLE IF NOT EXISTS match_share (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     match_id UUID NOT NULL REFERENCES match(id) ON DELETE CASCADE,
     shared_by UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
@@ -29,7 +37,7 @@ CREATE TABLE match_share (
 );
 
 -- Individual contact shares - who received the share
-CREATE TABLE match_share_recipient (
+CREATE TABLE IF NOT EXISTS match_share_recipient (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     share_id UUID NOT NULL REFERENCES match_share(id) ON DELETE CASCADE,
     contact_id UUID REFERENCES shared_contact(id) ON DELETE SET NULL, -- Link to shared_contact if from a list
@@ -51,12 +59,12 @@ CREATE TABLE match_share_recipient (
 -- INDEXES
 -- ============================================================================
 
-CREATE INDEX idx_match_share_match_id ON match_share(match_id);
-CREATE INDEX idx_match_share_shared_by ON match_share(shared_by);
-CREATE INDEX idx_match_share_token ON match_share(share_link_token);
-CREATE INDEX idx_match_share_recipient_share_id ON match_share_recipient(share_id);
-CREATE INDEX idx_match_share_recipient_contact_id ON match_share_recipient(contact_id);
-CREATE INDEX idx_match_share_recipient_status ON match_share_recipient(status);
+CREATE INDEX IF NOT EXISTS idx_match_share_match_id ON match_share(match_id);
+CREATE INDEX IF NOT EXISTS idx_match_share_shared_by ON match_share(shared_by);
+CREATE INDEX IF NOT EXISTS idx_match_share_token ON match_share(share_link_token);
+CREATE INDEX IF NOT EXISTS idx_match_share_recipient_share_id ON match_share_recipient(share_id);
+CREATE INDEX IF NOT EXISTS idx_match_share_recipient_contact_id ON match_share_recipient(contact_id);
+CREATE INDEX IF NOT EXISTS idx_match_share_recipient_status ON match_share_recipient(status);
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
@@ -66,23 +74,28 @@ ALTER TABLE match_share ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_share_recipient ENABLE ROW LEVEL SECURITY;
 
 -- Users can view and manage their own shares
+DROP POLICY IF EXISTS "Users can view their own match shares" ON match_share;
 CREATE POLICY "Users can view their own match shares"
     ON match_share FOR SELECT
     USING (auth.uid() = shared_by);
 
+DROP POLICY IF EXISTS "Users can create match shares" ON match_share;
 CREATE POLICY "Users can create match shares"
     ON match_share FOR INSERT
     WITH CHECK (auth.uid() = shared_by);
 
+DROP POLICY IF EXISTS "Users can update their own match shares" ON match_share;
 CREATE POLICY "Users can update their own match shares"
     ON match_share FOR UPDATE
     USING (auth.uid() = shared_by);
 
+DROP POLICY IF EXISTS "Users can delete their own match shares" ON match_share;
 CREATE POLICY "Users can delete their own match shares"
     ON match_share FOR DELETE
     USING (auth.uid() = shared_by);
 
 -- Users can manage recipients of their shares
+DROP POLICY IF EXISTS "Users can view recipients of their shares" ON match_share_recipient;
 CREATE POLICY "Users can view recipients of their shares"
     ON match_share_recipient FOR SELECT
     USING (EXISTS (
@@ -91,6 +104,7 @@ CREATE POLICY "Users can view recipients of their shares"
         AND match_share.shared_by = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can create recipients for their shares" ON match_share_recipient;
 CREATE POLICY "Users can create recipients for their shares"
     ON match_share_recipient FOR INSERT
     WITH CHECK (EXISTS (
@@ -99,6 +113,7 @@ CREATE POLICY "Users can create recipients for their shares"
         AND match_share.shared_by = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can update recipients of their shares" ON match_share_recipient;
 CREATE POLICY "Users can update recipients of their shares"
     ON match_share_recipient FOR UPDATE
     USING (EXISTS (
@@ -107,6 +122,7 @@ CREATE POLICY "Users can update recipients of their shares"
         AND match_share.shared_by = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Users can delete recipients of their shares" ON match_share_recipient;
 CREATE POLICY "Users can delete recipients of their shares"
     ON match_share_recipient FOR DELETE
     USING (EXISTS (
@@ -120,11 +136,13 @@ CREATE POLICY "Users can delete recipients of their shares"
 -- ============================================================================
 
 -- Auto-update updated_at timestamp
+DROP TRIGGER IF EXISTS update_match_share_updated_at ON match_share;
 CREATE TRIGGER update_match_share_updated_at
     BEFORE UPDATE ON match_share
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_match_share_recipient_updated_at ON match_share_recipient;
 CREATE TRIGGER update_match_share_recipient_updated_at
     BEFORE UPDATE ON match_share_recipient
     FOR EACH ROW

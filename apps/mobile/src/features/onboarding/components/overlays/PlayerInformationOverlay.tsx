@@ -1,46 +1,30 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  Animated,
-  Alert,
   TextInput,
-  ToastAndroid,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Overlay, Button, Heading, Text } from '@rallia/shared-components';
-import { COLORS } from '@rallia/shared-constants';
+import { Ionicons } from '@expo/vector-icons';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, usePlayer, useProfile, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface PlayerInformationOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  onSave?: () => void; // Called only when data is successfully saved
-  initialData?: {
-    username?: string;
-    bio?: string;
-    preferredPlayingHand?: string;
-    maximumTravelDistance?: number;
-  };
-}
-
-const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
-  visible,
-  onClose,
-  onSave,
-  initialData,
-}) => {
+export function PlayerInformationActionSheet({ payload }: SheetProps<'player-information'>) {
+  const onSave = payload?.onSave;
+  const initialData = payload?.initialData;
+  const onClose = () => SheetManager.hide('player-information');
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const { refetch: refetchPlayer } = usePlayer();
   const { refetch: refetchProfile } = useProfile();
-  const [username, setUsername] = useState(initialData?.username || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [preferredPlayingHand, setPreferredPlayingHand] = useState<string>(
     initialData?.preferredPlayingHand || ''
@@ -49,41 +33,6 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
     initialData?.maximumTravelDistance || 5
   );
   const [isSaving, setIsSaving] = useState(false);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Update local state when initialData changes
-  useEffect(() => {
-    if (initialData) {
-      setUsername(initialData.username || '');
-      setBio(initialData.bio || '');
-      setPreferredPlayingHand(initialData.preferredPlayingHand || '');
-      setMaximumTravelDistance(initialData.maximumTravelDistance || 5);
-    }
-  }, [initialData]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -98,15 +47,14 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
 
       if (!user) {
         setIsSaving(false);
-        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
+        toast.error(t('onboarding.validation.playerNotFound'));
         return;
       }
 
-      // Update profile table (username and bio)
+      // Update profile table (bio)
       const { error: profileUpdateError } = await supabase
         .from('profile')
         .update({
-          display_name: username,
           bio: bio,
           updated_at: new Date().toISOString(),
         })
@@ -115,7 +63,7 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (profileUpdateError) {
         Logger.error('Failed to update profile', profileUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
+        toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;
       }
 
@@ -131,272 +79,290 @@ const PlayerInformationOverlay: React.FC<PlayerInformationOverlayProps> = ({
       if (playerUpdateError) {
         Logger.error('Failed to update player', playerUpdateError as Error, { userId: user.id });
         setIsSaving(false);
-        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
+        toast.error(t('onboarding.validation.failedToUpdateProfile'));
         return;
-      }
-
-      // Sync display_name to auth.users metadata
-      const { error: authUpdateError } = await supabase.auth.updateUser({
-        data: { display_name: username },
-      });
-
-      if (authUpdateError) {
-        Logger.warn('Failed to sync display_name to auth.users', {
-          error: authUpdateError,
-          userId: user.id,
-        });
-        // Don't block the save - profile table is already updated
       }
 
       // Refetch player and profile data to update all consumers
       await refetchPlayer();
       await refetchProfile();
 
-      // Show success toast
-      if (Platform.OS === 'android') {
-        ToastAndroid.show(t('onboarding.successMessages.playerInfoUpdated' as TranslationKey), ToastAndroid.LONG);
-      } else {
-        Alert.alert(t('alerts.success' as TranslationKey), t('onboarding.successMessages.playerInfoUpdated' as TranslationKey));
-      }
+      toast.success(t('onboarding.successMessages.playerInfoUpdated'));
 
       // Notify parent that data was saved successfully
       onSave?.();
 
       // Close modal automatically after brief delay
       setTimeout(() => {
-        onClose();
+        SheetManager.hide('player-information');
       }, 500);
     } catch (error) {
       Logger.error('Unexpected error updating player information', error as Error);
       setIsSaving(false);
-      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+      toast.error(t('onboarding.validation.unexpectedError'));
     }
   };
 
-  const isFormValid = username.trim() !== '';
+  const isFormValid = true;
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom" showBackButton={false}>
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Title */}
-        <Heading level={2} style={[styles.title, { color: colors.text }]}>
-          Update your player information
-        </Heading>
-
-        {/* Username Input */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
-          <View
-            style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <TextInput
-              placeholder="Enter your username"
-              placeholderTextColor={colors.textMuted}
-              value={username}
-              onChangeText={setUsername}
-              maxLength={20}
-              style={[styles.inputField, { color: colors.text }]}
-            />
-          </View>
-        </View>
-
-        {/* Bio Input */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Bio</Text>
-          <View
-            style={[
-              styles.inputWithIcon,
-              styles.bioInput,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <TextInput
-              placeholder="Tell us about yourself..."
-              placeholderTextColor={colors.textMuted}
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
-              maxLength={300}
-              style={[styles.inputField, styles.bioInputField, { color: colors.text }]}
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
-
-        {/* Preferred Playing Hand */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Preferred Playing Hand</Text>
-          <View style={[styles.handButtonsContainer, { backgroundColor: colors.inputBackground }]}>
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.leftButton,
-                preferredPlayingHand === 'left' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('left');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'left'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Left
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.middleButton,
-                preferredPlayingHand === 'right' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('right');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'right'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Right
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.handButton,
-                styles.rightButton,
-                preferredPlayingHand === 'both' && [
-                  styles.handButtonActive,
-                  { backgroundColor: colors.primary },
-                ],
-              ]}
-              onPress={() => {
-                lightHaptic();
-                setPreferredPlayingHand('both');
-              }}
-            >
-              <Text
-                style={
-                  preferredPlayingHand === 'both'
-                    ? [
-                        styles.handButtonText,
-                        styles.handButtonTextActive,
-                        { color: colors.primaryForeground },
-                      ]
-                    : [styles.handButtonText, { color: colors.textMuted }]
-                }
-              >
-                Both
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Maximum Travel Distance */}
-        <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Maximum Travel Distance</Text>
-          <View
-            style={[
-              styles.sliderContainer,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <Text style={[styles.sliderValue, { color: colors.text }]}>
-              {maximumTravelDistance} km
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              {t('profile.editSheets.playerInfoTitle')}
             </Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={50}
-              step={1}
-              value={maximumTravelDistance}
-              onValueChange={setMaximumTravelDistance}
-              minimumTrackTintColor={colors.primary}
-              maximumTrackTintColor={colors.divider}
-              thumbTintColor={colors.primary}
-            />
           </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Save Button */}
-        <Button
-          variant="primary"
-          onPress={handleSave}
-          disabled={!isFormValid || isSaving}
-          style={styles.saveButton}
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {isSaving ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : 'Save'}
-        </Button>
-      </Animated.View>
-    </Overlay>
+          {/* Bio Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('profile.bio')}
+            </Text>
+            <View
+              style={[
+                styles.input,
+                styles.bioInput,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+              ]}
+            >
+              <TextInput
+                placeholder={t('profile.editSheets.bioPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                value={bio}
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
+                maxLength={300}
+                style={[styles.inputField, styles.bioInputField, { color: colors.text }]}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+
+          {/* Preferred Playing Hand */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('onboarding.preferencesStep.playingHand')}
+            </Text>
+            <View style={styles.handButtonGroup}>
+              <TouchableOpacity
+                style={[
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'left' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'left' ? colors.primary : colors.inputBorder,
+                  },
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('left');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={
+                    preferredPlayingHand === 'left'
+                      ? colors.primaryForeground
+                      : colors.textSecondary
+                  }
+                >
+                  {t('onboarding.preferencesStep.left')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'right' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'right' ? colors.primary : colors.inputBorder,
+                  },
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('right');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={
+                    preferredPlayingHand === 'right'
+                      ? colors.primaryForeground
+                      : colors.textSecondary
+                  }
+                >
+                  {t('onboarding.preferencesStep.right')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.handOptionButton,
+                  {
+                    backgroundColor:
+                      preferredPlayingHand === 'both' ? colors.primary : colors.inputBackground,
+                    borderColor:
+                      preferredPlayingHand === 'both' ? colors.primary : colors.inputBorder,
+                  },
+                ]}
+                onPress={() => {
+                  lightHaptic();
+                  setPreferredPlayingHand('both');
+                }}
+                activeOpacity={0.8}
+              >
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  color={
+                    preferredPlayingHand === 'both'
+                      ? colors.primaryForeground
+                      : colors.textSecondary
+                  }
+                >
+                  {t('onboarding.preferencesStep.both')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Maximum Travel Distance */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('onboarding.preferencesStep.travelDistance')}
+            </Text>
+            <View
+              style={[
+                styles.sliderContainer,
+                { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+              ]}
+            >
+              <Text style={[styles.sliderValue, { color: colors.text }]}>
+                {maximumTravelDistance} km
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={50}
+                step={1}
+                value={maximumTravelDistance}
+                onValueChange={setMaximumTravelDistance}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.divider}
+                thumbTintColor={colors.primary}
+              />
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!isFormValid || isSaving) && { opacity: 0.6 },
+            ]}
+            onPress={handleSave}
+            disabled={!isFormValid || isSaving}
+            activeOpacity={0.8}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {t('common.save')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export default PlayerInformationActionSheet;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    paddingBottom: 30,
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 28,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: spacingPixels[4],
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
-  inputWithIcon: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  input: {
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
     borderWidth: 1,
   },
   bioInput: {
     minHeight: 100,
-    paddingVertical: 12,
+    paddingVertical: spacingPixels[3],
   },
   inputField: {
     fontSize: 16,
@@ -405,56 +371,44 @@ const styles = StyleSheet.create({
   bioInputField: {
     minHeight: 80,
   },
-  handButtonsContainer: {
+  handButtonGroup: {
     flexDirection: 'row',
-    borderRadius: 10,
-    padding: 4,
+    gap: spacingPixels[2],
   },
-  handButton: {
+  handOptionButton: {
     flex: 1,
-    paddingVertical: 12,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  leftButton: {
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-  },
-  middleButton: {
-    marginHorizontal: 4,
-  },
-  rightButton: {
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
-  },
-  handButtonActive: {
-    // backgroundColor applied inline
-  },
-  handButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  handButtonTextActive: {
-    fontWeight: '600',
+    borderWidth: 1,
   },
   sliderContainer: {
-    borderRadius: 10,
-    padding: 16,
+    borderRadius: radiusPixels.lg,
+    padding: spacingPixels[4],
     borderWidth: 1,
   },
   sliderValue: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
   },
   slider: {
     width: '100%',
     height: 40,
   },
-  saveButton: {
-    marginTop: 10,
-    backgroundColor: COLORS.accent, // Coral/pink color
+  footer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    borderTopWidth: 1,
+  },
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
-
-export default PlayerInformationOverlay;

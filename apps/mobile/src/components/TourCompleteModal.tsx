@@ -9,17 +9,9 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-} from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { Logger } from '@rallia/shared-services';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,10 +124,7 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
         >
           {/* Celebration icon with animation */}
           <Animated.View
-            style={[
-              styles.iconContainer,
-              { transform: [{ rotate: confettiRotate }] },
-            ]}
+            style={[styles.iconContainer, { transform: [{ rotate: confettiRotate }] }]}
           >
             <Text style={styles.emoji}>🎉</Text>
           </Animated.View>
@@ -153,26 +142,11 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
 
           {/* Feature summary */}
           <View style={styles.summaryContainer}>
-            <SummaryItem
-              icon="home-outline"
-              label={t('tour.mainNavigation.home.title')}
-            />
-            <SummaryItem
-              icon="map-outline"
-              label={t('tour.mainNavigation.courts.title')}
-            />
-            <SummaryItem
-              icon="add-circle-outline"
-              label={t('tour.mainNavigation.actions.title')}
-            />
-            <SummaryItem
-              icon="chatbubbles-outline"
-              label={t('tour.mainNavigation.chat.title')}
-            />
-            <SummaryItem
-              icon="person-outline"
-              label={t('tour.mainNavigation.profile.title')}
-            />
+            <SummaryItem icon="home-outline" label={t('tour.mainNavigation.home.title')} />
+            <SummaryItem icon="map-outline" label={t('tour.mainNavigation.courts.title')} />
+            <SummaryItem icon="add-circle-outline" label={t('tour.mainNavigation.actions.title')} />
+            <SummaryItem icon="chatbubbles-outline" label={t('tour.mainNavigation.chat.title')} />
+            <SummaryItem icon="person-outline" label={t('tour.mainNavigation.profile.title')} />
           </View>
 
           {/* CTA Button */}
@@ -184,7 +158,7 @@ export const TourCompleteModal: React.FC<TourCompleteModalProps> = ({
           >
             <Text style={styles.ctaButtonText}>{t('tour.complete.button')}</Text>
             <Ionicons
-              name="arrow-forward"
+              name="arrow-forward-outline"
               size={20}
               color={COLORS.white}
               style={styles.ctaIcon}
@@ -211,7 +185,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({ icon, label }) => (
       <Ionicons name={icon} size={16} color={COLORS.primary} />
     </View>
     <Text style={styles.summaryLabel}>{label}</Text>
-    <Ionicons name="checkmark" size={16} color={COLORS.success} />
+    <Ionicons name="checkmark-outline" size={16} color={COLORS.success} />
   </View>
 );
 

@@ -20,6 +20,7 @@ import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, selectionHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useFacilitySearch, useFavoriteFacilities } from '@rallia/shared-hooks';
 import type { FacilitySearchResult } from '@rallia/shared-types';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TYPES
@@ -47,7 +48,7 @@ interface FavoriteFacilitiesSelectorProps {
   /** Theme colors */
   colors: ThemeColors;
   /** Translation function */
-  t: (key: string) => string;
+  t: (key: TranslationKey) => string;
   /** Maximum number of favorites allowed */
   maxFavorites?: number;
 }
@@ -148,10 +149,7 @@ const FacilitySearchItem: React.FC<FacilitySearchItemProps> = ({
     <View style={styles.searchResultContent}>
       <View style={styles.searchResultInfo}>
         <Text
-          style={[
-            styles.searchResultName,
-            { color: isSelected ? colors.primary : colors.text },
-          ]}
+          style={[styles.searchResultName, { color: isSelected ? colors.primary : colors.text }]}
           numberOfLines={1}
         >
           {facility.name}
@@ -199,11 +197,8 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
   } = useFavoriteFacilities(playerId);
 
   // Facility search
-  const {
-    facilities: searchResults,
-    isLoading: searchLoading,
-  } = useFacilitySearch({
-    sportId,
+  const { facilities: searchResults, isLoading: searchLoading } = useFacilitySearch({
+    sportIds: sportId ? [sportId] : undefined,
     latitude: latitude ?? undefined,
     longitude: longitude ?? undefined,
     searchQuery,
@@ -216,36 +211,45 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
   }, [searchResults, isFavorite]);
 
   // Handle facility selection
-  const handleSelectFacility = useCallback(async (facility: FacilitySearchResult) => {
-    if (isMaxReached) {
-      warningHaptic();
-      return;
-    }
-
-    const success = await addFavorite(facility);
-    if (success) {
-      successHaptic();
-      setSearchQuery('');
-      // Keep dropdown open to allow adding more if not at max
-      if (favorites.length + 1 >= maxFavorites) {
-        setIsDropdownOpen(false);
+  const handleSelectFacility = useCallback(
+    async (facility: FacilitySearchResult) => {
+      if (isMaxReached) {
+        warningHaptic();
+        return;
       }
-    }
-  }, [addFavorite, isMaxReached, favorites.length, maxFavorites]);
+
+      const success = await addFavorite(facility);
+      if (success) {
+        successHaptic();
+        setSearchQuery('');
+        // Keep dropdown open to allow adding more if not at max
+        if (favorites.length + 1 >= maxFavorites) {
+          setIsDropdownOpen(false);
+        }
+      }
+    },
+    [addFavorite, isMaxReached, favorites.length, maxFavorites]
+  );
 
   // Handle removing a favorite
-  const handleRemoveFavorite = useCallback(async (facilityId: string) => {
-    selectionHaptic();
-    await removeFavorite(facilityId);
-  }, [removeFavorite]);
+  const handleRemoveFavorite = useCallback(
+    async (facilityId: string) => {
+      selectionHaptic();
+      await removeFavorite(facilityId);
+    },
+    [removeFavorite]
+  );
 
   // Handle search input change
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-    if (!isDropdownOpen && text.length > 0) {
-      setIsDropdownOpen(true);
-    }
-  }, [isDropdownOpen]);
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (!isDropdownOpen && text.length > 0) {
+        setIsDropdownOpen(true);
+      }
+    },
+    [isDropdownOpen]
+  );
 
   // Toggle dropdown
   const handleToggleDropdown = useCallback(() => {
@@ -288,7 +292,7 @@ export const FavoriteFacilitiesSelector: React.FC<FavoriteFacilitiesSelectorProp
             onPress={handleToggleDropdown}
             activeOpacity={0.8}
           >
-            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder={
@@ -427,8 +431,7 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[3],
+    padding: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
     gap: spacingPixels[2],
@@ -436,7 +439,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 0,
+    paddingVertical: spacingPixels[1],
   },
   dropdownContainer: {
     marginTop: spacingPixels[2],

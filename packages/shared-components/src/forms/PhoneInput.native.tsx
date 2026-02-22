@@ -54,11 +54,7 @@ export interface PhoneInputProps {
    * @param countryCode - ISO country code (e.g., "US")
    * @param localNumber - Local phone number without country code
    */
-  onChangePhone: (
-    fullNumber: string,
-    countryCode: string,
-    localNumber: string
-  ) => void;
+  onChangePhone: (fullNumber: string, countryCode: string, localNumber: string) => void;
 
   /**
    * Input label
@@ -144,6 +140,20 @@ export interface PhoneInputProps {
    * TextInput component override (for BottomSheet compatibility)
    */
   TextInputComponent?: React.ComponentType<React.ComponentProps<typeof TextInput>>;
+
+  /**
+   * Callback to open custom country selector sheet.
+   * If provided, this will be called instead of showing the default modal.
+   * The callback should open your custom sheet, which should call
+   * onCountrySelect when a country is chosen.
+   */
+  onOpenCountrySelector?: () => void;
+
+  /**
+   * Callback when a country is selected from custom selector.
+   * Use with onOpenCountrySelector for custom sheet implementation.
+   */
+  onCountrySelect?: (country: Country) => void;
 }
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
@@ -155,7 +165,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   error,
   disabled = false,
   defaultCountryCode = 'CA',
-  maxLength = 15,
+  maxLength: _maxLength = 15,
   containerStyle,
   inputStyle,
   colors,
@@ -188,11 +198,14 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   useEffect(() => {
     if (value) {
       const { country, localNumber: parsedLocal } = parsePhoneNumber(value);
+      // Using functional updates to avoid lint warnings about setState in effect
+      // This is intentional for controlled component synchronization
       if (country) {
-        setSelectedCountry(country);
+        setSelectedCountry(prev => (prev.code === country.code ? prev : country));
       }
-      setLocalNumber(parsedLocal);
+      setLocalNumber(prev => (prev === parsedLocal ? prev : parsedLocal));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   // Merge theme colors with custom colors
@@ -228,10 +241,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   // Format phone number for display as XXX-XXX-XXXX
   const formatPhoneForDisplay = useCallback((digits: string): string => {
     if (!digits) return '';
-    
+
     // Remove any non-digits
     const cleaned = digits.replace(/\D/g, '');
-    
+
     // Format based on length
     if (cleaned.length <= 3) {
       return cleaned;
@@ -243,7 +256,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   }, []);
 
   // Get the display value (formatted)
-  const displayValue = useMemo(() => formatPhoneForDisplay(localNumber), [localNumber, formatPhoneForDisplay]);
+  const displayValue = useMemo(
+    () => formatPhoneForDisplay(localNumber),
+    [localNumber, formatPhoneForDisplay]
+  );
 
   // Handle local number change
   const handleLocalNumberChange = useCallback(
@@ -301,16 +317,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         >
           <Text style={styles.countryFlag}>{item.flag}</Text>
           <View style={styles.countryInfo}>
-            <Text style={[styles.countryName, { color: mergedColors.text }]}>
-              {item.name}
-            </Text>
+            <Text style={[styles.countryName, { color: mergedColors.text }]}>{item.name}</Text>
             <Text style={[styles.countryDialCode, { color: mergedColors.textMuted }]}>
               ({item.dialCode})
             </Text>
           </View>
-          {isSelected && (
-            <Ionicons name="checkmark" size={20} color={mergedColors.primary} />
-          )}
+          {isSelected && <Ionicons name="checkmark" size={20} color={mergedColors.primary} />}
         </TouchableOpacity>
       );
     },
@@ -323,9 +335,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       {label && (
         <Text style={[styles.label, { color: mergedColors.text }]}>
           {label}
-          {required && (
-            <Text style={{ color: mergedColors.error }}> *</Text>
-          )}
+          {required && <Text style={{ color: mergedColors.error }}> *</Text>}
         </Text>
       )}
 
@@ -360,19 +370,13 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </TouchableOpacity>
 
         {/* Separator */}
-        <View
-          style={[styles.separator, { backgroundColor: mergedColors.inputBorder }]}
-        />
+        <View style={[styles.separator, { backgroundColor: mergedColors.inputBorder }]} />
 
         {/* Phone Number Input */}
         {TextInputComponent === TextInput ? (
           <TextInput
             ref={inputRef}
-            style={[
-              styles.input,
-              { color: mergedColors.text },
-              inputStyle,
-            ]}
+            style={[styles.input, { color: mergedColors.text }, inputStyle]}
             value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
@@ -385,11 +389,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           />
         ) : (
           <TextInputComponent
-            style={[
-              styles.input,
-              { color: mergedColors.text },
-              inputStyle,
-            ]}
+            style={[styles.input, { color: mergedColors.text }, inputStyle]}
             value={displayValue}
             onChangeText={handleLocalNumberChange}
             placeholder={placeholder}
@@ -406,9 +406,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
       {/* Footer: Error or Character Count */}
       <View style={styles.footer}>
         {error ? (
-          <Text style={[styles.errorText, { color: mergedColors.error }]}>
-            {error}
-          </Text>
+          <Text style={[styles.errorText, { color: mergedColors.error }]}>{error}</Text>
         ) : (
           <View style={{ flex: 1 }} />
         )}
@@ -427,14 +425,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: mergedColors.card }]}
-          >
+          <View style={[styles.modalContent, { backgroundColor: mergedColors.card }]}>
             {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: mergedColors.text }]}>
-                Select Country
-              </Text>
+              <Text style={[styles.modalTitle, { color: mergedColors.text }]}>Select Country</Text>
               <TouchableOpacity
                 onPress={() => {
                   setModalVisible(false);
@@ -473,11 +467,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color={mergedColors.textMuted}
-                  />
+                  <Ionicons name="close-circle" size={20} color={mergedColors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>

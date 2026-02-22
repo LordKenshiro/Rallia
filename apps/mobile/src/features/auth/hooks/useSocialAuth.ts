@@ -4,18 +4,20 @@
  * Handles native social authentication for Google, Apple, and Facebook.
  * Integrates with Supabase Auth for session management.
  *
- * NOTE: This requires a development build (not Expo Go) because it uses
- * native modules that aren't available in Expo Go.
+ * NOTE: Google and Apple require a development build (not Expo Go).
+ * Facebook uses OAuth redirect (expo-web-browser) and works in dev builds.
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../../../lib/supabase';
-import { ProfileService, Logger } from '@rallia/shared-services';
+import { Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
+import { checkOnboardingStatus, getFriendlyErrorMessage } from '../utils';
 
 // =============================================================================
 // TYPES
@@ -27,6 +29,30 @@ export interface SocialAuthResult {
   success: boolean;
   needsOnboarding: boolean;
   error?: Error;
+}
+
+export const FACEBOOK_AUTH_CALLBACK = 'rallia://auth/callback';
+
+/**
+ * Parse Supabase OAuth redirect URL (hash fragment) for access_token and refresh_token.
+ */
+export function parseSessionFromAuthUrl(
+  url: string
+): { access_token: string; refresh_token: string } | null {
+  try {
+    const hashIndex = url.indexOf('#');
+    if (hashIndex === -1) return null;
+    const hash = url.slice(hashIndex + 1);
+    const params = new URLSearchParams(hash);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      return { access_token, refresh_token };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 interface UseSocialAuthReturn {
@@ -64,17 +90,17 @@ function isExpoGo(): boolean {
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-// Configure Facebook
-const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
-
 // Lazy-loaded native modules (only available in dev builds, not Expo Go)
-let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null = null;
-let statusCodes: typeof import('@react-native-google-signin/google-signin').statusCodes | null = null;
-let isSuccessResponse: typeof import('@react-native-google-signin/google-signin').isSuccessResponse | null = null;
-let isErrorWithCode: typeof import('@react-native-google-signin/google-signin').isErrorWithCode | null = null;
-let LoginManager: typeof import('react-native-fbsdk-next').LoginManager | null = null;
-let AccessToken: typeof import('react-native-fbsdk-next').AccessToken | null = null;
-let Settings: typeof import('react-native-fbsdk-next').Settings | null = null;
+let GoogleSignin: typeof import('@react-native-google-signin/google-signin').GoogleSignin | null =
+  null;
+let statusCodes: typeof import('@react-native-google-signin/google-signin').statusCodes | null =
+  null;
+let isSuccessResponse:
+  | typeof import('@react-native-google-signin/google-signin').isSuccessResponse
+  | null = null;
+let isErrorWithCode:
+  | typeof import('@react-native-google-signin/google-signin').isErrorWithCode
+  | null = null;
 
 let nativeModulesInitialized = false;
 
@@ -88,8 +114,10 @@ async function initializeNativeModules(): Promise<boolean> {
     return false;
   }
 
+  let googleInitialized = false;
+
+  // Initialize Google Sign-In
   try {
-    // Dynamically import Google Sign-In
     const googleModule = await import('@react-native-google-signin/google-signin');
     GoogleSignin = googleModule.GoogleSignin;
     statusCodes = googleModule.statusCodes;
@@ -97,61 +125,25 @@ async function initializeNativeModules(): Promise<boolean> {
     isErrorWithCode = googleModule.isErrorWithCode;
 
     // Configure Google Sign-In
+    // webClientId is used on both platforms per Supabase docs
+    // iosClientId is additionally needed on iOS for the native SDK
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID,
-      iosClientId: GOOGLE_IOS_CLIENT_ID,
+      ...(Platform.OS === 'ios' ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),
       scopes: ['email', 'profile'],
-      offlineAccess: true,
     });
 
-    // Dynamically import Facebook SDK
-    const fbModule = await import('react-native-fbsdk-next');
-    LoginManager = fbModule.LoginManager;
-    AccessToken = fbModule.AccessToken;
-    Settings = fbModule.Settings;
-
-    // Initialize Facebook SDK
-    if (FACEBOOK_APP_ID) {
-      Settings.initializeSDK();
-      Settings.setAppID(FACEBOOK_APP_ID);
-    }
-
-    nativeModulesInitialized = true;
-    Logger.debug('Native social auth modules initialized successfully');
-    return true;
+    googleInitialized = true;
+    Logger.debug('Google Sign-In initialized successfully');
   } catch (error) {
-    Logger.error('Failed to initialize native social auth modules', error as Error);
-    return false;
+    Logger.error('Failed to initialize Google Sign-In', error as Error);
   }
-}
 
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Check onboarding status after successful authentication
- */
-async function checkOnboardingStatus(userId: string): Promise<boolean> {
-  try {
-    const { data: profile, error } = await ProfileService.getProfile(userId);
-
-    if (error) {
-      const errorCode = (error as { code?: string })?.code;
-      // PGRST116 = no rows found, meaning new user
-      if (errorCode === 'PGRST116') {
-        Logger.debug('No profile found - new user needs onboarding', { userId });
-        return true;
-      }
-      Logger.error('Failed to fetch profile for onboarding check', error as Error);
-      return true; // Default to needing onboarding on error
-    }
-
-    return !profile?.onboarding_completed;
-  } catch (error) {
-    Logger.error('Error checking onboarding status', error as Error);
-    return true;
-  }
+  nativeModulesInitialized = googleInitialized;
+  Logger.debug('Native social auth modules initialization complete', {
+    google: googleInitialized,
+  });
+  return nativeModulesInitialized;
 }
 
 // =============================================================================
@@ -175,7 +167,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
   useEffect(() => {
     if (!initAttempted.current && isNativeBuild) {
       initAttempted.current = true;
-      initializeNativeModules().then(setModulesReady);
+      initializeNativeModules();
     }
   }, [isNativeBuild]);
 
@@ -183,10 +175,8 @@ export function useSocialAuth(): UseSocialAuthReturn {
    * Show Expo Go warning
    */
   const showExpoGoWarning = useCallback((provider: string) => {
-    Alert.alert(
-      'Development Build Required',
-      `${provider} Sign-In requires a development build and is not available in Expo Go.\n\nTo test social sign-in:\n1. Run: eas build --profile development\n2. Install the development build on your device`,
-      [{ text: 'OK' }]
+    setErrorMessage(
+      `${provider} Sign-In requires a development build and is not available in Expo Go.`
     );
   }, []);
 
@@ -258,23 +248,32 @@ export function useSocialAuth(): UseSocialAuthReturn {
       setIsLoading(false);
       setLoadingProvider(null);
 
+      // Handle Google Sign-In specific error codes
       if (isErrorWithCode && isErrorWithCode(error) && statusCodes) {
         switch (error.code) {
           case statusCodes.SIGN_IN_CANCELLED:
             Logger.debug('Google sign-in cancelled by user');
             return { success: false, needsOnboarding: false };
           case statusCodes.IN_PROGRESS:
-            setErrorMessage('Sign-in already in progress');
+            setErrorMessage('A sign-in is already in progress.');
             break;
-          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            setErrorMessage('Google Play Services not available');
-            Alert.alert('Error', 'Google Play Services is required for Google Sign-In');
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE: {
+            setErrorMessage('Google Play Services is required. Please update it and try again.');
             break;
-          default:
-            setErrorMessage('Google sign-in failed');
+          }
+          default: {
+            setErrorMessage(getFriendlyErrorMessage(error));
+          }
         }
       } else {
-        setErrorMessage((error as Error).message || 'Google sign-in failed');
+        // User cancelled (our throw) or other error - don't show error for cancel
+        const msg = error instanceof Error ? error.message : String(error);
+        const isCancelled = msg.toLowerCase().includes('cancelled');
+        if (isCancelled) {
+          Logger.debug('Google sign-in cancelled by user');
+          return { success: false, needsOnboarding: false };
+        }
+        setErrorMessage(getFriendlyErrorMessage(error));
       }
 
       Logger.error('Google sign-in error', error as Error);
@@ -300,9 +299,8 @@ export function useSocialAuth(): UseSocialAuthReturn {
       }
 
       // Generate a secure random nonce
-      const rawNonce = Array.from(
-        await Crypto.getRandomBytesAsync(32),
-        byte => byte.toString(16).padStart(2, '0')
+      const rawNonce = Array.from(await Crypto.getRandomBytesAsync(32), byte =>
+        byte.toString(16).padStart(2, '0')
       ).join('');
 
       // Hash the nonce for Apple (SHA-256)
@@ -356,12 +354,13 @@ export function useSocialAuth(): UseSocialAuthReturn {
 
       const appleError = error as { code?: string };
 
+      // Handle user cancellation silently
       if (appleError.code === 'ERR_REQUEST_CANCELED') {
         Logger.debug('Apple sign-in cancelled by user');
         return { success: false, needsOnboarding: false };
       }
 
-      setErrorMessage((error as Error).message || 'Apple sign-in failed');
+      setErrorMessage(getFriendlyErrorMessage(error));
       Logger.error('Apple sign-in error', error as Error);
       warningHaptic();
       return { success: false, needsOnboarding: false, error: error as Error };
@@ -369,17 +368,11 @@ export function useSocialAuth(): UseSocialAuthReturn {
   }, []);
 
   /**
-   * Sign in with Facebook using native SDK
+   * Sign in with Facebook using OAuth redirect (browser).
    */
   const signInWithFacebook = useCallback(async (): Promise<SocialAuthResult> => {
-    // Check for Expo Go
     if (!isNativeBuild) {
       showExpoGoWarning('Facebook');
-      return { success: false, needsOnboarding: false };
-    }
-
-    if (!LoginManager || !AccessToken) {
-      setErrorMessage('Facebook Sign-In not initialized');
       return { success: false, needsOnboarding: false };
     }
 
@@ -391,44 +384,58 @@ export function useSocialAuth(): UseSocialAuthReturn {
     try {
       Logger.logUserAction('social_signin_initiated', { provider: 'facebook' });
 
-      // Initiate Facebook login
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: FACEBOOK_AUTH_CALLBACK,
+          skipBrowserRedirect: true,
+        },
+      });
 
-      if (result.isCancelled) {
-        Logger.debug('Facebook sign-in cancelled by user');
+      if (error) {
+        Logger.error('Supabase Facebook OAuth error', error);
+        throw error;
+      }
+
+      if (!data?.url) {
+        throw new Error('No OAuth URL returned from Supabase');
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, FACEBOOK_AUTH_CALLBACK);
+
+      if (result.type !== 'success' || !result.url) {
+        Logger.debug('Facebook sign-in cancelled or dismissed');
         setIsLoading(false);
         setLoadingProvider(null);
         return { success: false, needsOnboarding: false };
       }
 
-      // Get the access token
-      const accessTokenData = await AccessToken.getCurrentAccessToken();
-
-      if (!accessTokenData?.accessToken) {
-        throw new Error('No access token received from Facebook');
+      const sessionParams = parseSessionFromAuthUrl(result.url);
+      if (!sessionParams) {
+        throw new Error('Could not parse session from redirect URL');
       }
 
-      Logger.debug('Facebook sign-in successful, authenticating with Supabase');
-
-      // Sign in to Supabase with the Facebook access token
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'facebook',
-        token: accessTokenData.accessToken,
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: sessionParams.access_token,
+        refresh_token: sessionParams.refresh_token,
       });
 
-      if (error) {
-        Logger.error('Supabase Facebook auth failed', error);
-        throw error;
+      if (sessionError) {
+        Logger.error('Supabase setSession failed after Facebook auth', sessionError);
+        throw sessionError;
       }
 
-      if (!data.user) {
-        throw new Error('No user returned from Supabase');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('No user after Facebook sign-in');
       }
 
-      Logger.info('Facebook sign-in completed successfully', { userId: data.user.id });
+      Logger.info('Facebook sign-in completed successfully', { userId: user.id });
       successHaptic();
 
-      const needsOnboarding = await checkOnboardingStatus(data.user.id);
+      const needsOnboarding = await checkOnboardingStatus(user.id);
 
       setIsLoading(false);
       setLoadingProvider(null);
@@ -436,8 +443,7 @@ export function useSocialAuth(): UseSocialAuthReturn {
     } catch (error) {
       setIsLoading(false);
       setLoadingProvider(null);
-
-      setErrorMessage((error as Error).message || 'Facebook sign-in failed');
+      setErrorMessage(getFriendlyErrorMessage(error));
       Logger.error('Facebook sign-in error', error as Error);
       warningHaptic();
       return { success: false, needsOnboarding: false, error: error as Error };

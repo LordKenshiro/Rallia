@@ -1,16 +1,12 @@
 /**
  * BlockedUserModal
- * 
+ *
  * Displayed when the current user has blocked the other user in a chat.
  * Provides options to unblock or report the user.
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { Text } from '@rallia/shared-components';
@@ -41,13 +37,9 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
   return (
     <View style={[styles.overlay, { backgroundColor: isDark ? colors.card : '#f5f5f5' }]}>
       {/* Back button at top left */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={onBack}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
-        <Text style={[styles.backText, { color: colors.text }]}>{t('common.back' as any)}</Text>
+        <Text style={[styles.backText, { color: colors.text }]}>{t('common.back')}</Text>
       </TouchableOpacity>
 
       <View style={styles.centeredContent}>
@@ -58,11 +50,11 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
         </View>
 
         <Text style={[styles.title, { color: colors.text }]}>
-          {t('chat.blocked.title' as any, { name: userName })}
+          {t('chat.blocked.title', { name: userName })}
         </Text>
 
         <Text style={[styles.description, { color: colors.textMuted }]}>
-          {t('chat.blocked.description' as any)}
+          {t('chat.blocked.description')}
         </Text>
 
         <View style={styles.buttonContainer}>
@@ -74,7 +66,7 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
           >
             <Ionicons name="checkmark-circle-outline" size={20} color="white" />
             <Text style={[styles.buttonText, { color: 'white' }]}>
-              {isUnblocking ? t('chat.blocked.unblocking' as any) : t('chat.blocked.unblock' as any)}
+              {isUnblocking ? t('chat.blocked.unblocking') : t('chat.blocked.unblock')}
             </Text>
           </TouchableOpacity>
 
@@ -85,7 +77,7 @@ export const BlockedUserModal: React.FC<BlockedUserModalProps> = ({
           >
             <Ionicons name="flag-outline" size={20} color={status.error.DEFAULT} />
             <Text style={[styles.buttonText, { color: status.error.DEFAULT }]}>
-              {t('chat.blocked.report' as any)}
+              {t('chat.blocked.report')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -64,7 +64,8 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
     try {
       const { data, error: fetchError } = await supabase
         .from('player_favorite_facility')
-        .select(`
+        .select(
+          `
           id,
           facility_id,
           display_order,
@@ -76,7 +77,8 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
             latitude,
             longitude
           )
-        `)
+        `
+        )
         .eq('player_id', playerId)
         .order('display_order', { ascending: true });
 
@@ -106,23 +108,25 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
     fetchFavorites();
   }, [fetchFavorites]);
 
-  const addFavorite = useCallback(async (facility: FacilitySearchResult): Promise<boolean> => {
-    if (!playerId) return false;
-    if (favorites.length >= MAX_FAVORITES) return false;
-    if (favorites.some(f => f.facilityId === facility.id)) return false;
+  const addFavorite = useCallback(
+    async (facility: FacilitySearchResult): Promise<boolean> => {
+      if (!playerId) return false;
+      if (favorites.length >= MAX_FAVORITES) return false;
+      if (favorites.some(f => f.facilityId === facility.id)) return false;
 
-    try {
-      // Calculate next display_order (1-based)
-      const nextDisplayOrder = favorites.length + 1;
+      try {
+        // Calculate next display_order (1-based)
+        const nextDisplayOrder = favorites.length + 1;
 
-      const { data, error: insertError } = await supabase
-        .from('player_favorite_facility')
-        .insert({
-          player_id: playerId,
-          facility_id: facility.id,
-          display_order: nextDisplayOrder,
-        })
-        .select(`
+        const { data, error: insertError } = await supabase
+          .from('player_favorite_facility')
+          .insert({
+            player_id: playerId,
+            facility_id: facility.id,
+            display_order: nextDisplayOrder,
+          })
+          .select(
+            `
           id,
           facility_id,
           display_order,
@@ -134,69 +138,81 @@ export function useFavoriteFacilities(playerId: string | null): UseFavoriteFacil
             latitude,
             longitude
           )
-        `)
-        .single();
+        `
+          )
+          .single();
 
-      if (insertError) throw insertError;
+        if (insertError) throw insertError;
 
-      // Supabase returns the joined relation as an object (single) when using FK reference
-      const facilityData = data.facility as unknown as FavoriteFacility['facility'];
-      const newFavorite: FavoriteFacility = {
-        id: data.id,
-        facilityId: data.facility_id,
-        facility: facilityData,
-        displayOrder: data.display_order,
-      };
+        // Supabase returns the joined relation as an object (single) when using FK reference
+        const facilityData = data.facility as unknown as FavoriteFacility['facility'];
+        const newFavorite: FavoriteFacility = {
+          id: data.id,
+          facilityId: data.facility_id,
+          facility: facilityData,
+          displayOrder: data.display_order,
+        };
 
-      setFavorites(prev => [...prev, newFavorite]);
-      return true;
-    } catch (err) {
-      Logger.error('Failed to add favorite facility', err as Error, { playerId, facilityId: facility.id });
-      return false;
-    }
-  }, [playerId, favorites]);
-
-  const removeFavorite = useCallback(async (facilityId: string): Promise<boolean> => {
-    if (!playerId) return false;
-
-    const favoriteToRemove = favorites.find(f => f.facilityId === facilityId);
-    if (!favoriteToRemove) return false;
-
-    try {
-      // Delete the favorite
-      const { error: deleteError } = await supabase
-        .from('player_favorite_facility')
-        .delete()
-        .eq('id', favoriteToRemove.id);
-
-      if (deleteError) throw deleteError;
-
-      // Update local state and reorder display_order
-      const remainingFavorites = favorites
-        .filter(f => f.facilityId !== facilityId)
-        .map((f, index) => ({ ...f, displayOrder: index + 1 }));
-
-      // Update display_order in database
-      for (const fav of remainingFavorites) {
-        if (fav.displayOrder !== favorites.find(f => f.id === fav.id)?.displayOrder) {
-          await supabase
-            .from('player_favorite_facility')
-            .update({ display_order: fav.displayOrder })
-            .eq('id', fav.id);
-        }
+        setFavorites(prev => [...prev, newFavorite]);
+        return true;
+      } catch (err) {
+        Logger.error('Failed to add favorite facility', err as Error, {
+          playerId,
+          facilityId: facility.id,
+        });
+        return false;
       }
+    },
+    [playerId, favorites]
+  );
 
-      setFavorites(remainingFavorites);
-      return true;
-    } catch (err) {
-      Logger.error('Failed to remove favorite facility', err as Error, { playerId, facilityId });
-      return false;
-    }
-  }, [playerId, favorites]);
+  const removeFavorite = useCallback(
+    async (facilityId: string): Promise<boolean> => {
+      if (!playerId) return false;
 
-  const isFavorite = useCallback((facilityId: string): boolean => {
-    return favorites.some(f => f.facilityId === facilityId);
-  }, [favorites]);
+      const favoriteToRemove = favorites.find(f => f.facilityId === facilityId);
+      if (!favoriteToRemove) return false;
+
+      try {
+        // Delete the favorite
+        const { error: deleteError } = await supabase
+          .from('player_favorite_facility')
+          .delete()
+          .eq('id', favoriteToRemove.id);
+
+        if (deleteError) throw deleteError;
+
+        // Update local state and reorder display_order
+        const remainingFavorites = favorites
+          .filter(f => f.facilityId !== facilityId)
+          .map((f, index) => ({ ...f, displayOrder: index + 1 }));
+
+        // Update display_order in database
+        for (const fav of remainingFavorites) {
+          if (fav.displayOrder !== favorites.find(f => f.id === fav.id)?.displayOrder) {
+            await supabase
+              .from('player_favorite_facility')
+              .update({ display_order: fav.displayOrder })
+              .eq('id', fav.id);
+          }
+        }
+
+        setFavorites(remainingFavorites);
+        return true;
+      } catch (err) {
+        Logger.error('Failed to remove favorite facility', err as Error, { playerId, facilityId });
+        return false;
+      }
+    },
+    [playerId, favorites]
+  );
+
+  const isFavorite = useCallback(
+    (facilityId: string): boolean => {
+      return favorites.some(f => f.facilityId === facilityId);
+    },
+    [favorites]
+  );
 
   return {
     favorites,

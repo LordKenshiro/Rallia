@@ -1,6 +1,6 @@
 /**
  * CertificationBadge Component
- * 
+ *
  * Displays the certification status of a player's rating with color-coded badges.
  * - Yellow: Self-Declared (unverified rating)
  * - Green: Certified (verified by references or proofs)
@@ -12,11 +12,7 @@ import { View, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
 export type BadgeStatus = 'self_declared' | 'certified' | 'disputed';
 
@@ -25,35 +21,35 @@ export interface CertificationBadgeProps {
    * The certification status
    */
   status: BadgeStatus;
-  
+
   /**
    * Size of the badge
    * @default 'md'
    */
   size?: 'sm' | 'md' | 'lg';
-  
+
   /**
    * Whether to show full label or just icon
    * @default true
    */
   showLabel?: boolean;
-  
+
   /**
    * Whether to show tooltip on press
    * @default false
    */
   showTooltip?: boolean;
-  
+
   /**
    * Callback when badge is pressed (for info display)
    */
   onPress?: () => void;
-  
+
   /**
    * Additional style overrides
    */
   style?: ViewStyle;
-  
+
   /**
    * Test ID for testing
    */
@@ -94,9 +90,9 @@ const getStatusIcon = (status: BadgeStatus): keyof typeof Ionicons.glyphMap => {
  * <CertificationBadge status="self_declared" size="sm" showLabel={false} />
  *
  * // With press handler
- * <CertificationBadge 
- *   status="disputed" 
- *   onPress={() => showCertificationInfo()} 
+ * <CertificationBadge
+ *   status="disputed"
+ *   onPress={() => showCertificationInfo()}
  * />
  * ```
  */
@@ -202,11 +198,7 @@ export const CertificationBadge: React.FC<CertificationBadgeProps> = ({
       ]}
       testID={testID}
     >
-      <Ionicons
-        name={iconName}
-        size={sizeStyles.iconSize}
-        color={colorScheme.icon}
-      />
+      <Ionicons name={iconName} size={sizeStyles.iconSize} color={colorScheme.icon} />
       {showLabel && (
         <Text
           style={[

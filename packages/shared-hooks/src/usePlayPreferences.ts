@@ -40,7 +40,8 @@ interface UsePlayPreferencesResult {
 export function usePlayPreferences(sportId: string | null): UsePlayPreferencesResult {
   const [playStyles, setPlayStyles] = useState<PlayStyleOption[]>([]);
   const [playAttributes, setPlayAttributes] = useState<PlayAttributeOption[]>([]);
-  const [playAttributesByCategory, setPlayAttributesByCategory] = useState<PlayAttributesByCategory>({});
+  const [playAttributesByCategory, setPlayAttributesByCategory] =
+    useState<PlayAttributesByCategory>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

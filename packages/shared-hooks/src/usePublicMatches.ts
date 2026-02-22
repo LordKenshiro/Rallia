@@ -48,6 +48,8 @@ export interface UsePublicMatchesOptions {
   debouncedSearchQuery: string;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
+  /** Optional facility ID to filter matches to a specific facility */
+  facilityId?: string;
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -93,6 +95,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
     filters,
     debouncedSearchQuery,
     userGender,
+    facilityId,
     limit = DEFAULT_PAGE_SIZE,
     enabled = true,
   } = options;
@@ -112,6 +115,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       longitude,
       maxDistanceKm,
       sportId,
+      facilityId,
       searchQuery: debouncedSearchQuery,
       format: filters.format,
       matchType: filters.matchType,
@@ -121,6 +125,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
       gender: filters.gender,
       cost: filters.cost,
       joinMode: filters.joinMode,
+      duration: filters.duration,
+      courtStatus: filters.courtStatus,
+      specificDate: filters.specificDate,
       userGender,
       limit,
     }),
@@ -134,6 +141,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         longitude: longitude!,
         maxDistanceKm: maxDistanceKm!, // Can be 'all' or a number
         sportId: sportId!,
+        facilityId,
         searchQuery: debouncedSearchQuery || undefined,
         format: filters.format,
         matchType: filters.matchType,
@@ -143,6 +151,9 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
         gender: filters.gender,
         cost: filters.cost,
         joinMode: filters.joinMode,
+        duration: filters.duration,
+        courtStatus: filters.courtStatus,
+        specificDate: filters.specificDate,
         userGender,
         limit,
         offset: pageParam as number,
@@ -166,7 +177,7 @@ export function usePublicMatches(options: UsePublicMatchesOptions) {
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
     return query.data.pages.flatMap(page => page.matches);
-  }, [query.data?.pages]);
+  }, [query.data]);
 
   // Stable refetch callback for pull-to-refresh
   const refresh = useCallback(async () => {

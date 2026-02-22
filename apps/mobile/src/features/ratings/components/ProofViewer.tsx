@@ -1,6 +1,6 @@
 /**
  * ProofViewer Component
- * 
+ *
  * A modern, full-screen viewer for rating proofs.
  * Supports videos, images, documents, and external links.
  * Provides smooth animations and professional UI.
@@ -106,12 +106,12 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
               isLooping={false}
               onLoadStart={() => setLoading(true)}
               onLoad={() => setLoading(false)}
-              onPlaybackStatusUpdate={(status) => {
+              onPlaybackStatusUpdate={status => {
                 if (status.isLoaded) {
                   setVideoStatus({ isPlaying: status.isPlaying });
                 }
               }}
-              onError={(err) => {
+              onError={err => {
                 Logger.error('Video playback error', new Error(String(err)));
                 setError(t('profile.ratingProofs.gallery.failedToLoadVideo'));
                 setLoading(false);
@@ -169,7 +169,8 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
           );
         }
         // For PDFs, use WebView with Google Docs viewer or native WebView
-        const isPDF = proof.file.mime_type?.includes('pdf') || proof.file.file_type?.includes('pdf');
+        const isPDF =
+          proof.file.mime_type?.includes('pdf') || proof.file.file_type?.includes('pdf');
         const docUrl = isPDF
           ? `https://docs.google.com/viewer?url=${encodeURIComponent(proof.file.url)}&embedded=true`
           : proof.file.url;
@@ -202,7 +203,9 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
               onPress={() => Linking.openURL(proof.file!.url)}
             >
               <Ionicons name="open-outline" size={20} color="#fff" />
-              <Text style={styles.openExternalButtonText}>{t('profile.ratingProofs.gallery.openInBrowser')}</Text>
+              <Text style={styles.openExternalButtonText}>
+                {t('profile.ratingProofs.gallery.openInBrowser')}
+              </Text>
             </TouchableOpacity>
           </View>
         );
@@ -229,7 +232,9 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
                 onPress={handleOpenExternalLink}
               >
                 <Ionicons name="open-outline" size={20} color="#fff" />
-                <Text style={styles.openLinkButtonText}>{t('profile.ratingProofs.gallery.openLink')}</Text>
+                <Text style={styles.openLinkButtonText}>
+                  {t('profile.ratingProofs.gallery.openLink')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -289,7 +294,7 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close-outline" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>
@@ -316,7 +321,9 @@ const ProofViewer: React.FC<ProofViewerProps> = ({ visible, onClose, proof }) =>
                   setLoading(true);
                 }}
               >
-                <Text style={styles.retryButtonText}>{t('profile.ratingProofs.gallery.retry')}</Text>
+                <Text style={styles.retryButtonText}>
+                  {t('profile.ratingProofs.gallery.retry')}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (

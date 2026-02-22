@@ -7,7 +7,10 @@ export * from './steps';
 
 // Public matches components
 export { SearchBar } from './SearchBar';
-export { MatchFiltersBar } from './MatchFiltersBar';
+export { default as MatchFiltersBar } from './MatchFiltersBar';
+
+// Player matches components
+export { default as PlayerMatchFilterChips } from './PlayerMatchFilterChips';
 
 // Add Score flow components
 export { AddScoreIntroModal } from './AddScoreIntroModal';

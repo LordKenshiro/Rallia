@@ -1,21 +1,21 @@
 /**
  * Rating Proof Upload Service
- * 
+ *
  * Unified service for uploading rating proof files:
  * - Videos → Backblaze B2 (cost-effective for large files)
  * - Images → Supabase Storage
  * - Documents → Supabase Storage
- * 
+ *
  * This service also handles creating the `file` record in the database
  * and linking it to the `rating_proof` table.
  */
 
 import { supabase, Logger } from '@rallia/shared-services';
 import { getStoragePublicUrl } from './imageUpload';
-import { 
-  uploadVideoToBackblaze, 
-  isBackblazeConfigured, 
-  BackblazeUploadProgress 
+import {
+  uploadVideoToBackblaze,
+  isBackblazeConfigured,
+  BackblazeUploadProgress,
 } from './backblazeUpload';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -91,7 +91,7 @@ async function uploadToSupabase(
   userId: string,
   originalName: string,
   mimeType: string,
-  onProgress?: (progress: number) => void,
+  onProgress?: (progress: number) => void
 ): Promise<{ url: string; storageKey: string; error?: Error }> {
   const bucket = getSupabaseBucket(fileType);
   const fileExt = originalName.split('.').pop() || 'file';
@@ -113,12 +113,10 @@ async function uploadToSupabase(
     const fileData = base64ToUint8Array(base64Data);
 
     // Upload to Supabase
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, fileData, {
-        contentType: mimeType,
-        upsert: false,
-      });
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(filePath, fileData, {
+      contentType: mimeType,
+      upsert: false,
+    });
 
     if (uploadError) {
       throw uploadError;
@@ -126,7 +124,7 @@ async function uploadToSupabase(
 
     // Get public URL
     const url = getStoragePublicUrl(bucket, filePath);
-    
+
     // Report completion
     onProgress?.(100);
 
@@ -158,12 +156,12 @@ async function createFileRecord(
   mimeType: string,
   fileSize: number,
   storageProvider: StorageProvider,
-  thumbnailUrl?: string,
+  thumbnailUrl?: string
 ): Promise<{ fileId: string | null; error?: Error }> {
   try {
     // Map our file type to database enum
-    const dbFileType = fileType === 'document' ? 'document' : 
-                       fileType === 'image' ? 'image' : 'video';
+    const dbFileType =
+      fileType === 'document' ? 'document' : fileType === 'image' ? 'image' : 'video';
 
     const { data, error } = await supabase
       .from('file')
@@ -205,7 +203,7 @@ async function createRatingProofRecord(
   playerRatingScoreId: string,
   fileId: string,
   title: string,
-  description?: string,
+  description?: string
 ): Promise<{ proofId: string | null; error?: Error }> {
   try {
     // First, get the current rating_score_id from player_rating_score
@@ -238,7 +236,7 @@ async function createRatingProofRecord(
       throw error;
     }
 
-    Logger.info('Rating proof record created', { 
+    Logger.info('Rating proof record created', {
       proofId: data.id,
       ratingScoreId: playerRatingScore.rating_score_id,
     });
@@ -252,7 +250,7 @@ async function createRatingProofRecord(
 
 /**
  * Upload a rating proof file (video, image, or document)
- * 
+ *
  * This is the main entry point for uploading proof files.
  * It handles:
  * 1. Uploading the file to the appropriate storage (Backblaze for videos, Supabase for others)
@@ -260,7 +258,7 @@ async function createRatingProofRecord(
  * 3. Creating a rating_proof record linked to the file
  */
 export async function uploadRatingProofFile(
-  options: ProofUploadOptions,
+  options: ProofUploadOptions
 ): Promise<ProofUploadResult> {
   const {
     fileUri,
@@ -295,7 +293,7 @@ export async function uploadRatingProofFile(
         originalName,
         (progress: BackblazeUploadProgress) => {
           onProgress?.(progress.percentage);
-        },
+        }
       );
 
       if (bbResult.error) {
@@ -314,7 +312,7 @@ export async function uploadRatingProofFile(
         userId,
         originalName,
         mimeType,
-        onProgress,
+        onProgress
       );
 
       if (uploadResult.error) {
@@ -331,7 +329,7 @@ export async function uploadRatingProofFile(
       fileType,
       mimeType,
       fileSize,
-      storageProvider,
+      storageProvider
     );
 
     if (fileResult.error || !fileResult.fileId) {
@@ -343,7 +341,7 @@ export async function uploadRatingProofFile(
       playerRatingScoreId,
       fileResult.fileId,
       title,
-      description,
+      description
     );
 
     if (proofResult.error) {
@@ -383,7 +381,7 @@ export async function createExternalLinkProof(
   playerRatingScoreId: string,
   externalUrl: string,
   title: string,
-  description?: string,
+  description?: string
 ): Promise<ProofUploadResult> {
   try {
     const { data, error } = await supabase
@@ -445,7 +443,7 @@ export function getSupportedDocumentFormats(): string[] {
 export function getMaxFileSizes(): Record<ProofFileType, number> {
   return {
     video: 500 * 1024 * 1024, // 500 MB
-    image: 10 * 1024 * 1024,  // 10 MB
+    image: 10 * 1024 * 1024, // 10 MB
     document: 25 * 1024 * 1024, // 25 MB
   };
 }
@@ -456,7 +454,7 @@ export function getMaxFileSizes(): Record<ProofFileType, number> {
 export function validateProofFile(
   fileName: string,
   fileSize: number,
-  fileType: ProofFileType,
+  fileType: ProofFileType
 ): { valid: boolean; error?: string } {
   const ext = fileName.split('.').pop()?.toLowerCase();
   const maxSizes = getMaxFileSizes();

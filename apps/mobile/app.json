@@ -23,7 +23,8 @@
       },
       "bundleIdentifier": "com.mathisl971.rallia-app",
       "appleTeamId": "587DRRMTV8",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:rallia.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +38,21 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.mathisl971.ralliaapp"
+      "package": "com.mathisl971.ralliaapp",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "rallia.app",
+              "pathPrefix": "/match"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -49,19 +64,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
-        }
-      ],
-      [
-        "react-native-fbsdk-next",
-        {
-          "appID": "YOUR_FACEBOOK_APP_ID",
-          "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
-          "displayName": "Rallia",
-          "scheme": "fbYOUR_FACEBOOK_APP_ID",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
-          "isAutoInitEnabled": true
+          "iosUrlScheme": "com.googleusercontent.apps.438904367358-9a8l1o2u2a5ap608fq88m912fppdsveq"
         }
       ],
       [
@@ -85,6 +88,13 @@
         {
           "color": "#4DB8A8",
           "mode": "production"
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.mathisl971.rallia-app",
+          "enableGooglePay": false
         }
       ]
     ],

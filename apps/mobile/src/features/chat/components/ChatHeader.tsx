@@ -5,14 +5,7 @@
  */
 
 import React, { memo, useState, useCallback } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Modal,
-  Pressable,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -96,33 +89,33 @@ function ChatHeaderComponent({
   const menuItems: MenuItem[] = [
     {
       id: 'search',
-      label: t('chat.menu.search' as any),
+      label: t('chat.menu.search'),
       icon: 'search',
       onPress: () => handleMenuItemPress(() => onSearchPress?.()),
     },
     {
       id: 'mute',
-      label: isMuted ? t('chat.menu.unmuteNotifications' as any) : t('chat.menu.muteNotifications' as any),
+      label: isMuted ? t('chat.menu.unmuteNotifications') : t('chat.menu.muteNotifications'),
       icon: isMuted ? 'notifications' : 'notifications-off',
       onPress: () => handleMenuItemPress(() => onToggleMute?.()),
     },
     {
       id: 'favorite',
-      label: isFavorite ? t('chat.menu.removeFromFavorites' as any) : t('chat.menu.addToFavorites' as any),
+      label: isFavorite ? t('chat.menu.removeFromFavorites') : t('chat.menu.addToFavorites'),
       icon: isFavorite ? 'heart-dislike' : 'heart',
       onPress: () => handleMenuItemPress(() => onToggleFavorite?.()),
       directOnly: true,
     },
     {
       id: 'block',
-      label: isBlocked ? t('chat.menu.unblock' as any) : t('chat.menu.block' as any),
+      label: isBlocked ? t('chat.menu.unblock') : t('chat.menu.block'),
       icon: isBlocked ? 'person-add' : 'ban',
       onPress: () => handleMenuItemPress(() => onToggleBlock?.()),
       directOnly: true,
     },
     {
       id: 'report',
-      label: t('chat.menu.report' as any),
+      label: t('chat.menu.report'),
       icon: 'flag',
       onPress: () => handleMenuItemPress(() => onReport?.()),
       destructive: true,
@@ -130,7 +123,7 @@ function ChatHeaderComponent({
     },
     {
       id: 'clear',
-      label: t('chat.menu.clearChat' as any),
+      label: t('chat.menu.clearChat'),
       icon: 'trash-outline',
       onPress: () => handleMenuItemPress(() => onClearChat?.()),
       destructive: true,
@@ -139,15 +132,13 @@ function ChatHeaderComponent({
   ];
 
   // Filter menu items based on chat type
-  const visibleMenuItems = menuItems.filter(
-    (item) => !item.directOnly || isDirectChat
-  );
+  const visibleMenuItems = menuItems.filter(item => !item.directOnly || isDirectChat);
 
   return (
     <View
       style={[
         styles.container,
-        { 
+        {
           backgroundColor: isDark ? colors.background : '#FFFFFF',
           borderBottomColor: colors.border,
           paddingTop: insets.top + spacingPixels[2],
@@ -196,22 +187,17 @@ function ChatHeaderComponent({
       </TouchableOpacity>
 
       {/* Dropdown Menu Modal */}
-      <Modal
-        visible={showMenu}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCloseMenu}
-      >
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={handleCloseMenu}>
         <Pressable style={styles.menuOverlay} onPress={handleCloseMenu}>
-          <Pressable 
+          <Pressable
             style={[
               styles.menuContainer,
-              { 
+              {
                 backgroundColor: isDark ? colors.card : '#FFFFFF',
                 top: insets.top + 50,
               },
             ]}
-            onPress={(e) => e.stopPropagation()}
+            onPress={e => e.stopPropagation()}
           >
             {visibleMenuItems.map((item, index) => (
               <TouchableOpacity

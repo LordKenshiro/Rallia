@@ -20,16 +20,18 @@ export {
   type PlayerOnlineStatus,
   type TypingIndicator,
   type SearchMessageResult,
-  
+
   // Constants
   COMMON_REACTIONS,
-  
+
   // Conversation Operations
   getPlayerConversations,
   getConversation,
   createConversation,
   getOrCreateDirectConversation,
-  
+  createMatchChat,
+  getMatchChat,
+
   // Message Operations
   getMessages,
   sendMessage,
@@ -37,52 +39,52 @@ export {
   deleteMessage,
   editMessage,
   clearChatForUser,
-  
+
   // Participant Operations
   toggleMuteConversation,
   leaveConversation,
   addParticipant,
-  
+
   // Pin & Archive Operations
   togglePinConversation,
   toggleArchiveConversation,
-  
+
   // Online Status Operations
   updatePlayerLastSeen,
   getPlayersOnlineStatus,
   isPlayerOnline,
-  
+
   // Typing Indicator Operations
   subscribeToTypingIndicators,
   sendTypingIndicator,
   unsubscribeFromTypingIndicators,
-  
+
   // Search Operations
   searchMessagesInConversation,
-  
+
   // Reaction Operations
   addReaction,
   removeReaction,
   toggleReaction,
   getMessageReactions,
   getMessagesReactions,
-  
+
   // Real-time Subscriptions
   subscribeToMessages,
   subscribeToConversations,
   subscribeToReactions,
   unsubscribeFromChannel,
   type MessageEventCallback,
-  
+
   // Utility Functions
   getTotalUnreadCount,
   getConversationByNetworkId,
   getNetworkByConversationId,
-  
+
   // Chat Agreement
   hasAgreedToChatRules,
   agreeToChatRules,
-  
+
   // Conversation Management
   type UpdateConversationInput,
   updateConversation,

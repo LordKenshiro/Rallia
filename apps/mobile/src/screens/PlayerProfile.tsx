@@ -1,6 +1,6 @@
 /**
  * PlayerProfile Screen
- * 
+ *
  * Displays another player's profile information (read-only).
  * Shows player info, stats, availability, and ratings.
  * Action buttons: "Invite to Match" and "Request Reference"
@@ -25,6 +25,8 @@ import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
 import { supabase, Logger, isPlayerOnline } from '@rallia/shared-services';
 import { useGetOrCreateDirectConversation } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl, lightHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { formatDateMonthYear } from '../utils/dateFormatting';
@@ -39,7 +41,11 @@ import {
   neutral,
   status,
 } from '@rallia/design-system';
-import { ProofGallerySection, CertificationBadge, type BadgeStatus } from '../features/ratings/components';
+import {
+  ProofGallerySection,
+  CertificationBadge,
+  type BadgeStatus,
+} from '../features/ratings/components';
 
 // Types
 type PlayerProfileRouteProp = RouteProp<RootStackParamList, 'PlayerProfile'>;
@@ -105,6 +111,7 @@ const PlayerProfile = () => {
   const { playerId, sportId } = route.params;
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
+  const { selectedSport } = useSport();
   const getOrCreateDirectConversation = useGetOrCreateDirectConversation();
 
   const [loading, setLoading] = useState(true);
@@ -113,7 +120,11 @@ const PlayerProfile = () => {
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [sportPreferences, setSportPreferences] = useState<PlayerSportPreferences | null>(null);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
-  const [stats, setStats] = useState<PlayerStats>({ hoursPlayed: 0, gamesHosted: 0, weekStreak: 0 });
+  const [stats, setStats] = useState<PlayerStats>({
+    hoursPlayed: 0,
+    gamesHosted: 0,
+    weekStreak: 0,
+  });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
@@ -135,10 +146,12 @@ const PlayerProfile = () => {
   useEffect(() => {
     const fetchCurrentUserAndStatuses = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           setCurrentUserId(user.id);
-          
+
           // Check if this player is favorited and blocked in parallel
           const [favoriteResult, blockResult] = await Promise.all([
             supabase
@@ -154,7 +167,7 @@ const PlayerProfile = () => {
               .eq('blocked_player_id', playerId)
               .maybeSingle(),
           ]);
-          
+
           setIsFavorite(!!favoriteResult.data);
           setIsBlocked(!!blockResult.data);
         }
@@ -162,7 +175,7 @@ const PlayerProfile = () => {
         Logger.error('Failed to fetch favorite/block status', error as Error);
       }
     };
-    
+
     fetchCurrentUserAndStatuses();
   }, [playerId]);
 
@@ -171,7 +184,17 @@ const PlayerProfile = () => {
       setLoading(true);
 
       // Run all queries in parallel
-      const [profileResult, playerResult, sportsResult, playerSportsResult, ratingsResult, availResult, sportProfileResult, , statsResult] = await Promise.all([
+      const [
+        profileResult,
+        playerResult,
+        sportsResult,
+        playerSportsResult,
+        ratingsResult,
+        availResult,
+        sportProfileResult,
+        ,
+        statsResult,
+      ] = await Promise.all([
         // Fetch profile data
         withTimeout(
           (async () => supabase.from('profile').select('*').eq('id', playerId).single())(),
@@ -209,7 +232,8 @@ const PlayerProfile = () => {
           (async () =>
             supabase
               .from('player_rating_score')
-              .select(`
+              .select(
+                `
                 id,
                 rating_score_id,
                 is_certified,
@@ -225,7 +249,8 @@ const PlayerProfile = () => {
                     sport_id
                   )
                 )
-              `)
+              `
+              )
               .eq('player_id', playerId)
               .order('is_certified', { ascending: false })
               .order('created_at', { ascending: false }))(),
@@ -246,17 +271,21 @@ const PlayerProfile = () => {
         ),
 
         // Fetch sport preferences from player_sport table (like SportProfile does)
-        sportId ? withTimeout(
-          (async () =>
-            supabase
-              .from('player_sport')
-              .select('id, is_active, preferred_match_duration, preferred_match_type, preferred_play_style, preferred_court, is_primary')
-              .eq('player_id', playerId)
-              .eq('sport_id', sportId)
-              .maybeSingle())(),
-          15000,
-          'Failed to load sport preferences'
-        ) : Promise.resolve({ data: null, error: null }),
+        sportId
+          ? withTimeout(
+              (async () =>
+                supabase
+                  .from('player_sport')
+                  .select(
+                    'id, is_active, preferred_match_duration, preferred_match_type, preferred_play_style, preferred_court, is_primary'
+                  )
+                  .eq('player_id', playerId)
+                  .eq('sport_id', sportId)
+                  .maybeSingle())(),
+              15000,
+              'Failed to load sport preferences'
+            )
+          : Promise.resolve({ data: null, error: null }),
 
         // Placeholder (kept for array destructuring)
         Promise.resolve({ data: null, error: null }),
@@ -309,29 +338,32 @@ const PlayerProfile = () => {
       );
 
       // Map ratings
-      const ratingsMap = new Map<string, { 
-        label: string; 
-        value: number | null; 
-        ratingScoreId: string;
-        isCertified: boolean; 
-        badgeStatus: BadgeStatus;
-        playerRatingScoreId: string;
-        referencesCount: number;
-        peerEvaluationCount: number;
-        totalProofsCount: number;
-        currentLevelProofsCount: number;
-      }>();
+      const ratingsMap = new Map<
+        string,
+        {
+          label: string;
+          value: number | null;
+          ratingScoreId: string;
+          isCertified: boolean;
+          badgeStatus: BadgeStatus;
+          playerRatingScoreId: string;
+          referencesCount: number;
+          peerEvaluationCount: number;
+          totalProofsCount: number;
+          currentLevelProofsCount: number;
+        }
+      >();
 
       // Fetch proofs for all ratings in parallel (with rating_score_id for current-level filtering)
       const ratingsWithProofsCounts = await Promise.all(
-        (ratingsData || []).map(async (rating) => {
+        (ratingsData || []).map(async rating => {
           let totalProofsCount = 0;
           let currentLevelProofsCount = 0;
-          
+
           // Get the current rating_score_id from the rating
           const ratingScore = rating.rating_score as { id?: string } | null;
           const currentRatingScoreId = ratingScore?.id || rating.rating_score_id;
-          
+
           if (rating.id) {
             // Fetch all proofs with their rating_score_id
             const { data: proofs, error: proofsError } = await supabase
@@ -339,11 +371,11 @@ const PlayerProfile = () => {
               .select('rating_score_id')
               .eq('player_rating_score_id', rating.id)
               .eq('is_active', true);
-            
+
             if (!proofsError && proofs) {
               // Total count: all proofs
               totalProofsCount = proofs.length;
-              
+
               // Current-level count: proofs matching current rating_score_id
               currentLevelProofsCount = proofs.filter(
                 p => p.rating_score_id === currentRatingScoreId
@@ -377,7 +409,7 @@ const PlayerProfile = () => {
         const currentLevelProofsCount = rating.currentLevelProofsCount || 0;
         const totalProofsCount = rating.totalProofsCount || 0;
         const peerEvalCount = rating.peer_evaluation_count || 0;
-        
+
         let badgeStatus: BadgeStatus = 'self_declared';
         if (rawBadgeStatus === 'disputed') {
           badgeStatus = 'disputed';
@@ -443,54 +475,65 @@ const PlayerProfile = () => {
         const [playStyleResult, playAttributesResult, favoritesResult] = await Promise.all([
           supabase
             .from('player_sport_play_style')
-            .select(`
+            .select(
+              `
               play_style:play_style_id (
                 id,
                 name,
                 description
               )
-            `)
+            `
+            )
             .eq('player_sport_id', spData.id)
             .maybeSingle(),
           supabase
             .from('player_sport_play_attribute')
-            .select(`
+            .select(
+              `
               play_attribute:play_attribute_id (
                 id,
                 name,
                 description,
                 category
               )
-            `)
+            `
+            )
             .eq('player_sport_id', spData.id),
           // Fetch favorite facilities for this player
           supabase
             .from('player_favorite_facility')
-            .select(`
+            .select(
+              `
               id,
               facility:facility_id (
                 id,
                 name
               )
-            `)
+            `
+            )
             .eq('player_id', playerId),
         ]);
 
         // Extract play style name
-        const playStyleName = (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
-        
+        const playStyleName =
+          (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
+
         // Extract play attribute names
-        const playAttributeNames = playAttributesResult.data
-          ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
-          .filter((name): name is string => !!name) || null;
+        const playAttributeNames =
+          playAttributesResult.data
+            ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
+            .filter((name): name is string => !!name) || null;
 
         // Set favorite facilities
         if (favoritesResult.data) {
           // Map the data to ensure proper typing (facility comes as array from Supabase)
-          const mappedFacilities = favoritesResult.data.map((item: { id: string; facility: { id: string; name: string }[] | null }) => ({
-            id: item.id,
-            facility: Array.isArray(item.facility) && item.facility.length > 0 ? item.facility[0] : null,
-          }));
+          const mappedFacilities = favoritesResult.data.map(
+            (item: { id: string; facility: { id: string; name: string }[] | null }) => ({
+              id: item.id,
+              facility:
+                Array.isArray(item.facility) && item.facility.length > 0 ? item.facility[0] : null,
+            })
+          );
           setFavoriteFacilities(mappedFacilities);
         }
 
@@ -501,7 +544,8 @@ const PlayerProfile = () => {
           preferred_play_style: playStyleName,
           preferred_court: spData.preferred_court,
           is_primary: spData.is_primary || false,
-          playAttributes: playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
+          playAttributes:
+            playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
         });
       }
 
@@ -533,9 +577,15 @@ const PlayerProfile = () => {
 
       // Process stats
       if (statsResult.data) {
-        type MatchData = { match_id: string; match: { duration_minutes: number | null; host_id: string }[] | null };
+        type MatchData = {
+          match_id: string;
+          match: { duration_minutes: number | null; host_id: string }[] | null;
+        };
         const matchData = statsResult.data as unknown as MatchData[];
-        const totalMinutes = matchData.reduce((sum, m) => sum + (m.match?.[0]?.duration_minutes || 0), 0);
+        const totalMinutes = matchData.reduce(
+          (sum, m) => sum + (m.match?.[0]?.duration_minutes || 0),
+          0
+        );
         const hostedMatches = matchData.filter(m => m.match?.[0]?.host_id === playerId).length;
         setStats({
           hoursPlayed: Math.round(totalMinutes / 60),
@@ -543,7 +593,6 @@ const PlayerProfile = () => {
           weekStreak: 0, // TODO: Calculate actual streak
         });
       }
-
     } catch (error) {
       Logger.error('Failed to fetch player profile', error as Error, { playerId });
       Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
@@ -581,8 +630,8 @@ const PlayerProfile = () => {
     if (!duration) return t('profile.notSet');
 
     // Use translation keys for enum values
-    const translationKey = `profile.preferences.durations.${duration}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.durations.${duration}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -608,8 +657,8 @@ const PlayerProfile = () => {
     if (!type) return t('profile.notSet');
 
     // Use translation keys for match types
-    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -624,8 +673,8 @@ const PlayerProfile = () => {
     if (!style) return t('profile.notSet');
 
     // Use translation keys for play styles
-    const translationKey = `profile.preferences.playStyles.${style}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playStyles.${style}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -638,8 +687,8 @@ const PlayerProfile = () => {
 
   const formatPlayAttribute = (attr: string): string => {
     // Use translation keys for play attributes
-    const translationKey = `profile.preferences.playAttributes.${attr}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playAttributes.${attr}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -675,22 +724,23 @@ const PlayerProfile = () => {
 
   const handleStartChat = useCallback(async () => {
     if (!currentUserId || chatLoading) return;
-    
+
     setChatLoading(true);
     lightHaptic();
-    
+
     try {
       const conversation = await getOrCreateDirectConversation.mutateAsync({
         playerId1: currentUserId,
         playerId2: playerId,
       });
-      
+
       // Navigate to the chat conversation
       // Use the other player's name as the title
-      const playerName = profile 
-        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() || 'Player'
+      const playerName = profile
+        ? `${(profile as unknown as { first_name?: string }).first_name || ''} ${(profile as unknown as { last_name?: string }).last_name || ''}`.trim() ||
+          'Player'
         : 'Chat';
-      navigation.navigate('Chat', {
+      navigation.navigate('ChatConversation', {
         conversationId: conversation.id,
         title: playerName,
       });
@@ -704,10 +754,10 @@ const PlayerProfile = () => {
 
   const handleToggleFavorite = useCallback(async () => {
     if (!currentUserId || favoriteLoading) return;
-    
+
     setFavoriteLoading(true);
     lightHaptic();
-    
+
     try {
       if (isFavorite) {
         // Remove from favorites
@@ -716,19 +766,17 @@ const PlayerProfile = () => {
           .delete()
           .eq('player_id', currentUserId)
           .eq('favorite_player_id', playerId);
-        
+
         if (error) throw error;
         setIsFavorite(false);
         Logger.info('Player removed from favorites', { playerId });
       } else {
         // Add to favorites
-        const { error } = await supabase
-          .from('player_favorite')
-          .insert({
-            player_id: currentUserId,
-            favorite_player_id: playerId,
-          });
-        
+        const { error } = await supabase.from('player_favorite').insert({
+          player_id: currentUserId,
+          favorite_player_id: playerId,
+        });
+
         if (error) throw error;
         setIsFavorite(true);
         Logger.info('Player added to favorites', { playerId });
@@ -746,10 +794,10 @@ const PlayerProfile = () => {
 
   const handleToggleBlock = useCallback(async () => {
     if (!currentUserId || blockLoading) return;
-    
+
     setBlockLoading(true);
     mediumHaptic();
-    
+
     try {
       if (isBlocked) {
         // Unblock player
@@ -758,7 +806,7 @@ const PlayerProfile = () => {
           .delete()
           .eq('player_id', currentUserId)
           .eq('blocked_player_id', playerId);
-        
+
         if (error) throw error;
         setIsBlocked(false);
         Logger.info('Player unblocked', { playerId });
@@ -772,14 +820,12 @@ const PlayerProfile = () => {
             .eq('favorite_player_id', playerId);
           setIsFavorite(false);
         }
-        
-        const { error } = await supabase
-          .from('player_block')
-          .insert({
-            player_id: currentUserId,
-            blocked_player_id: playerId,
-          });
-        
+
+        const { error } = await supabase.from('player_block').insert({
+          player_id: currentUserId,
+          blocked_player_id: playerId,
+        });
+
         if (error) throw error;
         setIsBlocked(true);
         Logger.info('Player blocked', { playerId });
@@ -809,40 +855,89 @@ const PlayerProfile = () => {
         <View style={styles.loadingContainer}>
           {/* Player Profile Skeleton */}
           <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <SkeletonAvatar
+              size={120}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+              <Skeleton
+                width={150}
+                height={18}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={80}
+                height={14}
+                borderRadius={4}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+                style={{ marginTop: 8 }}
+              />
             </View>
             {/* Action buttons skeleton */}
             <View style={{ flexDirection: 'row', marginTop: 16, gap: 12 }}>
-              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={140} height={44} borderRadius={22} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width={140}
+                height={44}
+                borderRadius={22}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={140}
+                height={44}
+                borderRadius={22}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           {/* Stats cards skeleton */}
           <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={80}
+                borderRadius={12}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Skeleton width="100%" height={80} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={80}
+                borderRadius={12}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           {/* Info section skeleton */}
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <Skeleton width="100%" height={120} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width="100%"
+              height={120}
+              borderRadius={12}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
           </View>
         </View>
       </SafeAreaView>
     );
   }
 
-  const displayName = profile?.display_name || 
-    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 
+  const displayName =
+    profile?.display_name ||
+    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
     'Player';
 
-  const username = profile?.display_name?.toLowerCase().replace(/\s/g, '') || 
+  const username =
+    profile?.display_name?.toLowerCase().replace(/\s/g, '') ||
     `${profile?.first_name?.toLowerCase() || ''}${profile?.last_name?.toLowerCase() || ''}`;
 
   return (
@@ -879,7 +974,9 @@ const PlayerProfile = () => {
               <Ionicons
                 name={isFavorite ? 'heart' : 'heart-outline'}
                 size={28}
-                color={isFavorite ? status.error.DEFAULT : (isBlocked ? colors.border : colors.textMuted)}
+                color={
+                  isFavorite ? status.error.DEFAULT : isBlocked ? colors.border : colors.textMuted
+                }
               />
             )}
           </TouchableOpacity>
@@ -892,18 +989,18 @@ const PlayerProfile = () => {
                   style={styles.profileImage}
                 />
               ) : (
-                <Ionicons name="person" size={40} color={colors.primary} />
+                <Ionicons name="person-outline" size={40} color={colors.primary} />
               )}
             </View>
             {/* Online Status Indicator */}
-            <View 
+            <View
               style={[
-                styles.onlineIndicator, 
-                { 
+                styles.onlineIndicator,
+                {
                   backgroundColor: isOnline ? '#22C55E' : neutral[400],
                   borderColor: colors.card,
-                }
-              ]} 
+                },
+              ]}
             />
           </View>
 
@@ -923,7 +1020,11 @@ const PlayerProfile = () => {
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={handleInviteToMatch}
             >
-              <Ionicons name="tennisball-outline" size={18} color={colors.primaryForeground} />
+              <SportIcon
+                sportName={selectedSport?.name ?? 'tennis'}
+                size={18}
+                color={colors.primaryForeground}
+              />
               <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
                 Invite to Match
               </Text>
@@ -950,7 +1051,10 @@ const PlayerProfile = () => {
           {/* Secondary Action */}
           <View style={styles.secondaryAction}>
             <TouchableOpacity
-              style={[styles.actionButtonSecondary, { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] }]}
+              style={[
+                styles.actionButtonSecondary,
+                { borderColor: colors.border, flex: 0, paddingHorizontal: spacingPixels[4] },
+              ]}
               onPress={handleRequestReference}
             >
               <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
@@ -987,7 +1091,9 @@ const PlayerProfile = () => {
                 </Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Max Travel Distance</Text>
+                <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+                  Max Travel Distance
+                </Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
                 </Text>
@@ -1032,7 +1138,7 @@ const PlayerProfile = () => {
                 </Text>
                 <View style={styles.facilitiesContainer}>
                   {favoriteFacilities.length > 0 ? (
-                    favoriteFacilities.map((fav) => (
+                    favoriteFacilities.map(fav => (
                       <Text
                         key={fav.id}
                         style={[styles.facilityText, { color: colors.text }]}
@@ -1069,10 +1175,7 @@ const PlayerProfile = () => {
                     {sportPreferences.playAttributes.map((attr: string, index: number) => (
                       <View
                         key={index}
-                        style={[
-                          styles.attributeTag,
-                          { backgroundColor: colors.primaryForeground },
-                        ]}
+                        style={[styles.attributeTag, { backgroundColor: colors.primaryForeground }]}
                       >
                         <Text style={[styles.attributeTagText, { color: colors.primary }]}>
                           {formatPlayAttribute(attr)}
@@ -1098,14 +1201,17 @@ const PlayerProfile = () => {
               <View style={styles.ratingHeader}>
                 <View>
                   <Text style={[styles.ratingTitle, { color: colors.text }]}>
-                    {primarySport.ratingLabel ? getRatingTitle(primarySport.ratingValue) : 'Unrated'}
+                    {primarySport.ratingLabel
+                      ? getRatingTitle(primarySport.ratingValue)
+                      : 'Unrated'}
                   </Text>
                   <Text style={[styles.ratingCode, { color: colors.primary }]}>
-                    {primarySport.name === 'tennis' ? 'NTRP' : 'DUPR'} {primarySport.ratingLabel || '-'}
+                    {primarySport.name === 'tennis' ? 'NTRP' : 'DUPR'}{' '}
+                    {primarySport.ratingLabel || '-'}
                   </Text>
                 </View>
-                <CertificationBadge 
-                  status={primarySport.badgeStatus || 'self_declared'} 
+                <CertificationBadge
+                  status={primarySport.badgeStatus || 'self_declared'}
                   size="md"
                 />
               </View>
@@ -1115,12 +1221,16 @@ const PlayerProfile = () => {
 
               {/* Rating Actions */}
               <View style={styles.ratingActions}>
-                <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
+                <TouchableOpacity
+                  style={[styles.ratingActionButton, { borderColor: colors.border }]}
+                >
                   <Text style={[styles.ratingActionText, { color: colors.primary }]}>
                     {t('profile.rating.references', { count: primarySport.referencesCount || 0 })}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.ratingActionButton, { borderColor: colors.border }]}>
+                <TouchableOpacity
+                  style={[styles.ratingActionButton, { borderColor: colors.border }]}
+                >
                   <Text style={[styles.ratingActionText, { color: colors.primary }]}>
                     {t('profile.rating.ratingProof', { count: primarySport.totalProofsCount || 0 })}
                   </Text>
@@ -1147,14 +1257,14 @@ const PlayerProfile = () => {
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.reputationBar}>
-              <View 
+              <View
                 style={[
-                  styles.reputationFill, 
-                  { 
+                  styles.reputationFill,
+                  {
                     backgroundColor: colors.primary,
                     width: `${player?.reputation_score || 0}%`,
-                  }
-                ]} 
+                  },
+                ]}
               />
             </View>
             <Text style={[styles.reputationScore, { color: colors.text }]}>
@@ -1195,18 +1305,6 @@ const PlayerProfile = () => {
 
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={styles.availabilityGrid}>
-              {/* Header Row */}
-              <View style={styles.availabilityRow}>
-                <View style={styles.dayCell} />
-                {['AM', 'PM', 'EVE'].map(slot => (
-                  <View key={slot} style={styles.headerCell}>
-                    <Text size="xs" weight="semibold" color={colors.textMuted}>
-                      {slot}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
               {/* Day Rows */}
               {Object.keys(availabilities).map(day => (
                 <View key={day} style={styles.availabilityRow}>
@@ -1229,7 +1327,11 @@ const PlayerProfile = () => {
                         <Text
                           size="xs"
                           weight="semibold"
-                          color={availabilities[day]?.[period] ? colors.primaryForeground : colors.textMuted}
+                          color={
+                            availabilities[day]?.[period]
+                              ? colors.primaryForeground
+                              : colors.textMuted
+                          }
                         >
                           {period === 'morning' ? 'AM' : period === 'afternoon' ? 'PM' : 'EVE'}
                         </Text>
@@ -1263,7 +1365,8 @@ function getRatingDescription(value: number | null | undefined): string {
   if (!value) return 'This player has not been rated yet.';
   if (value <= 2.0) return 'New to the sport, learning basic strokes and rules.';
   if (value <= 3.0) return 'Developing consistency in shots and starting to play competitively.';
-  if (value <= 4.0) return 'Intermediate player that can rally with decent consistency and control the direction of their shots.';
+  if (value <= 4.0)
+    return 'Intermediate player that can rally with decent consistency and control the direction of their shots.';
   if (value <= 5.0) return 'Advanced player with strong shot variety and tactical awareness.';
   return 'Tournament-level player with exceptional skills.';
 }

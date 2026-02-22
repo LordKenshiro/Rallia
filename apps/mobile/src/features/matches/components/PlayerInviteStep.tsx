@@ -16,8 +16,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { Text } from '@rallia/shared-components';
+import { Text, useToast } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import {
   lightHaptic,
@@ -28,6 +27,8 @@ import {
 import { usePlayerSearch, useInviteToMatch } from '@rallia/shared-hooks';
 import type { PlayerSearchResult } from '@rallia/shared-services';
 import type { TranslationKey, TranslationOptions } from '../../../hooks/useTranslation';
+import { SearchBar } from '../../../components/SearchBar';
+import { InviteFromListsStep } from '../../shared-lists/components/InviteFromListsStep';
 
 // =============================================================================
 // TYPES
@@ -58,7 +59,13 @@ interface PlayerInviteStepProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Whether dark mode is active */
   isDark: boolean;
+  /** Player IDs to exclude from search (e.g., existing participants) */
+  excludePlayerIds?: string[];
+  /** When true, show a close (X) icon in the top right that calls onComplete (e.g. in wizard; sheet has its own X) */
+  showCloseButton?: boolean;
 }
+
+type InviteTab = 'players' | 'lists';
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -170,7 +177,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, isSelected, onToggle, c
           },
         ]}
       >
-        {isSelected && <Ionicons name="checkmark" size={14} color={colors.buttonTextActive} />}
+        {isSelected && (
+          <Ionicons name="checkmark-outline" size={14} color={colors.buttonTextActive} />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -225,7 +234,7 @@ const SelectedPlayersStrip: React.FC<SelectedPlayersStripProps> = ({
               </View>
             )}
             <View style={[styles.removeButton, { backgroundColor: colors.textMuted }]}>
-              <Ionicons name="close" size={10} color={colors.buttonTextActive} />
+              <Ionicons name="close-outline" size={10} color={colors.buttonTextActive} />
             </View>
           </TouchableOpacity>
         )}
@@ -246,10 +255,25 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
   colors,
   t,
   isDark,
+  excludePlayerIds,
+  showCloseButton = false,
 }) => {
+  const toast = useToast();
+
+  // Tab state: Players (app users) or From lists (shared-list contacts)
+  const [activeTab, setActiveTab] = useState<InviteTab>('players');
+
   // State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState<PlayerSearchResult[]>([]);
+  /** Player IDs we invited this session — exclude them from search so they don't show again */
+  const [invitedPlayerIds, setInvitedPlayerIds] = useState<string[]>([]);
+
+  // Merge prop exclude (existing participants) with players we just invited
+  const effectiveExcludePlayerIds = useMemo(
+    () => [...(excludePlayerIds ?? []), ...invitedPlayerIds],
+    [excludePlayerIds, invitedPlayerIds]
+  );
 
   // Selected player IDs for quick lookup
   const selectedPlayerIds = useMemo(
@@ -273,21 +297,28 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     sportId,
     currentUserId: hostId,
     searchQuery,
+    excludePlayerIds: effectiveExcludePlayerIds,
     enabled: true,
   });
 
-  // Invite mutation
+  // Invite mutation - do not close sheet on success so user can also share with contacts
   const { invitePlayers, isInviting } = useInviteToMatch({
     matchId,
     hostId,
-    onSuccess: _result => {
+    onSuccess: result => {
       successHaptic();
-      onComplete();
+      const invited = result?.invited ?? [];
+      const count = invited.length;
+      const newInvitedIds = invited.map((p: { player_id: string }) => p.player_id);
+      if (newInvitedIds.length > 0) {
+        setInvitedPlayerIds(prev => [...prev, ...newInvitedIds]);
+      }
+      toast.success(t('matchCreation.invite.invitationsSentCount', { count }));
+      setSelectedPlayers([]);
     },
     onError: error => {
       console.error('Failed to invite players:', error);
-      // Still complete to not block the user
-      onComplete();
+      toast.error(t('common.tryAgain'));
     },
   });
 
@@ -314,8 +345,8 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     invitePlayers(playerIds);
   }, [selectedPlayers, invitePlayers]);
 
-  // Handle skip
-  const handleSkip = useCallback(() => {
+  // Handle close (X) - dismiss step/sheet
+  const handleClose = useCallback(() => {
     lightHaptic();
     onComplete();
   }, [onComplete]);
@@ -364,7 +395,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <ActivityIndicator size="small" color={colors.buttonActive} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.searching' as TranslationKey)}
+            {t('matchCreation.invite.searching')}
           </Text>
         </View>
       );
@@ -375,7 +406,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.searchError' as TranslationKey)}
+            {t('matchCreation.invite.searchError')}
           </Text>
         </View>
       );
@@ -386,7 +417,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.noPlayersFound' as TranslationKey)}
+            {t('matchCreation.invite.noPlayersFound')}
           </Text>
         </View>
       );
@@ -397,7 +428,7 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={32} color={colors.textMuted} />
           <Text size="sm" color={colors.textMuted} style={styles.emptyStateText}>
-            {t('matchCreation.invite.noPlayersAvailable' as TranslationKey)}
+            {t('matchCreation.invite.noPlayersAvailable')}
           </Text>
         </View>
       );
@@ -406,113 +437,188 @@ export const PlayerInviteStep: React.FC<PlayerInviteStepProps> = ({
     return null;
   }, [isLoading, searchError, searchQuery, players.length, colors, t]);
 
+  const handleTabChange = useCallback((tab: InviteTab) => {
+    selectionHaptic();
+    setActiveTab(tab);
+  }, []);
+
+  // Colors for InviteFromListsStep (uses buttonActive as primary for consistency)
+  const listStepColors = useMemo(
+    () => ({
+      text: colors.text,
+      textSecondary: colors.textSecondary,
+      textMuted: colors.textMuted,
+      border: colors.border,
+      primary: colors.buttonActive,
+      cardBackground: colors.cardBackground,
+      background: colors.background,
+      buttonActive: colors.buttonActive,
+      buttonInactive: colors.buttonInactive,
+      buttonTextActive: colors.buttonTextActive,
+    }),
+    [colors]
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+      {/* Header with optional close (X) */}
       <View style={styles.header}>
-        <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.invite.title' as TranslationKey)}
-        </Text>
-        <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.invite.description' as TranslationKey)}
-        </Text>
-      </View>
-
-      {/* Selected players strip */}
-      <SelectedPlayersStrip
-        players={selectedPlayers}
-        onRemove={handleRemovePlayer}
-        colors={colors}
-      />
-
-      {/* Search input */}
-      <View
-        style={[
-          styles.searchInputContainer,
-          { borderColor: colors.border, backgroundColor: colors.buttonInactive },
-        ]}
-      >
-        <Ionicons name="search-outline" size={20} color={colors.textMuted} />
-        <BottomSheetTextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder={t('matchCreation.invite.searchPlaceholder' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
+        <View style={styles.headerTextBlock}>
+          <Text size="lg" weight="bold" color={colors.text}>
+            {t('matchCreation.invite.title')}
+          </Text>
+          <Text size="sm" color={colors.textMuted}>
+            {t('matchCreation.invite.description')}
+          </Text>
+        </View>
+        {showCloseButton && (
           <TouchableOpacity
-            onPress={() => setSearchQuery('')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={handleClose}
+            style={styles.headerCloseButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Player list */}
-      <FlatList
-        data={players}
-        keyExtractor={item => item.id}
-        renderItem={renderPlayer}
-        ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.3}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={isDark ? '#FFFFFF' : colors.buttonActive}
-            colors={[isDark ? '#FFFFFF' : colors.buttonActive]}
-          />
-        }
-      />
-
-      {/* Footer with buttons */}
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        {/* Skip button */}
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip} disabled={isInviting}>
-          <Text size="base" color={colors.textSecondary}>
-            {t('matchCreation.invite.skip' as TranslationKey)}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Send invitations button */}
+      {/* Tab bar: Players | From lists */}
+      <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
         <TouchableOpacity
           style={[
-            styles.sendButton,
-            {
-              backgroundColor:
-                selectedPlayers.length > 0 ? colors.buttonActive : colors.buttonInactive,
-            },
+            styles.tab,
+            activeTab === 'players' && [
+              styles.activeTab,
+              { backgroundColor: colors.cardBackground },
+            ],
           ]}
-          onPress={handleSendInvitations}
-          disabled={selectedPlayers.length === 0 || isInviting}
-          activeOpacity={0.8}
+          onPress={() => handleTabChange('players')}
         >
-          {isInviting ? (
-            <ActivityIndicator size="small" color={colors.buttonTextActive} />
-          ) : (
-            <Text
-              size="base"
-              weight="semibold"
-              color={selectedPlayers.length > 0 ? colors.buttonTextActive : colors.textMuted}
-            >
-              {selectedPlayers.length > 0
-                ? t('matchCreation.invite.sendInvitations' as TranslationKey, {
-                    count: selectedPlayers.length,
-                  })
-                : t('matchCreation.invite.selectPlayers' as TranslationKey)}
-            </Text>
-          )}
+          <Ionicons
+            name="people-outline"
+            size={18}
+            color={activeTab === 'players' ? colors.buttonActive : colors.textMuted}
+          />
+          <Text
+            size="sm"
+            weight={activeTab === 'players' ? 'semibold' : 'medium'}
+            style={{
+              color: activeTab === 'players' ? colors.buttonActive : colors.textMuted,
+              marginLeft: 6,
+            }}
+          >
+            {t('matchCreation.invite.tabPlayers')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'lists' && [styles.activeTab, { backgroundColor: colors.cardBackground }],
+          ]}
+          onPress={() => handleTabChange('lists')}
+        >
+          <Ionicons
+            name="list-outline"
+            size={18}
+            color={activeTab === 'lists' ? colors.buttonActive : colors.textMuted}
+          />
+          <Text
+            size="sm"
+            weight={activeTab === 'lists' ? 'semibold' : 'medium'}
+            style={{
+              color: activeTab === 'lists' ? colors.buttonActive : colors.textMuted,
+              marginLeft: 6,
+            }}
+          >
+            {t('matchCreation.invite.tabFromLists')}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {activeTab === 'players' && (
+        <>
+          {/* Selected players strip */}
+          <SelectedPlayersStrip
+            players={selectedPlayers}
+            onRemove={handleRemovePlayer}
+            colors={colors}
+          />
+
+          {/* Search input */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('matchCreation.invite.searchPlaceholder')}
+            colors={colors}
+            style={styles.searchBarWrapper}
+          />
+
+          {/* Player list */}
+          <FlatList
+            data={players}
+            keyExtractor={item => item.id}
+            renderItem={renderPlayer}
+            ListEmptyComponent={renderEmptyState}
+            ListFooterComponent={renderFooter}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.3}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={isDark ? '#FFFFFF' : colors.buttonActive}
+                colors={[isDark ? '#FFFFFF' : colors.buttonActive]}
+              />
+            }
+          />
+
+          {/* Footer */}
+          <View style={[styles.footer, { borderTopColor: colors.border }]}>
+            {/* Send invitations button */}
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                {
+                  backgroundColor:
+                    selectedPlayers.length > 0 ? colors.buttonActive : colors.buttonInactive,
+                },
+              ]}
+              onPress={handleSendInvitations}
+              disabled={selectedPlayers.length === 0 || isInviting}
+              activeOpacity={0.8}
+            >
+              {isInviting ? (
+                <ActivityIndicator size="small" color={colors.buttonTextActive} />
+              ) : (
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color={selectedPlayers.length > 0 ? colors.buttonTextActive : colors.textMuted}
+                >
+                  {selectedPlayers.length > 0
+                    ? t('matchCreation.invite.sendInvitations', {
+                        count: selectedPlayers.length,
+                      })
+                    : t('matchCreation.invite.selectPlayers')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {activeTab === 'lists' && (
+        <InviteFromListsStep
+          matchId={matchId}
+          colors={listStepColors}
+          t={t}
+          isDark={isDark}
+          onShareSuccess={onComplete}
+        />
+      )}
     </View>
   );
 };
@@ -526,9 +632,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingTop: spacingPixels[4],
     paddingBottom: spacingPixels[3],
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  headerCloseButton: {
+    padding: spacingPixels[1],
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: spacingPixels[4],
+    marginBottom: spacingPixels[3],
+    borderRadius: radiusPixels.lg,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: radiusPixels.md,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   selectedStrip: {
     paddingVertical: spacingPixels[2],
@@ -565,20 +702,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchBarWrapper: {
     marginHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
-    padding: spacingPixels[3],
-    borderRadius: radiusPixels.lg,
-    borderWidth: 1,
-    gap: spacingPixels[2],
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: spacingPixels[1],
   },
   listContent: {
     paddingHorizontal: spacingPixels[4],
@@ -648,12 +774,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
     borderTopWidth: 1,
-    gap: spacingPixels[3],
-  },
-  skipButton: {
-    paddingVertical: spacingPixels[3],
-    paddingHorizontal: spacingPixels[4],
   },
   sendButton: {
     flex: 1,

@@ -5,7 +5,7 @@
  * Handles court cost, visibility, join mode, and notes.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   Linking,
   Keyboard,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { UseFormReturn } from 'react-hook-form';
@@ -190,11 +191,11 @@ const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
       <View style={styles.reservationAlertHeader}>
         <Ionicons name="calendar-outline" size={20} color={alertColor} />
         <Text size="base" weight="semibold" color={alertColor}>
-          {t('matchCreation.fields.reservationContactTitle' as TranslationKey)}
+          {t('matchCreation.fields.reservationContactTitle')}
         </Text>
       </View>
       <Text size="sm" color={alertTextColor} style={styles.reservationAlertDescription}>
-        {t('matchCreation.fields.reservationContactDescription' as TranslationKey)}
+        {t('matchCreation.fields.reservationContactDescription')}
       </Text>
       <View style={styles.reservationAlertActions}>
         {phone && (
@@ -205,7 +206,7 @@ const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
           >
             <Ionicons name="call-outline" size={16} color={colors.buttonTextActive} />
             <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.callFacility' as TranslationKey)}
+              {t('matchCreation.fields.callFacility')}
             </Text>
           </TouchableOpacity>
         )}
@@ -217,7 +218,7 @@ const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
           >
             <Ionicons name="mail-outline" size={16} color={colors.buttonTextActive} />
             <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.emailFacility' as TranslationKey)}
+              {t('matchCreation.fields.emailFacility')}
             </Text>
           </TouchableOpacity>
         )}
@@ -229,7 +230,7 @@ const ReservationContactAlert: React.FC<ReservationContactAlertProps> = ({
           >
             <Ionicons name="globe-outline" size={16} color={colors.buttonTextActive} />
             <Text size="sm" weight="semibold" color={colors.buttonTextActive}>
-              {t('matchCreation.fields.visitWebsite' as TranslationKey)}
+              {t('matchCreation.fields.visitWebsite')}
             </Text>
           </TouchableOpacity>
         )}
@@ -251,10 +252,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   sportId,
   userId,
 }) => {
-  const {
-    watch,
-    setValue,
-  } = form;
+  const { watch, setValue } = form;
 
   const format = watch('format');
   const playerExpectation = watch('playerExpectation');
@@ -262,6 +260,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   const costSplitType = watch('costSplitType');
   const estimatedCost = watch('estimatedCost');
   const visibility = watch('visibility');
+  const visibleInGroups = watch('visibleInGroups');
+  const visibleInCommunities = watch('visibleInCommunities');
   const joinMode = watch('joinMode');
   const preferredOpponentGender = watch('preferredOpponentGender');
   const minRatingScoreId = watch('minRatingScoreId');
@@ -300,6 +300,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scrollViewRef = useRef<any>(null);
   const notesFieldRef = useRef<View>(null);
+  const ratingScrollRef = useRef<ScrollView>(null);
+  const [ratingScrollViewWidth, setRatingScrollViewWidth] = useState(0);
 
   // Keyboard handling state for Android
   const [focusedField, setFocusedField] = useState<'cost' | 'notes' | null>(null);
@@ -360,6 +362,49 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
     }
   }, [hasLocationSpecified, courtStatus, setValue]);
 
+  // Track measured positions of rating items for accurate scroll centering
+  const ratingItemPositions = useRef<Map<number, { x: number; width: number }>>(new Map());
+  const [ratingLayoutsReady, setRatingLayoutsReady] = useState(false);
+
+  // Reset measured positions when ratings reload
+  useEffect(() => {
+    if (isLoadingRatings) {
+      ratingItemPositions.current.clear();
+      queueMicrotask(() => setRatingLayoutsReady(false));
+    }
+  }, [isLoadingRatings]);
+
+  const handleRatingItemLayout = useCallback(
+    (index: number, x: number, width: number) => {
+      ratingItemPositions.current.set(index, { x, width });
+      if (ratingItemPositions.current.size === ratingScores.length + 1) {
+        setRatingLayoutsReady(true);
+      }
+    },
+    [ratingScores.length]
+  );
+
+  // Center the minimum rating horizontal scroll on the pre-selected rating
+  useEffect(() => {
+    if (isLoadingRatings || !ratingLayoutsReady || ratingScrollViewWidth <= 0) return;
+
+    const selectedIndex = minRatingScoreId
+      ? 1 + ratingScores.findIndex(s => s.id === minRatingScoreId)
+      : 0;
+    const clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+
+    const layout = ratingItemPositions.current.get(clampedIndex);
+    if (!layout) return;
+
+    const itemCenterX = layout.x + layout.width / 2;
+    const scrollX = Math.max(0, itemCenterX - ratingScrollViewWidth / 2);
+
+    const id = setTimeout(() => {
+      ratingScrollRef.current?.scrollTo({ x: scrollX, animated: false });
+    }, 0);
+    return () => clearTimeout(id);
+  }, [isLoadingRatings, ratingLayoutsReady, ratingScores, minRatingScoreId, ratingScrollViewWidth]);
+
   return (
     <BottomSheetScrollView
       ref={scrollViewRef}
@@ -372,22 +417,22 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step3Title' as TranslationKey)}
+          {t('matchCreation.step3Title')}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step3Description' as TranslationKey)}
+          {t('matchCreation.step3Description')}
         </Text>
       </View>
 
       {/* Format options (Singles/Doubles) */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.format' as TranslationKey)}
+          {t('matchCreation.fields.format')}
         </Text>
         <View style={styles.formatRow}>
           <OptionCard
             icon="person-outline"
-            title={t('matchCreation.fields.formatSingles' as TranslationKey)}
+            title={t('matchCreation.fields.formatSingles')}
             selected={format === 'singles'}
             onPress={() =>
               setValue('format', 'singles', { shouldValidate: true, shouldDirty: true })
@@ -397,7 +442,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="people-outline"
-            title={t('matchCreation.fields.formatDoubles' as TranslationKey)}
+            title={t('matchCreation.fields.formatDoubles')}
             selected={format === 'doubles'}
             onPress={() =>
               setValue('format', 'doubles', { shouldValidate: true, shouldDirty: true })
@@ -411,15 +456,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {/* Player expectation options (Casual/Competitive/Both) */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.playerExpectation' as TranslationKey)}
+          {t('matchCreation.fields.playerExpectation')}
         </Text>
         <View style={styles.optionsColumn}>
           <OptionCard
             icon="cafe-outline"
-            title={t('matchCreation.fields.playerExpectationCasual' as TranslationKey)}
-            description={t(
-              'matchCreation.fields.playerExpectationCasualDescription' as TranslationKey
-            )}
+            title={t('matchCreation.fields.playerExpectationCasual')}
+            description={t('matchCreation.fields.playerExpectationCasualDescription')}
             selected={playerExpectation === 'casual'}
             onPress={() =>
               setValue('playerExpectation', 'casual', { shouldValidate: true, shouldDirty: true })
@@ -428,10 +471,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="trophy-outline"
-            title={t('matchCreation.fields.playerExpectationCompetitive' as TranslationKey)}
-            description={t(
-              'matchCreation.fields.playerExpectationCompetitiveDescription' as TranslationKey
-            )}
+            title={t('matchCreation.fields.playerExpectationCompetitive')}
+            description={t('matchCreation.fields.playerExpectationCompetitiveDescription')}
             selected={playerExpectation === 'competitive'}
             onPress={() =>
               setValue('playerExpectation', 'competitive', {
@@ -443,10 +484,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="hand-left-outline"
-            title={t('matchCreation.fields.playerExpectationBoth' as TranslationKey)}
-            description={t(
-              'matchCreation.fields.playerExpectationBothDescription' as TranslationKey
-            )}
+            title={t('matchCreation.fields.playerExpectationBoth')}
+            description={t('matchCreation.fields.playerExpectationBothDescription')}
             selected={playerExpectation === 'both'}
             onPress={() =>
               setValue('playerExpectation', 'both', { shouldValidate: true, shouldDirty: true })
@@ -472,13 +511,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {hasLocationSpecified && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.courtStatus' as TranslationKey)}
+            {t('matchCreation.fields.courtStatus')}
           </Text>
           <View style={styles.optionsColumn}>
             <OptionCard
               icon="calendar-outline"
-              title={t('matchCreation.fields.courtStatusToBook' as TranslationKey)}
-              description={t('matchCreation.fields.courtStatusToBookDescription' as TranslationKey)}
+              title={t('matchCreation.fields.courtStatusToBook')}
+              description={t('matchCreation.fields.courtStatusToBookDescription')}
               selected={courtStatus === 'to_book' || !courtStatus}
               onPress={() =>
                 setValue('courtStatus', 'to_book', { shouldValidate: true, shouldDirty: true })
@@ -487,8 +526,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             />
             <OptionCard
               icon="checkmark-circle-outline"
-              title={t('matchCreation.fields.courtStatusBooked' as TranslationKey)}
-              description={t('matchCreation.fields.courtStatusBookedDescription' as TranslationKey)}
+              title={t('matchCreation.fields.courtStatusBooked')}
+              description={t('matchCreation.fields.courtStatusBookedDescription')}
               selected={courtStatus === 'booked'}
               onPress={() =>
                 setValue('courtStatus', 'booked', { shouldValidate: true, shouldDirty: true })
@@ -505,12 +544,12 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           <View style={[styles.toggleRow, { borderColor: colors.border }]}>
             <View style={styles.toggleTextContainer}>
               <Text size="base" weight="semibold" color={colors.text}>
-                {t('matchCreation.fields.isCourtFree' as TranslationKey)}
+                {t('matchCreation.fields.isCourtFree')}
               </Text>
               <Text size="xs" color={colors.textMuted}>
                 {isCourtFree
-                  ? t('matchCreation.fields.isCourtFreeYes' as TranslationKey)
-                  : t('matchCreation.fields.isCourtFreeNo' as TranslationKey)}
+                  ? t('matchCreation.fields.isCourtFreeYes')
+                  : t('matchCreation.fields.isCourtFreeNo')}
               </Text>
             </View>
             <Switch
@@ -537,8 +576,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           <View style={styles.fieldGroup}>
             <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
               {costSplitType === 'equal'
-                ? t('matchCreation.fields.estimatedCostTotalEqual' as TranslationKey)
-                : t('matchCreation.fields.estimatedCostTotalCreator' as TranslationKey)}
+                ? t('matchCreation.fields.estimatedCostTotalEqual')
+                : t('matchCreation.fields.estimatedCostTotalCreator')}
             </Text>
             <View
               style={[
@@ -558,9 +597,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                     shouldDirty: true,
                   });
                 }}
-                placeholder={t(
-                  'matchCreation.fields.estimatedCostPlaceholderTotal' as TranslationKey
-                )}
+                placeholder={t('matchCreation.fields.estimatedCostPlaceholderTotal')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 onFocus={() => setFocusedField('cost')}
@@ -572,7 +609,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   const playerCount = format === 'doubles' ? 4 : 2;
                   const perPerson = Math.ceil(estimatedCost / playerCount);
                   return (
-                    t('matchCreation.fields.estimatedCostHelper' as TranslationKey, {
+                    t('matchCreation.fields.estimatedCostHelper', {
                       amount: perPerson,
                       count: playerCount,
                     }) || `Per person: ~$${perPerson} (estimated for ${playerCount} players)`
@@ -585,13 +622,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           {/* Cost split type */}
           <View style={styles.fieldGroup}>
             <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-              {t('matchCreation.fields.costSplitType' as TranslationKey)}
+              {t('matchCreation.fields.costSplitType')}
             </Text>
             <View style={styles.optionsColumn}>
               <OptionCard
                 icon="people-outline"
-                title={t('matchCreation.fields.costSplitEqual' as TranslationKey)}
-                description={t('matchCreation.fields.costSplitEqualDescription' as TranslationKey)}
+                title={t('matchCreation.fields.costSplitEqual')}
+                description={t('matchCreation.fields.costSplitEqualDescription')}
                 selected={costSplitType === 'equal'}
                 onPress={() =>
                   setValue('costSplitType', 'equal', { shouldValidate: true, shouldDirty: true })
@@ -600,10 +637,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
               />
               <OptionCard
                 icon="person-outline"
-                title={t('matchCreation.fields.costSplitCreator' as TranslationKey)}
-                description={t(
-                  'matchCreation.fields.costSplitCreatorDescription' as TranslationKey
-                )}
+                title={t('matchCreation.fields.costSplitCreator')}
+                description={t('matchCreation.fields.costSplitCreatorDescription')}
                 selected={costSplitType === 'creator_pays'}
                 onPress={() =>
                   setValue('costSplitType', 'creator_pays', {
@@ -621,13 +656,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {/* Visibility options */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.visibility' as TranslationKey)}
+          {t('matchCreation.fields.visibility')}
         </Text>
         <View style={styles.optionsColumn}>
           <OptionCard
             icon="globe-outline"
-            title={t('matchCreation.fields.visibilityPublic' as TranslationKey)}
-            description={t('matchCreation.fields.visibilityPublicDescription' as TranslationKey)}
+            title={t('matchCreation.fields.visibilityPublic')}
+            description={t('matchCreation.fields.visibilityPublicDescription')}
             selected={visibility === 'public'}
             onPress={() =>
               setValue('visibility', 'public', { shouldValidate: true, shouldDirty: true })
@@ -636,8 +671,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="lock-closed-outline"
-            title={t('matchCreation.fields.visibilityPrivate' as TranslationKey)}
-            description={t('matchCreation.fields.visibilityPrivateDescription' as TranslationKey)}
+            title={t('matchCreation.fields.visibilityPrivate')}
+            description={t('matchCreation.fields.visibilityPrivateDescription')}
             selected={visibility === 'private'}
             onPress={() =>
               setValue('visibility', 'private', { shouldValidate: true, shouldDirty: true })
@@ -647,16 +682,57 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
         </View>
       </View>
 
+      {/* Private visibility: visible in groups / communities (pre-checked) */}
+      {visibility === 'private' && (
+        <View style={[styles.fieldGroup, styles.privateVisibilityToggles]}>
+          <View style={[styles.privateVisibilityToggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="sm" weight="medium" color={colors.text}>
+                {t('matchCreation.fields.visibleInGroups')}
+              </Text>
+            </View>
+            <Switch
+              value={visibleInGroups ?? true}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('visibleInGroups', value, { shouldValidate: true, shouldDirty: true });
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
+          </View>
+          <View style={[styles.privateVisibilityToggleRow, { borderColor: colors.border }]}>
+            <View style={styles.toggleTextContainer}>
+              <Text size="sm" weight="medium" color={colors.text}>
+                {t('matchCreation.fields.visibleInCommunities')}
+              </Text>
+            </View>
+            <Switch
+              value={visibleInCommunities ?? true}
+              onValueChange={value => {
+                lightHaptic();
+                setValue('visibleInCommunities', value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
+              trackColor={{ false: colors.border, true: colors.buttonActive }}
+              thumbColor={colors.buttonTextActive}
+            />
+          </View>
+        </View>
+      )}
+
       {/* Join mode options */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.joinMode' as TranslationKey)}
+          {t('matchCreation.fields.joinMode')}
         </Text>
         <View style={styles.optionsColumn}>
           <OptionCard
             icon="flash-outline"
-            title={t('matchCreation.fields.joinModeDirect' as TranslationKey)}
-            description={t('matchCreation.fields.joinModeDirectDescription' as TranslationKey)}
+            title={t('matchCreation.fields.joinModeDirect')}
+            description={t('matchCreation.fields.joinModeDirectDescription')}
             selected={joinMode === 'direct'}
             onPress={() =>
               setValue('joinMode', 'direct', { shouldValidate: true, shouldDirty: true })
@@ -665,8 +741,8 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="hand-right-outline"
-            title={t('matchCreation.fields.joinModeRequest' as TranslationKey)}
-            description={t('matchCreation.fields.joinModeRequestDescription' as TranslationKey)}
+            title={t('matchCreation.fields.joinModeRequest')}
+            description={t('matchCreation.fields.joinModeRequestDescription')}
             selected={joinMode === 'request'}
             onPress={() =>
               setValue('joinMode', 'request', { shouldValidate: true, shouldDirty: true })
@@ -679,22 +755,22 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {/* Opponent Preferences Section Header */}
       <View style={styles.sectionHeader}>
         <Text size="base" weight="bold" color={colors.text}>
-          {t('matchCreation.fields.opponentPreferences' as TranslationKey)}
+          {t('matchCreation.fields.opponentPreferences')}
         </Text>
         <Text size="xs" color={colors.textMuted}>
-          {t('matchCreation.fields.opponentPreferencesDescription' as TranslationKey)}
+          {t('matchCreation.fields.opponentPreferencesDescription')}
         </Text>
       </View>
 
       {/* Preferred opponent gender */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.preferredGender' as TranslationKey)}
+          {t('matchCreation.fields.preferredGender')}
         </Text>
         <View style={styles.optionsRow}>
           <OptionCard
             icon="people-outline"
-            title={t('matchCreation.fields.genderAny' as TranslationKey)}
+            title={t('matchCreation.fields.genderAny')}
             selected={preferredOpponentGender === 'any' || !preferredOpponentGender}
             onPress={() =>
               setValue('preferredOpponentGender', 'any', {
@@ -707,7 +783,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="man-outline"
-            title={t('matchCreation.fields.genderMale' as TranslationKey)}
+            title={t('matchCreation.fields.genderMale')}
             selected={preferredOpponentGender === 'male'}
             onPress={() =>
               setValue('preferredOpponentGender', 'male', {
@@ -720,7 +796,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           />
           <OptionCard
             icon="woman-outline"
-            title={t('matchCreation.fields.genderFemale' as TranslationKey)}
+            title={t('matchCreation.fields.genderFemale')}
             selected={preferredOpponentGender === 'female'}
             onPress={() =>
               setValue('preferredOpponentGender', 'female', {
@@ -738,10 +814,10 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {hasRatingSystem && (
         <View style={styles.fieldGroup}>
           <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-            {t('matchCreation.fields.minRatingScore' as TranslationKey)}
+            {t('matchCreation.fields.minRatingScore')}
           </Text>
           <Text size="xs" color={colors.textMuted} style={styles.fieldDescription}>
-            {t('matchCreation.fields.minRatingScoreDescription' as TranslationKey)}
+            {t('matchCreation.fields.minRatingScoreDescription')}
           </Text>
           {isLoadingRatings ? (
             <View style={styles.loadingContainer}>
@@ -749,10 +825,12 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
             </View>
           ) : (
             <GestureScrollView
+              ref={ratingScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.ratingScrollContent}
               nestedScrollEnabled
+              onLayout={e => setRatingScrollViewWidth(e.nativeEvent.layout.width)}
             >
               {/* No minimum option */}
               <TouchableOpacity
@@ -765,6 +843,9 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                     borderColor: !minRatingScoreId ? colors.buttonActive : colors.border,
                   },
                 ]}
+                onLayout={e =>
+                  handleRatingItemLayout(0, e.nativeEvent.layout.x, e.nativeEvent.layout.width)
+                }
                 onPress={() => {
                   lightHaptic();
                   setValue('minRatingScoreId', undefined, {
@@ -778,12 +859,12 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                   weight={!minRatingScoreId ? 'bold' : 'regular'}
                   color={!minRatingScoreId ? colors.buttonActive : colors.text}
                 >
-                  {t('matchCreation.fields.noMinimum' as TranslationKey)}
+                  {t('matchCreation.fields.noMinimum')}
                 </Text>
               </TouchableOpacity>
 
               {/* Rating score options */}
-              {ratingScores.map(score => {
+              {ratingScores.map((score, index) => {
                 const isSelected = minRatingScoreId === score.id;
                 const isPlayerRating = score.id === playerRatingScoreId;
                 return (
@@ -798,6 +879,13 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                         borderColor: isSelected ? colors.buttonActive : colors.border,
                       },
                     ]}
+                    onLayout={e =>
+                      handleRatingItemLayout(
+                        index + 1,
+                        e.nativeEvent.layout.x,
+                        e.nativeEvent.layout.width
+                      )
+                    }
                     onPress={() => {
                       lightHaptic();
                       setValue('minRatingScoreId', score.id, {
@@ -816,7 +904,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                           },
                         ]}
                       >
-                        <Ionicons name="person" size={10} color={colors.buttonTextActive} />
+                        <Ionicons name="person-outline" size={10} color={colors.buttonTextActive} />
                       </View>
                     )}
                     <Text
@@ -832,9 +920,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
                         color={isSelected ? colors.buttonActive : colors.textMuted}
                         style={styles.ratingSkillLevel}
                       >
-                        {t(
-                          `matchCreation.fields.skillLevelAbbr.${score.skillLevel}` as TranslationKey
-                        )}
+                        {t(`matchCreation.fields.skillLevelAbbr.${score.skillLevel}`)}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -848,7 +934,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
       {/* Notes */}
       <View ref={notesFieldRef} style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.notes' as TranslationKey)}
+          {t('matchCreation.fields.notes')}
         </Text>
         <BottomSheetTextInput
           style={[
@@ -861,7 +947,7 @@ export const PreferencesStep: React.FC<PreferencesStepProps> = ({
           ]}
           value={notes ?? ''}
           onChangeText={text => setValue('notes', text, { shouldDirty: true })}
-          placeholder={t('matchCreation.fields.notesPlaceholder' as TranslationKey)}
+          placeholder={t('matchCreation.fields.notesPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={4}
@@ -904,6 +990,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacingPixels[4],
     borderRadius: radiusPixels.lg,
+    borderWidth: 1,
+  },
+  privateVisibilityToggles: {
+    gap: spacingPixels[2],
+  },
+  privateVisibilityToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[3],
+    borderRadius: radiusPixels.md,
     borderWidth: 1,
   },
   toggleTextContainer: {

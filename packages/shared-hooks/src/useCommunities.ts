@@ -57,11 +57,16 @@ export const communityKeys = {
   details: () => [...communityKeys.all, 'detail'] as const,
   detail: (communityId: string) => [...communityKeys.details(), communityId] as const,
   withMembers: (communityId: string) => [...communityKeys.detail(communityId), 'members'] as const,
-  isModerator: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'moderator', playerId] as const,
-  isMember: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'member', playerId] as const,
-  membershipStatus: (communityId: string, playerId: string) => [...communityKeys.detail(communityId), 'status', playerId] as const,
-  access: (communityId: string, playerId?: string) => [...communityKeys.detail(communityId), 'access', playerId] as const,
-  pendingRequests: (communityId: string) => [...communityKeys.detail(communityId), 'pending'] as const,
+  isModerator: (communityId: string, playerId: string) =>
+    [...communityKeys.detail(communityId), 'moderator', playerId] as const,
+  isMember: (communityId: string, playerId: string) =>
+    [...communityKeys.detail(communityId), 'member', playerId] as const,
+  membershipStatus: (communityId: string, playerId: string) =>
+    [...communityKeys.detail(communityId), 'status', playerId] as const,
+  access: (communityId: string, playerId?: string) =>
+    [...communityKeys.detail(communityId), 'access', playerId] as const,
+  pendingRequests: (communityId: string) =>
+    [...communityKeys.detail(communityId), 'pending'] as const,
 };
 
 // =============================================================================
@@ -114,7 +119,10 @@ export function useCommunityWithMembers(communityId: string | undefined) {
 /**
  * Check if a player is a community moderator
  */
-export function useIsCommunityModerator(communityId: string | undefined, playerId: string | undefined) {
+export function useIsCommunityModerator(
+  communityId: string | undefined,
+  playerId: string | undefined
+) {
   return useQuery({
     queryKey: communityKeys.isModerator(communityId || '', playerId || ''),
     queryFn: () => isCommunityModerator(communityId!, playerId!),
@@ -125,7 +133,10 @@ export function useIsCommunityModerator(communityId: string | undefined, playerI
 /**
  * Check if a player is a community member
  */
-export function useIsCommunityMember(communityId: string | undefined, playerId: string | undefined) {
+export function useIsCommunityMember(
+  communityId: string | undefined,
+  playerId: string | undefined
+) {
   return useQuery({
     queryKey: communityKeys.isMember(communityId || '', playerId || ''),
     queryFn: () => isCommunityMember(communityId!, playerId!),
@@ -136,7 +147,10 @@ export function useIsCommunityMember(communityId: string | undefined, playerId: 
 /**
  * Get a player's membership status in a community
  */
-export function useCommunityMembershipStatus(communityId: string | undefined, playerId: string | undefined) {
+export function useCommunityMembershipStatus(
+  communityId: string | undefined,
+  playerId: string | undefined
+) {
   return useQuery({
     queryKey: communityKeys.membershipStatus(communityId || '', playerId || ''),
     queryFn: () => getCommunityMembershipStatus(communityId!, playerId!),
@@ -159,7 +173,10 @@ export function useCommunityAccess(communityId: string | undefined, playerId: st
 /**
  * Get pending membership requests for a community (moderators only)
  */
-export function usePendingCommunityMembers(communityId: string | undefined, moderatorId: string | undefined) {
+export function usePendingCommunityMembers(
+  communityId: string | undefined,
+  moderatorId: string | undefined
+) {
   return useQuery({
     queryKey: communityKeys.pendingRequests(communityId || ''),
     queryFn: () => getPendingCommunityMembers(communityId!, moderatorId!),
@@ -181,7 +198,9 @@ export function useCreateCommunity() {
     mutationFn: ({ playerId, input }: { playerId: string; input: CreateCommunityInput }) =>
       createCommunity(playerId, input),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.playerCommunities(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.playerCommunities(variables.playerId),
+      });
       queryClient.invalidateQueries({ queryKey: communityKeys.publicCommunities() });
     },
   });
@@ -220,7 +239,9 @@ export function useDeleteCommunity() {
     mutationFn: ({ communityId, playerId }: { communityId: string; playerId: string }) =>
       deleteCommunity(communityId, playerId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.playerCommunities(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.playerCommunities(variables.playerId),
+      });
       queryClient.invalidateQueries({ queryKey: communityKeys.publicCommunities() });
     },
   });
@@ -236,8 +257,12 @@ export function useRequestToJoinCommunity() {
     mutationFn: ({ communityId, playerId }: { communityId: string; playerId: string }) =>
       requestToJoinCommunity(communityId, playerId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.membershipStatus(variables.communityId, variables.playerId) });
-      queryClient.invalidateQueries({ queryKey: communityKeys.publicCommunities(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.membershipStatus(variables.communityId, variables.playerId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.publicCommunities(variables.playerId),
+      });
     },
   });
 }
@@ -253,9 +278,15 @@ export function useRequestToJoinCommunityByInviteCode() {
       requestToJoinCommunityByInviteCode(inviteCode, playerId),
     onSuccess: (result, variables) => {
       if (result.success && result.communityId) {
-        queryClient.invalidateQueries({ queryKey: communityKeys.membershipStatus(result.communityId, variables.playerId) });
-        queryClient.invalidateQueries({ queryKey: communityKeys.publicCommunities(variables.playerId) });
-        queryClient.invalidateQueries({ queryKey: communityKeys.playerCommunities(variables.playerId) });
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.membershipStatus(result.communityId, variables.playerId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.publicCommunities(variables.playerId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: communityKeys.playerCommunities(variables.playerId),
+        });
       }
     },
   });
@@ -278,7 +309,9 @@ export function useReferPlayerToCommunity() {
       referrerId: string;
     }) => referPlayerToCommunity(communityId, referredPlayerId, referrerId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.pendingRequests(variables.communityId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.pendingRequests(variables.communityId),
+      });
     },
     onError: (error, variables) => {
       console.error('[useReferPlayerToCommunity] Error referring player:', {
@@ -308,7 +341,9 @@ export function useApproveCommunityMember() {
       approverId: string;
     }) => approveCommunityMember(communityId, memberId, approverId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.pendingRequests(variables.communityId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.pendingRequests(variables.communityId),
+      });
       queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
       queryClient.invalidateQueries({ queryKey: communityKeys.detail(variables.communityId) });
     },
@@ -332,7 +367,9 @@ export function useRejectCommunityMember() {
       rejectorId: string;
     }) => rejectCommunityMember(communityId, memberId, rejectorId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.pendingRequests(variables.communityId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.pendingRequests(variables.communityId),
+      });
     },
   });
 }
@@ -347,9 +384,13 @@ export function useLeaveCommunity() {
     mutationFn: ({ communityId, playerId }: { communityId: string; playerId: string }) =>
       leaveCommunity(communityId, playerId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.playerCommunities(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.playerCommunities(variables.playerId),
+      });
       queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
-      queryClient.invalidateQueries({ queryKey: communityKeys.publicCommunities(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.publicCommunities(variables.playerId),
+      });
     },
   });
 }
@@ -377,7 +418,9 @@ export function useAddCommunityMember() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: communityKeys.withMembers(variables.communityId) });
       queryClient.invalidateQueries({ queryKey: communityKeys.detail(variables.communityId) });
-      queryClient.invalidateQueries({ queryKey: communityKeys.pendingRequests(variables.communityId) });
+      queryClient.invalidateQueries({
+        queryKey: communityKeys.pendingRequests(variables.communityId),
+      });
     },
     onError: (error, variables) => {
       console.error('[useAddCommunityMember] Error adding member:', {

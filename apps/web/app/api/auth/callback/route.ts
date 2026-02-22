@@ -9,13 +9,19 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type') as EmailOtpType | null;
   const code = searchParams.get('code');
   const redirectParam = searchParams.get('redirect');
+  const invitationToken = searchParams.get('invitation_token')?.trim() || null;
 
   const supabase = await createClient();
 
   // Determine redirect paths based on redirect parameter
   const isAdminFlow = redirectParam === 'admin';
   const signInPath = isAdminFlow ? '/admin/sign-in' : '/sign-in';
-  const postAuthPath = isAdminFlow ? '/admin/sign-in/post-auth' : '/sign-in/post-auth';
+
+  // Build post-auth path with invitation token if present and non-empty
+  let postAuthPath = isAdminFlow ? '/admin/sign-in/post-auth' : '/sign-in/post-auth';
+  if (invitationToken && invitationToken.length > 0) {
+    postAuthPath += `?token=${encodeURIComponent(invitationToken)}`;
+  }
 
   // Handle OAuth callback (Google/Microsoft)
   if (code) {

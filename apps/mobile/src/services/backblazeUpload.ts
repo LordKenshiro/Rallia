@@ -1,23 +1,23 @@
 /**
  * Backblaze B2 Video Upload Service
- * 
- * Handles video uploads to Backblaze B2 Cloud Storage for cost-effective 
+ *
+ * Handles video uploads to Backblaze B2 Cloud Storage for cost-effective
  * storage of large video files (rating proof videos).
- * 
+ *
  * SETUP REQUIREMENTS (TODOs):
  * ===========================
- * 
+ *
  * 1. Create a Backblaze B2 Account:
  *    - Go to https://www.backblaze.com/b2/cloud-storage.html
  *    - Sign up for an account (10GB free storage included)
- * 
+ *
  * 2. Create a B2 Bucket:
  *    - In the B2 Console, go to "Buckets" and click "Create a Bucket"
  *    - Bucket Name: "rallia-videos" (or your preferred name)
  *    - Bucket Type: "Public" (for video playback) or "Private" with signed URLs
  *    - Enable encryption if required
  *    - Note the bucket ID for configuration
- * 
+ *
  * 3. Create Application Keys:
  *    - Go to "App Keys" in B2 Console
  *    - Click "Add a New Application Key"
@@ -25,7 +25,7 @@
  *    - Bucket access: Select your bucket or "All"
  *    - Type of access: "Read and Write"
  *    - IMPORTANT: Copy the keyID and applicationKey immediately (shown only once)
- * 
+ *
  * 4. Configure CORS for Direct Uploads:
  *    - Go to your bucket settings
  *    - Add CORS rules to allow uploads from mobile devices:
@@ -38,20 +38,20 @@
  *        "maxAgeSeconds": 3600
  *      }
  *    ]
- * 
+ *
  * 5. Set Environment Variables:
  *    Add these to your .env file:
  *    - EXPO_PUBLIC_BACKBLAZE_KEY_ID=your_key_id
  *    - EXPO_PUBLIC_BACKBLAZE_APP_KEY=your_application_key
  *    - EXPO_PUBLIC_BACKBLAZE_BUCKET_ID=your_bucket_id
  *    - EXPO_PUBLIC_BACKBLAZE_BUCKET_NAME=rallia-videos
- * 
+ *
  * 6. (Optional) Set up Lifecycle Rules:
  *    - Configure auto-deletion of incomplete uploads after 24 hours
  *    - Set up video retention policies if needed
- * 
+ *
  * 7. (Optional) Configure CDN/Cloudflare:
- *    - For better video delivery performance, consider using Cloudflare 
+ *    - For better video delivery performance, consider using Cloudflare
  *      as a CDN in front of Backblaze B2 (free bandwidth alliance)
  */
 
@@ -144,11 +144,11 @@ async function authenticateB2(): Promise<BackblazeAuthResponse> {
 
   try {
     const credentials = Buffer.from(`${BACKBLAZE_KEY_ID}:${BACKBLAZE_APP_KEY}`).toString('base64');
-    
+
     const response = await fetch(BACKBLAZE_AUTH_URL, {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${credentials}`,
+        Authorization: `Basic ${credentials}`,
       },
     });
 
@@ -161,22 +161,22 @@ async function authenticateB2(): Promise<BackblazeAuthResponse> {
     }
 
     const data = await response.json();
-    
+
     cachedAuth = {
       authorizationToken: data.authorizationToken,
       apiUrl: data.apiUrl,
       downloadUrl: data.downloadUrl,
       allowed: data.allowed,
     };
-    
+
     // Set expiry to 12 hours from now (token is valid for 24 hours)
-    authExpiresAt = Date.now() + (12 * 60 * 60 * 1000);
-    
+    authExpiresAt = Date.now() + 12 * 60 * 60 * 1000;
+
     Logger.debug('Backblaze B2 authenticated successfully', {
       apiUrl: cachedAuth.apiUrl,
       bucketName: data.allowed?.bucketName,
     });
-    
+
     return cachedAuth;
   } catch (error) {
     Logger.error('Backblaze B2 authentication error', error as Error);
@@ -189,11 +189,11 @@ async function authenticateB2(): Promise<BackblazeAuthResponse> {
  */
 async function getUploadUrl(): Promise<BackblazeUploadUrlResponse> {
   const auth = await authenticateB2();
-  
+
   const response = await fetch(`${auth.apiUrl}/b2api/v2/b2_get_upload_url`, {
     method: 'POST',
     headers: {
-      'Authorization': auth.authorizationToken,
+      Authorization: auth.authorizationToken,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -217,7 +217,7 @@ function generateFileName(userId: string, originalName: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
   const ext = originalName.split('.').pop()?.toLowerCase() || 'mp4';
-  
+
   // Organize by userId for easy management
   return `rating-proofs/${userId}/${timestamp}-${random}.${ext}`;
 }
@@ -228,20 +228,20 @@ function generateFileName(userId: string, originalName: string): string {
 function getContentType(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase();
   const mimeTypes: Record<string, string> = {
-    'mp4': 'video/mp4',
-    'mov': 'video/quicktime',
-    'avi': 'video/x-msvideo',
-    'webm': 'video/webm',
-    'mkv': 'video/x-matroska',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    webm: 'video/webm',
+    mkv: 'video/x-matroska',
     '3gp': 'video/3gpp',
-    'm4v': 'video/x-m4v',
+    m4v: 'video/x-m4v',
   };
   return mimeTypes[ext || ''] || 'video/mp4';
 }
 
 /**
  * Upload video to Backblaze B2
- * 
+ *
  * @param videoUri - Local file URI from video picker/recorder
  * @param userId - User ID for organizing files
  * @param originalName - Original filename for extension detection
@@ -252,7 +252,7 @@ export async function uploadVideoToBackblaze(
   videoUri: string,
   userId: string,
   originalName: string = 'video.mp4',
-  onProgress?: (progress: BackblazeUploadProgress) => void,
+  onProgress?: (progress: BackblazeUploadProgress) => void
 ): Promise<BackblazeUploadResult> {
   if (!isBackblazeConfigured()) {
     Logger.warn('Backblaze B2 not configured, cannot upload video');
@@ -303,7 +303,7 @@ export async function uploadVideoToBackblaze(
     const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
       method: 'POST',
       headers: {
-        'Authorization': uploadUrlData.authorizationToken,
+        Authorization: uploadUrlData.authorizationToken,
         'X-Bz-File-Name': encodeURIComponent(fileName),
         'Content-Type': contentType,
         'Content-Length': fileSize.toString(),
@@ -367,17 +367,14 @@ export async function uploadVideoToBackblaze(
 /**
  * Delete video from Backblaze B2
  */
-export async function deleteVideoFromBackblaze(
-  fileId: string,
-  fileName: string,
-): Promise<boolean> {
+export async function deleteVideoFromBackblaze(fileId: string, fileName: string): Promise<boolean> {
   try {
     const auth = await authenticateB2();
 
     const response = await fetch(`${auth.apiUrl}/b2api/v2/b2_delete_file_version`, {
       method: 'POST',
       headers: {
-        'Authorization': auth.authorizationToken,
+        Authorization: auth.authorizationToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -425,10 +422,10 @@ async function calculateSHA1(buffer: ArrayBuffer): Promise<string> {
 }
 
 /**
- * Get video thumbnail URL (Backblaze doesn't auto-generate, 
+ * Get video thumbnail URL (Backblaze doesn't auto-generate,
  * this is a placeholder for future implementation)
  */
-export function getVideoThumbnailUrl(videoUrl: string): string | null {
+export function getVideoThumbnailUrl(_videoUrl: string): string | null {
   // TODO: Implement video thumbnail generation
   // Options:
   // 1. Use a Supabase Edge Function to generate thumbnails

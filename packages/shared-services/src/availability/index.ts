@@ -27,4 +27,14 @@ export {
   fetchTodayAvailability,
   filterFutureSlots,
   getNextSlots,
+  // Unified availability (local-first)
+  fetchUnifiedAvailability,
+  type UnifiedAvailabilityParams,
 } from './availabilityService';
+
+// Local availability fetcher
+export {
+  hasLocalTemplates,
+  fetchLocalAvailability,
+  clearLocalTemplatesCache,
+} from './localAvailabilityFetcher';

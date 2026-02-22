@@ -40,16 +40,21 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation();
-  
+
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+      style={[
+        styles.container,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       {/* Icon */}
-      <View style={[styles.iconContainer, { backgroundColor: isDark ? primary[900] : primary[50] }]}>
-        <Ionicons name="people" size={24} color={primary[500]} />
+      <View
+        style={[styles.iconContainer, { backgroundColor: isDark ? primary[900] : primary[50] }]}
+      >
+        <Ionicons name="people-outline" size={24} color={primary[500]} />
       </View>
 
       {/* Content */}
@@ -63,10 +68,13 @@ const SharedListCard: React.FC<SharedListCardProps> = ({
           </Text>
         ) : null}
         <Text size="xs" color={colors.textMuted} style={styles.contactCount}>
-          {list.contact_count === 1 
-            ? t('sharedLists.contacts.contactCountSingular' as TranslationKey, { count: list.contact_count })
-            : t('sharedLists.contacts.contactCount' as TranslationKey, { count: list.contact_count })
-          }
+          {list.contact_count === 1
+            ? t('sharedLists.contacts.contactCountSingular', {
+                count: list.contact_count,
+              })
+            : t('sharedLists.contacts.contactCount', {
+                count: list.contact_count,
+              })}
         </Text>
       </View>
 

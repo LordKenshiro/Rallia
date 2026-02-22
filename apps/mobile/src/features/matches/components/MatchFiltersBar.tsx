@@ -1,25 +1,35 @@
 /**
  * MatchFiltersBar Component
  * A horizontally scrollable row of filter chips for match filtering.
+ * Uses compact dropdown-based filters similar to PlayerFiltersBar.
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
-import { Text } from '@rallia/shared-components';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Animated,
+  Platform,
+} from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Text, LocationSelector, type LocationMode } from '@rallia/shared-components';
 import { useTheme, DISTANCE_OPTIONS } from '@rallia/shared-hooks';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { spacingPixels, radiusPixels, primary, neutral, secondary } from '@rallia/design-system';
+import {
+  spacingPixels,
+  radiusPixels,
+  primary,
+  neutral,
+  secondary,
+  duration as animDuration,
+  lightTheme,
+  darkTheme,
+} from '@rallia/design-system';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  FadeIn,
-  FadeOut,
-  Layout,
-} from 'react-native-reanimated';
 import { selectionHaptic, lightHaptic } from '../../../utils/haptics';
 import type {
   FormatFilter,
@@ -31,187 +41,300 @@ import type {
   CostFilter,
   JoinModeFilter,
   DistanceFilter,
+  DurationFilter,
+  CourtStatusFilter,
+  SpecificDateFilter,
 } from '@rallia/shared-hooks';
 
-// Animated pressable for scale effect
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// =============================================================================
+// TYPES & OPTIONS
+// =============================================================================
 
 interface MatchFiltersBarProps {
-  /** Current format filter */
   format: FormatFilter;
-  /** Current match type filter */
   matchType: MatchTypeFilter;
-  /** Current date range filter */
   dateRange: DateRangeFilter;
-  /** Current time of day filter */
   timeOfDay: TimeOfDayFilter;
-  /** Current skill level filter */
   skillLevel: SkillLevelFilter;
-  /** Current gender filter */
   gender: GenderFilter;
-  /** Current cost filter */
   cost: CostFilter;
-  /** Current join mode filter */
   joinMode: JoinModeFilter;
-  /** Current distance filter */
   distance: DistanceFilter;
-  /** Called when format changes */
+  duration: DurationFilter;
+  courtStatus: CourtStatusFilter;
+  specificDate: SpecificDateFilter;
   onFormatChange: (format: FormatFilter) => void;
-  /** Called when match type changes */
   onMatchTypeChange: (matchType: MatchTypeFilter) => void;
-  /** Called when date range changes */
   onDateRangeChange: (dateRange: DateRangeFilter) => void;
-  /** Called when time of day changes */
   onTimeOfDayChange: (timeOfDay: TimeOfDayFilter) => void;
-  /** Called when skill level changes */
   onSkillLevelChange: (skillLevel: SkillLevelFilter) => void;
-  /** Called when gender changes */
   onGenderChange: (gender: GenderFilter) => void;
-  /** Called when cost changes */
   onCostChange: (cost: CostFilter) => void;
-  /** Called when join mode changes */
   onJoinModeChange: (joinMode: JoinModeFilter) => void;
-  /** Called when distance changes */
   onDistanceChange: (distance: DistanceFilter) => void;
-  /** Called when reset button is pressed */
+  onDurationChange: (duration: DurationFilter) => void;
+  onCourtStatusChange: (courtStatus: CourtStatusFilter) => void;
+  onSpecificDateChange: (specificDate: SpecificDateFilter) => void;
   onReset?: () => void;
-  /** Whether any filter is active */
   hasActiveFilters?: boolean;
+  showLocationSelector?: boolean;
+  locationMode?: LocationMode;
+  onLocationModeChange?: (mode: LocationMode) => void;
+  hasHomeLocation?: boolean;
+  homeLocationLabel?: string;
 }
 
 // Filter option definitions
 const FORMAT_OPTIONS: FormatFilter[] = ['all', 'singles', 'doubles'];
 const MATCH_TYPE_OPTIONS: MatchTypeFilter[] = ['all', 'casual', 'competitive'];
-const DATE_RANGE_OPTIONS: DateRangeFilter[] = ['all', 'today', 'week', 'weekend'];
 const TIME_OF_DAY_OPTIONS: TimeOfDayFilter[] = ['all', 'morning', 'afternoon', 'evening'];
 const SKILL_LEVEL_OPTIONS: SkillLevelFilter[] = ['all', 'beginner', 'intermediate', 'advanced'];
 const GENDER_OPTIONS: GenderFilter[] = ['all', 'male', 'female'];
 const COST_OPTIONS: CostFilter[] = ['all', 'free', 'paid'];
 const JOIN_MODE_OPTIONS: JoinModeFilter[] = ['all', 'direct', 'request'];
+const DURATION_OPTIONS_LIST: DurationFilter[] = ['all', '30', '60', '90', '120+'];
+const COURT_STATUS_OPTIONS: CourtStatusFilter[] = ['all', 'reserved', 'to_reserve'];
 
-// Icon mappings for specific filters
-const TIME_OF_DAY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  morning: 'sunny-outline',
-  afternoon: 'partly-sunny-outline',
-  evening: 'moon-outline',
-};
-
-const COST_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  free: 'checkmark-circle-outline',
-  paid: 'cash-outline',
-};
+// =============================================================================
+// FILTER CHIP COMPONENT
+// =============================================================================
 
 interface FilterChipProps {
-  label: string;
+  value: string;
   isActive: boolean;
   onPress: () => void;
   isDark: boolean;
+  hasDropdown?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
-  accessibilityLabel?: string;
 }
 
 function FilterChip({
-  label,
+  value,
   isActive,
   onPress,
   isDark,
+  hasDropdown = true,
   icon,
-  accessibilityLabel,
 }: FilterChipProps) {
-  const scale = useSharedValue(1);
-  const activeBackground = isDark ? primary[600] : primary[500];
-  const inactiveBackground = isDark ? neutral[800] : neutral[100];
-  const activeBorder = isDark ? primary[500] : primary[400];
-  const inactiveBorder = isDark ? neutral[700] : neutral[200];
+  const scaleAnim = useMemo(() => new Animated.Value(1), []);
+
+  const bgColor = isActive ? primary[500] : isDark ? neutral[800] : neutral[100];
+  const borderColor = isActive ? primary[400] : isDark ? neutral[700] : neutral[200];
   const textColor = isActive ? '#ffffff' : isDark ? neutral[300] : neutral[600];
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 400 });
-    selectionHaptic(); // Immediate haptic feedback on touch
-  }, [scale]);
-
-  const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  }, [scale]);
-
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
+    lightHaptic();
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
     onPress();
-  }, [onPress]);
+  };
 
   return (
-    <AnimatedPressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: isActive ? activeBackground : inactiveBackground,
-          borderColor: isActive ? activeBorder : inactiveBorder,
-        },
-        animatedStyle,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || label}
-      accessibilityState={{ selected: isActive }}
-    >
-      {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
-      <Text size="sm" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
-        {label}
-      </Text>
-    </AnimatedPressable>
-  );
-}
-
-interface FilterGroupProps {
-  title?: string;
-  children: React.ReactNode;
-  isDark: boolean;
-  /** Whether this filter group has a non-default selection */
-  hasActiveSelection?: boolean;
-}
-
-function FilterGroup({ title, children, isDark, hasActiveSelection = false }: FilterGroupProps) {
-  return (
-    <Animated.View style={styles.filterGroup} layout={Layout.springify()}>
-      <View style={styles.filterGroupTitleContainer}>
-        <Text
-          size="xs"
-          weight="medium"
-          color={
-            hasActiveSelection
-              ? isDark
-                ? primary[400]
-                : primary[600]
-              : isDark
-                ? neutral[500]
-                : neutral[500]
-          }
-          style={styles.filterGroupTitle}
-        >
-          {title || '\u00A0'}
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.chip,
+          {
+            backgroundColor: bgColor,
+            borderColor: borderColor,
+          },
+        ]}
+        onPress={handlePress}
+        activeOpacity={0.85}
+      >
+        {icon && <Ionicons name={icon} size={14} color={textColor} style={styles.chipIcon} />}
+        <Text size="xs" weight={isActive ? 'semibold' : 'medium'} color={textColor}>
+          {value}
         </Text>
-        {hasActiveSelection && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(150)}
-            style={[
-              styles.activeIndicator,
-              { backgroundColor: isDark ? primary[400] : primary[500] },
-            ]}
-          />
+        {hasDropdown && (
+          <Ionicons name="chevron-down" size={12} color={textColor} style={styles.chipChevron} />
         )}
-      </View>
-      <View style={styles.filterGroupChips}>{children}</View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
-export function MatchFiltersBar({
+// =============================================================================
+// FILTER DROPDOWN MODAL COMPONENT
+// =============================================================================
+
+interface FilterDropdownProps<T extends string | number> {
+  visible: boolean;
+  title: string;
+  options: T[];
+  selectedValue: T;
+  onSelect: (value: T) => void;
+  onClose: () => void;
+  isDark: boolean;
+  getLabel: (value: T) => string;
+  getIcon?: (value: T) => keyof typeof Ionicons.glyphMap | undefined;
+}
+
+function FilterDropdown<T extends string | number>({
+  visible,
+  title,
+  options,
+  selectedValue,
+  onSelect,
+  onClose,
+  isDark,
+  getLabel,
+  getIcon,
+}: FilterDropdownProps<T>) {
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);
+
+  const themeColors = isDark ? darkTheme : lightTheme;
+  const colors = {
+    dropdownBg: themeColors.card,
+    dropdownBorder: themeColors.border,
+    itemText: themeColors.foreground,
+    itemTextSelected: primary[500],
+    itemBg: 'transparent',
+    itemBgSelected: isDark ? `${primary[500]}20` : `${primary[500]}10`,
+    itemBorder: themeColors.border,
+    overlayBg: 'rgba(0, 0, 0, 0.5)',
+    checkmark: primary[500],
+  };
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: animDuration.fast,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 8,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.9);
+    }
+  }, [visible, fadeAnim, scaleAnim]);
+
+  const handleSelect = (value: T) => {
+    selectionHaptic();
+    onSelect(value);
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <Animated.View
+          style={[
+            styles.overlayBackground,
+            {
+              opacity: fadeAnim,
+              backgroundColor: colors.overlayBg,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.dropdownContainer,
+            {
+              backgroundColor: colors.dropdownBg,
+              borderColor: colors.dropdownBorder,
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Header */}
+          <View style={[styles.dropdownHeader, { borderBottomColor: colors.itemBorder }]}>
+            <Text size="base" weight="semibold" color={themeColors.foreground}>
+              {title}
+            </Text>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-outline" size={22} color={themeColors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Options list */}
+          <ScrollView
+            style={styles.dropdownScrollView}
+            showsVerticalScrollIndicator={false}
+            bounces={options.length > 6}
+          >
+            {options.map((option, index) => {
+              const isSelected = selectedValue === option;
+              const isLast = index === options.length - 1;
+              const optionIcon = getIcon?.(option);
+
+              return (
+                <TouchableOpacity
+                  key={String(option)}
+                  style={[
+                    styles.dropdownItem,
+                    {
+                      backgroundColor: isSelected ? colors.itemBgSelected : colors.itemBg,
+                      borderBottomColor: isLast ? 'transparent' : colors.itemBorder,
+                    },
+                  ]}
+                  onPress={() => handleSelect(option)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dropdownItemContent}>
+                    {optionIcon && (
+                      <Ionicons
+                        name={optionIcon}
+                        size={18}
+                        color={isSelected ? colors.itemTextSelected : colors.itemText}
+                        style={styles.dropdownItemIcon}
+                      />
+                    )}
+                    <Text
+                      size="base"
+                      weight={isSelected ? 'semibold' : 'regular'}
+                      color={isSelected ? colors.itemTextSelected : colors.itemText}
+                    >
+                      {getLabel(option)}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={22} color={colors.checkmark} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export default function MatchFiltersBar({
   format,
   matchType,
   dateRange,
@@ -221,6 +344,9 @@ export function MatchFiltersBar({
   cost,
   joinMode,
   distance,
+  duration,
+  courtStatus,
+  specificDate,
   onFormatChange,
   onMatchTypeChange,
   onDateRangeChange,
@@ -230,56 +356,268 @@ export function MatchFiltersBar({
   onCostChange,
   onJoinModeChange,
   onDistanceChange,
+  onDurationChange,
+  onCourtStatusChange,
+  onSpecificDateChange,
   onReset,
   hasActiveFilters = false,
+  showLocationSelector = false,
+  locationMode,
+  onLocationModeChange,
+  hasHomeLocation = false,
+  homeLocationLabel,
 }: MatchFiltersBarProps) {
   const { theme } = useTheme();
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
 
-  // Translation helper
-  const getFilterLabel = (type: string, value: string): string => {
-    return t(`publicMatches.filters.${type}.${value}` as TranslationKey);
-  };
+  // Dropdown visibility states
+  const [showFormatDropdown, setShowFormatDropdown] = useState(false);
+  const [showMatchTypeDropdown, setShowMatchTypeDropdown] = useState(false);
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  const [showCostDropdown, setShowCostDropdown] = useState(false);
+  const [showJoinModeDropdown, setShowJoinModeDropdown] = useState(false);
+  const [showDistanceDropdown, setShowDistanceDropdown] = useState(false);
+  const [showDurationDropdown, setShowDurationDropdown] = useState(false);
+  const [showCourtStatusDropdown, setShowCourtStatusDropdown] = useState(false);
 
-  // Count active filters (non-default selections)
-  // Distance default is 'all' (no distance filter)
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (format !== 'all') count++;
-    if (matchType !== 'all') count++;
-    if (dateRange !== 'all') count++;
-    if (timeOfDay !== 'all') count++;
-    if (skillLevel !== 'all') count++;
-    if (gender !== 'all') count++;
-    if (cost !== 'all') count++;
-    if (joinMode !== 'all') count++;
-    if (distance !== 'all') count++;
-    return count;
-  }, [format, matchType, dateRange, timeOfDay, skillLevel, gender, cost, joinMode, distance]);
-
-  // Helper to get distance label
-  const getDistanceLabel = (option: DistanceFilter): string => {
-    if (option === 'all') {
-      return t('publicMatches.filters.distance.all' as TranslationKey);
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(() => {
+    if (specificDate) {
+      return new Date(specificDate + 'T00:00:00');
     }
-    return `${option} km`;
-  };
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  });
 
-  // Handle reset with haptic feedback
+  const getTodayAtMidnight = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }, []);
+
+  // =============================================================================
+  // LABEL GETTERS
+  // =============================================================================
+
+  const getFilterLabel = useCallback(
+    (filterType: string, value: string): string => {
+      const key = `publicMatches.filters.${filterType}.${value}` as TranslationKey;
+      return t(key);
+    },
+    [t]
+  );
+
+  const getFormatLabel = useCallback(
+    (v: FormatFilter) => getFilterLabel('format', v),
+    [getFilterLabel]
+  );
+  const getMatchTypeLabel = useCallback(
+    (v: MatchTypeFilter) => getFilterLabel('matchType', v),
+    [getFilterLabel]
+  );
+  const getDateRangeLabel = useCallback(
+    (v: DateRangeFilter) => getFilterLabel('dateRange', v),
+    [getFilterLabel]
+  );
+  const getTimeOfDayLabel = useCallback(
+    (v: TimeOfDayFilter) => getFilterLabel('timeOfDay', v),
+    [getFilterLabel]
+  );
+  const getSkillLevelLabel = useCallback(
+    (v: SkillLevelFilter) => getFilterLabel('skillLevel', v),
+    [getFilterLabel]
+  );
+  const getGenderLabel = useCallback(
+    (v: GenderFilter) => getFilterLabel('gender', v),
+    [getFilterLabel]
+  );
+  const getCostLabel = useCallback((v: CostFilter) => getFilterLabel('cost', v), [getFilterLabel]);
+  const getJoinModeLabel = useCallback(
+    (v: JoinModeFilter) => getFilterLabel('joinMode', v),
+    [getFilterLabel]
+  );
+  const getDurationLabel = useCallback(
+    (v: DurationFilter) => t(`publicMatches.filters.duration.${v}`),
+    [t]
+  );
+  const getCourtStatusLabel = useCallback(
+    (v: CourtStatusFilter) => t(`publicMatches.filters.courtStatus.${v}`),
+    [t]
+  );
+  const getDistanceLabel = useCallback(
+    (v: DistanceFilter) => {
+      if (v === 'all') return t('publicMatches.filters.distance.all');
+      return `${v} km`;
+    },
+    [t]
+  );
+
+  // Icon getters for dropdowns
+  const getTimeOfDayIcon = useCallback((v: TimeOfDayFilter) => {
+    const icons: Record<TimeOfDayFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      morning: 'sunny-outline',
+      afternoon: 'partly-sunny-outline',
+      evening: 'moon-outline',
+    };
+    return icons[v];
+  }, []);
+
+  const getCostIcon = useCallback((v: CostFilter) => {
+    const icons: Record<CostFilter, keyof typeof Ionicons.glyphMap | undefined> = {
+      all: undefined,
+      free: 'checkmark-circle-outline',
+      paid: 'cash-outline',
+    };
+    return icons[v];
+  }, []);
+
+  // =============================================================================
+  // DISPLAY VALUES
+  // =============================================================================
+
+  const formatDisplay =
+    format === 'all' ? t('publicMatches.filters.format.label') : getFormatLabel(format);
+  const matchTypeDisplay =
+    matchType === 'all' ? t('publicMatches.filters.matchType.label') : getMatchTypeLabel(matchType);
+  const timeOfDayDisplay =
+    timeOfDay === 'all' ? t('publicMatches.filters.timeOfDay.label') : getTimeOfDayLabel(timeOfDay);
+  const skillLevelDisplay =
+    skillLevel === 'all'
+      ? t('publicMatches.filters.skillLevel.label')
+      : getSkillLevelLabel(skillLevel);
+  const genderDisplay =
+    gender === 'all' ? t('publicMatches.filters.gender.label') : getGenderLabel(gender);
+  const costDisplay = cost === 'all' ? t('publicMatches.filters.cost.label') : getCostLabel(cost);
+  const joinModeDisplay =
+    joinMode === 'all' ? t('publicMatches.filters.joinMode.label') : getJoinModeLabel(joinMode);
+  const distanceDisplay =
+    distance === 'all' ? t('publicMatches.filters.distance.label') : `${distance} km`;
+  const durationDisplay =
+    duration === 'all' ? t('publicMatches.filters.duration.label') : getDurationLabel(duration);
+  const courtStatusDisplay =
+    courtStatus === 'all'
+      ? t('publicMatches.filters.courtStatus.label')
+      : getCourtStatusLabel(courtStatus);
+
+  // Date display - combines dateRange and specificDate
+  const getDateDisplay = useCallback(() => {
+    if (specificDate) {
+      const d = new Date(specificDate + 'T00:00:00');
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+    if (dateRange === 'all') {
+      return t('publicMatches.filters.dateRange.label');
+    }
+    return getDateRangeLabel(dateRange);
+  }, [specificDate, dateRange, t, getDateRangeLabel]);
+
+  // =============================================================================
+  // DATE PICKER HANDLERS
+  // =============================================================================
+
+  const handleDateChipPress = useCallback(() => {
+    // Open date dropdown to choose between ranges or pick specific date
+    setShowDateDropdown(true);
+  }, []);
+
+  const handleDateRangeSelect = useCallback(
+    (value: DateRangeFilter | 'pick_date') => {
+      if (value === 'pick_date') {
+        // Open the date picker
+        setTempDate(() => {
+          if (specificDate) {
+            return new Date(specificDate + 'T00:00:00');
+          }
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow;
+        });
+        setShowDatePicker(true);
+      } else {
+        onDateRangeChange(value);
+        if (specificDate !== null) {
+          onSpecificDateChange(null);
+        }
+      }
+    },
+    [specificDate, onDateRangeChange, onSpecificDateChange]
+  );
+
+  const handleDateChange = useCallback(
+    (_event: unknown, selectedDate?: Date) => {
+      if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+        if (selectedDate) {
+          const isoDate = selectedDate.toISOString().split('T')[0];
+          onSpecificDateChange(isoDate);
+          selectionHaptic();
+        }
+      } else if (selectedDate) {
+        setTempDate(selectedDate);
+      }
+    },
+    [onSpecificDateChange]
+  );
+
+  const handleDateCancel = useCallback(() => {
+    setShowDatePicker(false);
+  }, []);
+
+  const handleDateDone = useCallback(() => {
+    setShowDatePicker(false);
+    const isoDate = tempDate.toISOString().split('T')[0];
+    onSpecificDateChange(isoDate);
+    selectionHaptic();
+  }, [tempDate, onSpecificDateChange]);
+
+  // =============================================================================
+  // RESET HANDLER
+  // =============================================================================
+
   const handleReset = useCallback(() => {
     lightHaptic();
     onReset?.();
   }, [onReset]);
 
-  // Gradient colors for fade effect - subtle fade to indicate scrollable content
-  const gradientColors = useMemo(() => {
-    const bg = colors.background;
-    // Very subtle gradient: transparent -> 40% opacity -> 80% opacity -> full opacity
-    // Creates a gentle fade that's noticeable but not distracting
-    return [bg + '00', bg + '66', bg + 'CC', bg] as const;
-  }, [colors.background]);
+  // =============================================================================
+  // DATE OPTIONS (including pick specific date)
+  // =============================================================================
+
+  const dateOptions: (DateRangeFilter | 'pick_date')[] = [
+    'all',
+    'today',
+    'week',
+    'weekend',
+    'pick_date',
+  ];
+
+  const getDateOptionLabel = useCallback(
+    (v: DateRangeFilter | 'pick_date') => {
+      if (v === 'pick_date') {
+        return specificDate
+          ? t('publicMatches.filters.specificDate.clear')
+          : t('publicMatches.filters.specificDate.pick');
+      }
+      return getDateRangeLabel(v as DateRangeFilter);
+    },
+    [t, getDateRangeLabel, specificDate]
+  );
+
+  const getDateOptionIcon = useCallback((v: DateRangeFilter | 'pick_date') => {
+    if (v === 'pick_date') return 'calendar-outline' as keyof typeof Ionicons.glyphMap;
+    return undefined;
+  }, []);
+
+  // Current date selection for the dropdown
+  const currentDateSelection = specificDate ? 'pick_date' : dateRange;
 
   return (
     <View style={styles.container}>
@@ -288,293 +626,447 @@ export function MatchFiltersBar({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Reset Button - Enhanced with icon and count */}
-        {hasActiveFilters && onReset && (
-          <FilterGroup title="" isDark={isDark}>
-            <AnimatedPressable
-              onPress={handleReset}
-              style={[
-                styles.resetButton,
-                {
-                  backgroundColor: isDark ? secondary[900] + '40' : secondary[50],
-                  borderColor: isDark ? secondary[700] : secondary[200],
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('publicMatches.filters.reset' as TranslationKey)}
-              accessibilityHint="Clears all active filters"
-            >
-              <Ionicons
-                name="close-circle"
-                size={16}
-                color={isDark ? secondary[400] : secondary[600]}
-              />
-              <Text size="sm" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
-                {t('publicMatches.filters.reset' as TranslationKey)}
-              </Text>
-              {activeFilterCount > 0 && (
-                <View
-                  style={[
-                    styles.filterCountBadge,
-                    { backgroundColor: isDark ? secondary[600] : secondary[500] },
-                  ]}
-                >
-                  <Text size="xs" weight="bold" color="#ffffff" style={styles.badgeText}>
-                    {activeFilterCount}
-                  </Text>
-                </View>
-              )}
-            </AnimatedPressable>
-          </FilterGroup>
+        {/* Location Selector - if both GPS and home are available */}
+        {showLocationSelector && hasHomeLocation && onLocationModeChange && locationMode && (
+          <View style={styles.locationSelectorWrapper}>
+            <LocationSelector
+              selectedMode={locationMode}
+              onSelectMode={onLocationModeChange}
+              hasHomeLocation={hasHomeLocation}
+              homeLocationLabel={homeLocationLabel}
+              isDark={isDark}
+              t={t as (key: string) => string}
+            />
+          </View>
         )}
 
-        {/* Distance Filter - First for prominence */}
-        <FilterGroup
-          title={t('publicMatches.filters.distance.label' as TranslationKey)}
+        {/* Date Filter */}
+        <FilterChip
+          value={getDateDisplay()}
+          isActive={dateRange !== 'all' || specificDate !== null}
+          onPress={handleDateChipPress}
           isDark={isDark}
-          hasActiveSelection={distance !== 'all'}
-        >
-          {DISTANCE_OPTIONS.map(option => (
-            <FilterChip
-              key={String(option)}
-              label={getDistanceLabel(option)}
-              isActive={distance === option}
-              onPress={() => onDistanceChange(option)}
-              isDark={isDark}
-              accessibilityLabel={
-                option === 'all'
-                  ? t('publicMatches.filters.distance.all' as TranslationKey)
-                  : `Distance ${option} kilometers`
-              }
-            />
-          ))}
-        </FilterGroup>
+          icon={specificDate ? 'calendar' : undefined}
+        />
 
-        {/* Date Range Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.dateRange.label' as TranslationKey)}
+        {/* Time of Day Filter */}
+        <FilterChip
+          value={timeOfDayDisplay}
+          isActive={timeOfDay !== 'all'}
+          onPress={() => setShowTimeDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={dateRange !== 'all'}
-        >
-          {DATE_RANGE_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('dateRange', option)}
-              isActive={dateRange === option}
-              onPress={() => onDateRangeChange(option)}
-              isDark={isDark}
-            />
-          ))}
-        </FilterGroup>
-
-        {/* Time of Day Filter - With icons */}
-        <FilterGroup
-          title={t('publicMatches.filters.timeOfDay.label' as TranslationKey)}
-          isDark={isDark}
-          hasActiveSelection={timeOfDay !== 'all'}
-        >
-          {TIME_OF_DAY_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('timeOfDay', option)}
-              isActive={timeOfDay === option}
-              onPress={() => onTimeOfDayChange(option)}
-              isDark={isDark}
-              icon={TIME_OF_DAY_ICONS[option]}
-            />
-          ))}
-        </FilterGroup>
+          icon={getTimeOfDayIcon(timeOfDay)}
+        />
 
         {/* Format Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.format.label' as TranslationKey)}
+        <FilterChip
+          value={formatDisplay}
+          isActive={format !== 'all'}
+          onPress={() => setShowFormatDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={format !== 'all'}
-        >
-          {FORMAT_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('format', option)}
-              isActive={format === option}
-              onPress={() => onFormatChange(option)}
-              isDark={isDark}
-            />
-          ))}
-        </FilterGroup>
+        />
 
         {/* Match Type Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.matchType.label' as TranslationKey)}
+        <FilterChip
+          value={matchTypeDisplay}
+          isActive={matchType !== 'all'}
+          onPress={() => setShowMatchTypeDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={matchType !== 'all'}
-        >
-          {MATCH_TYPE_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('matchType', option)}
-              isActive={matchType === option}
-              onPress={() => onMatchTypeChange(option)}
-              isDark={isDark}
-            />
-          ))}
-        </FilterGroup>
+        />
+
+        {/* Duration Filter */}
+        <FilterChip
+          value={durationDisplay}
+          isActive={duration !== 'all'}
+          onPress={() => setShowDurationDropdown(true)}
+          isDark={isDark}
+          icon={duration !== 'all' ? 'timer-outline' : undefined}
+        />
+
+        {/* Distance Filter */}
+        <FilterChip
+          value={distanceDisplay}
+          isActive={distance !== 'all'}
+          onPress={() => setShowDistanceDropdown(true)}
+          isDark={isDark}
+        />
 
         {/* Skill Level Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.skillLevel.label' as TranslationKey)}
+        <FilterChip
+          value={skillLevelDisplay}
+          isActive={skillLevel !== 'all'}
+          onPress={() => setShowSkillDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={skillLevel !== 'all'}
-        >
-          {SKILL_LEVEL_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('skillLevel', option)}
-              isActive={skillLevel === option}
-              onPress={() => onSkillLevelChange(option)}
-              isDark={isDark}
-            />
-          ))}
-        </FilterGroup>
+        />
 
         {/* Gender Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.gender.label' as TranslationKey)}
+        <FilterChip
+          value={genderDisplay}
+          isActive={gender !== 'all'}
+          onPress={() => setShowGenderDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={gender !== 'all'}
-        >
-          {GENDER_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('gender', option)}
-              isActive={gender === option}
-              onPress={() => onGenderChange(option)}
-              isDark={isDark}
-            />
-          ))}
-        </FilterGroup>
+        />
 
-        {/* Cost Filter - With icons */}
-        <FilterGroup
-          title={t('publicMatches.filters.cost.label' as TranslationKey)}
+        {/* Cost Filter */}
+        <FilterChip
+          value={costDisplay}
+          isActive={cost !== 'all'}
+          onPress={() => setShowCostDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={cost !== 'all'}
-        >
-          {COST_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('cost', option)}
-              isActive={cost === option}
-              onPress={() => onCostChange(option)}
-              isDark={isDark}
-              icon={COST_ICONS[option]}
-            />
-          ))}
-        </FilterGroup>
+          icon={getCostIcon(cost)}
+        />
+
+        {/* Court Status Filter */}
+        <FilterChip
+          value={courtStatusDisplay}
+          isActive={courtStatus !== 'all'}
+          onPress={() => setShowCourtStatusDropdown(true)}
+          isDark={isDark}
+        />
 
         {/* Join Mode Filter */}
-        <FilterGroup
-          title={t('publicMatches.filters.joinMode.label' as TranslationKey)}
+        <FilterChip
+          value={joinModeDisplay}
+          isActive={joinMode !== 'all'}
+          onPress={() => setShowJoinModeDropdown(true)}
           isDark={isDark}
-          hasActiveSelection={joinMode !== 'all'}
-        >
-          {JOIN_MODE_OPTIONS.map(option => (
-            <FilterChip
-              key={option}
-              label={getFilterLabel('joinMode', option)}
-              isActive={joinMode === option}
-              onPress={() => onJoinModeChange(option)}
-              isDark={isDark}
+        />
+
+        {/* Reset Button */}
+        {hasActiveFilters && onReset && (
+          <TouchableOpacity
+            style={[
+              styles.resetChip,
+              {
+                backgroundColor: isDark ? secondary[900] + '40' : secondary[50],
+                borderColor: isDark ? secondary[700] : secondary[200],
+              },
+            ]}
+            onPress={handleReset}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="close-circle"
+              size={14}
+              color={isDark ? secondary[400] : secondary[600]}
             />
-          ))}
-        </FilterGroup>
+            <Text size="xs" weight="semibold" color={isDark ? secondary[400] : secondary[600]}>
+              {t('publicMatches.filters.reset')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
-      {/* Right edge fade gradient */}
-      <LinearGradient
-        colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.fadeGradient}
-        pointerEvents="none"
+      {/* =================================================================== */}
+      {/* DROPDOWN MODALS */}
+      {/* =================================================================== */}
+
+      {/* Date Dropdown (includes pick specific date option) */}
+      <FilterDropdown
+        visible={showDateDropdown}
+        title={t('publicMatches.filters.dateRange.label')}
+        options={dateOptions}
+        selectedValue={currentDateSelection}
+        onSelect={handleDateRangeSelect}
+        onClose={() => setShowDateDropdown(false)}
+        isDark={isDark}
+        getLabel={getDateOptionLabel}
+        getIcon={getDateOptionIcon}
       />
+
+      {/* Time of Day Dropdown */}
+      <FilterDropdown
+        visible={showTimeDropdown}
+        title={t('publicMatches.filters.timeOfDay.label')}
+        options={TIME_OF_DAY_OPTIONS}
+        selectedValue={timeOfDay}
+        onSelect={onTimeOfDayChange}
+        onClose={() => setShowTimeDropdown(false)}
+        isDark={isDark}
+        getLabel={getTimeOfDayLabel}
+        getIcon={getTimeOfDayIcon}
+      />
+
+      {/* Format Dropdown */}
+      <FilterDropdown
+        visible={showFormatDropdown}
+        title={t('publicMatches.filters.format.label')}
+        options={FORMAT_OPTIONS}
+        selectedValue={format}
+        onSelect={onFormatChange}
+        onClose={() => setShowFormatDropdown(false)}
+        isDark={isDark}
+        getLabel={getFormatLabel}
+      />
+
+      {/* Match Type Dropdown */}
+      <FilterDropdown
+        visible={showMatchTypeDropdown}
+        title={t('publicMatches.filters.matchType.label')}
+        options={MATCH_TYPE_OPTIONS}
+        selectedValue={matchType}
+        onSelect={onMatchTypeChange}
+        onClose={() => setShowMatchTypeDropdown(false)}
+        isDark={isDark}
+        getLabel={getMatchTypeLabel}
+      />
+
+      {/* Duration Dropdown */}
+      <FilterDropdown
+        visible={showDurationDropdown}
+        title={t('publicMatches.filters.duration.label')}
+        options={DURATION_OPTIONS_LIST}
+        selectedValue={duration}
+        onSelect={onDurationChange}
+        onClose={() => setShowDurationDropdown(false)}
+        isDark={isDark}
+        getLabel={getDurationLabel}
+      />
+
+      {/* Distance Dropdown */}
+      <FilterDropdown
+        visible={showDistanceDropdown}
+        title={t('publicMatches.filters.distance.label')}
+        options={DISTANCE_OPTIONS as DistanceFilter[]}
+        selectedValue={distance}
+        onSelect={onDistanceChange}
+        onClose={() => setShowDistanceDropdown(false)}
+        isDark={isDark}
+        getLabel={getDistanceLabel}
+      />
+
+      {/* Skill Level Dropdown */}
+      <FilterDropdown
+        visible={showSkillDropdown}
+        title={t('publicMatches.filters.skillLevel.label')}
+        options={SKILL_LEVEL_OPTIONS}
+        selectedValue={skillLevel}
+        onSelect={onSkillLevelChange}
+        onClose={() => setShowSkillDropdown(false)}
+        isDark={isDark}
+        getLabel={getSkillLevelLabel}
+      />
+
+      {/* Gender Dropdown */}
+      <FilterDropdown
+        visible={showGenderDropdown}
+        title={t('publicMatches.filters.gender.label')}
+        options={GENDER_OPTIONS}
+        selectedValue={gender}
+        onSelect={onGenderChange}
+        onClose={() => setShowGenderDropdown(false)}
+        isDark={isDark}
+        getLabel={getGenderLabel}
+      />
+
+      {/* Cost Dropdown */}
+      <FilterDropdown
+        visible={showCostDropdown}
+        title={t('publicMatches.filters.cost.label')}
+        options={COST_OPTIONS}
+        selectedValue={cost}
+        onSelect={onCostChange}
+        onClose={() => setShowCostDropdown(false)}
+        isDark={isDark}
+        getLabel={getCostLabel}
+        getIcon={getCostIcon}
+      />
+
+      {/* Court Status Dropdown */}
+      <FilterDropdown
+        visible={showCourtStatusDropdown}
+        title={t('publicMatches.filters.courtStatus.label')}
+        options={COURT_STATUS_OPTIONS}
+        selectedValue={courtStatus}
+        onSelect={onCourtStatusChange}
+        onClose={() => setShowCourtStatusDropdown(false)}
+        isDark={isDark}
+        getLabel={getCourtStatusLabel}
+      />
+
+      {/* Join Mode Dropdown */}
+      <FilterDropdown
+        visible={showJoinModeDropdown}
+        title={t('publicMatches.filters.joinMode.label')}
+        options={JOIN_MODE_OPTIONS}
+        selectedValue={joinMode}
+        onSelect={onJoinModeChange}
+        onClose={() => setShowJoinModeDropdown(false)}
+        isDark={isDark}
+        getLabel={getJoinModeLabel}
+      />
+
+      {/* =================================================================== */}
+      {/* DATE PICKER MODALS */}
+      {/* =================================================================== */}
+
+      {/* Android Date Picker */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          minimumDate={getTodayAtMidnight()}
+        />
+      )}
+
+      {/* iOS Date Picker Modal */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="fade"
+          onRequestClose={handleDateCancel}
+        >
+          <TouchableOpacity
+            style={styles.datePickerOverlay}
+            activeOpacity={1}
+            onPress={handleDateCancel}
+          >
+            <View
+              style={[styles.datePickerModal, { backgroundColor: colors.cardBackground }]}
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
+                <TouchableOpacity onPress={handleDateCancel} style={styles.datePickerHeaderButton}>
+                  <Text size="base" color={colors.textMuted}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <Text size="base" weight="semibold" color={colors.text}>
+                  {t('publicMatches.filters.specificDate.label')}
+                </Text>
+                <TouchableOpacity onPress={handleDateDone} style={styles.datePickerHeaderButton}>
+                  <Text size="base" weight="semibold" color={primary[500]}>
+                    {t('common.done')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                minimumDate={getTodayAtMidnight()}
+                themeVariant={isDark ? 'dark' : 'light'}
+                style={styles.iosPicker}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 }
 
+// =============================================================================
+// STYLES
+// =============================================================================
+
 const styles = StyleSheet.create({
   container: {
     paddingVertical: spacingPixels[2],
-    position: 'relative',
   },
   scrollContent: {
     paddingHorizontal: spacingPixels[4],
-    paddingRight: spacingPixels[12], // Extra padding for fade gradient
-    gap: spacingPixels[4],
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  filterGroup: {
-    gap: spacingPixels[1.5],
-  },
-  filterGroupTitleContainer: {
-    flexDirection: 'row',
+    gap: spacingPixels[2],
     alignItems: 'center',
-    gap: spacingPixels[1.5],
   },
-  filterGroupTitle: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  activeIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  filterGroupChips: {
-    flexDirection: 'row',
-    gap: spacingPixels[1.5],
+  locationSelectorWrapper: {
+    marginRight: spacingPixels[1],
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
     borderWidth: 1,
+    gap: spacingPixels[1],
   },
   chipIcon: {
-    marginRight: spacingPixels[1],
+    marginRight: 2,
   },
-  resetButton: {
+  chipChevron: {
+    marginLeft: 2,
+  },
+  resetChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacingPixels[3],
-    paddingVertical: spacingPixels[1.5],
+    paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
     borderWidth: 1,
-    gap: spacingPixels[1.5],
+    gap: spacingPixels[1],
   },
-  filterCountBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: spacingPixels[1],
-    marginLeft: spacingPixels[0.5],
+    alignItems: 'center',
   },
-  badgeText: {
-    textAlign: 'center',
-    lineHeight: 14,
-    includeFontPadding: false,
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
   },
-  fadeGradient: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 32, // Reduced width for more subtle effect
+  dropdownContainer: {
+    width: '80%',
+    maxWidth: 320,
+    maxHeight: '60%',
+    borderRadius: radiusPixels.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: 1,
+  },
+  dropdownScrollView: {
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dropdownItemIcon: {
+    marginRight: spacingPixels[2],
+  },
+  // Date picker modal styles
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModal: {
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    paddingBottom: spacingPixels[8],
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderBottomWidth: 1,
+  },
+  datePickerHeaderButton: {
+    paddingVertical: spacingPixels[1],
+    paddingHorizontal: spacingPixels[2],
+  },
+  iosPicker: {
+    height: 200,
   },
 });
-
-export default MatchFiltersBar;

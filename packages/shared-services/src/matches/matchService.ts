@@ -15,6 +15,11 @@ import {
   notifyPlayerKicked,
   notifyMatchInvitation,
 } from '../notifications/notificationFactory';
+import {
+  createReputationEvent,
+  createReputationEvents,
+  havePlayedTogether,
+} from '../reputation/reputationService';
 import { createMatchChat } from '../chat/chatService';
 import type {
   Match,
@@ -25,6 +30,7 @@ import type {
   Profile,
   PlayerWithProfile,
 } from '@rallia/shared-types';
+import { calculateDistanceMeters } from '@rallia/shared-utils';
 
 /**
  * Input data for creating a match
@@ -66,6 +72,10 @@ export interface CreateMatchInput {
 
   // Visibility & access
   visibility?: 'public' | 'private';
+  /** When private: whether the match is visible in groups the creator is part of */
+  visibleInGroups?: boolean;
+  /** When private: whether the match is visible in communities the creator is part of */
+  visibleInCommunities?: boolean;
   joinMode?: 'direct' | 'request';
 
   // Additional info
@@ -126,6 +136,8 @@ export async function createMatch(input: CreateMatchInput): Promise<Match> {
     preferred_opponent_gender:
       input.preferredOpponentGender === 'any' ? null : input.preferredOpponentGender,
     visibility: input.visibility ?? 'public',
+    visible_in_groups: input.visibleInGroups ?? true,
+    visible_in_communities: input.visibleInCommunities ?? true,
     join_mode: input.joinMode ?? 'direct',
     notes: emptyToNull(input.notes),
   };
@@ -190,6 +202,8 @@ export async function getMatchWithDetails(matchId: string) {
         is_host,
         score,
         team_number,
+        feedback_completed,
+        checked_in_at,
         created_at,
         updated_at,
         player:player_id (
@@ -204,6 +218,25 @@ export async function getMatchWithDetails(matchId: string) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -401,6 +434,8 @@ export async function getMatchesWithDetails(
         is_host,
         score,
         team_number,
+        feedback_completed,
+        checked_in_at,
         created_at,
         updated_at,
         player:player_id (
@@ -751,6 +786,9 @@ export async function updateMatch(
     updateData.preferred_opponent_gender =
       updates.preferredOpponentGender === 'any' ? null : updates.preferredOpponentGender;
   if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+  if (updates.visibleInGroups !== undefined) updateData.visible_in_groups = updates.visibleInGroups;
+  if (updates.visibleInCommunities !== undefined)
+    updateData.visible_in_communities = updates.visibleInCommunities;
   if (updates.joinMode !== undefined) updateData.join_mode = updates.joinMode;
   if (updates.notes !== undefined) updateData.notes = emptyToNull(updates.notes);
 
@@ -804,12 +842,16 @@ export async function updateMatch(
       .eq('status', 'joined');
 
     if (participantsData && participantsData.length > 0) {
-      const participantIds = participantsData.map(p => p.player_id);
+      // Exclude the creator from notifications since they triggered the update
+      const creatorId = (data as Match).created_by;
+      const participantIds = participantsData.map(p => p.player_id).filter(id => id !== creatorId);
 
-      // Send notifications (fire and forget - don't block on notification)
-      notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
-        console.error('Failed to send match updated notifications:', err);
-      });
+      if (participantIds.length > 0) {
+        // Send notifications (fire and forget - don't block on notification)
+        notifyMatchUpdated(participantIds, matchId, updatedFields).catch(err => {
+          console.error('Failed to send match updated notifications:', err);
+        });
+      }
     }
   }
 
@@ -825,9 +867,10 @@ export async function updateMatch(
  */
 export async function cancelMatch(matchId: string, userId?: string): Promise<Match> {
   // First, verify the user is authorized to cancel (must be the creator)
+  // Include created_at for reputation penalty calculation
   const { data: match, error: fetchError } = await supabase
     .from('match')
-    .select('created_by, cancelled_at, match_date, start_time, end_time, timezone')
+    .select('created_by, cancelled_at, created_at, match_date, start_time, end_time, timezone')
     .eq('id', matchId)
     .single();
 
@@ -872,6 +915,38 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     throw new Error(`Failed to cancel match: ${error.message}`);
   }
 
+  // Create reputation event for cancellation (if userId is provided = host cancelling)
+  // Per the spec, late cancellation penalty applies when BOTH:
+  // 1. Cancelling within 24 hours of start time
+  // 2. Match was created more than 24 hours before start (not a spontaneous match)
+  if (userId) {
+    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+    const now = new Date();
+    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const isWithin24HoursOfStart = hoursUntilMatch > 0 && hoursUntilMatch < 24;
+
+    // Check if match was created more than 24h before start (planned match vs spontaneous)
+    let isPlannedMatch = true; // Default to true if created_at is missing
+    if (match.created_at) {
+      const createdAt = new Date(match.created_at);
+      const hoursFromCreationToStart =
+        (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      isPlannedMatch = hoursFromCreationToStart >= 24;
+    }
+
+    // Late cancellation penalty only applies if within 24h of start AND was a planned match
+    const isLateCancellation = isWithin24HoursOfStart && isPlannedMatch;
+
+    // Create reputation event for the host
+    createReputationEvent(
+      userId,
+      isLateCancellation ? 'match_cancelled_late' : 'match_cancelled_early',
+      { matchId }
+    ).catch(err => {
+      console.error('[cancelMatch] Failed to create reputation event:', err);
+    });
+  }
+
   // Notify all joined participants about the cancellation
   // First, get all participant IDs (excluding the host who cancelled)
   const { data: participantsData } = await supabase
@@ -884,17 +959,29 @@ export async function cancelMatch(matchId: string, userId?: string): Promise<Mat
     const participantIds = participantsData.map(p => p.player_id).filter(id => id !== userId); // Exclude the host
 
     if (participantIds.length > 0) {
-      // Get sport name for better notification
+      // Get sport name and location for better notification
       const { data: matchDetails } = await supabase
         .from('match')
-        .select('sport:sport_id (name)')
+        .select('sport:sport_id (name), location_name')
         .eq('id', matchId)
         .single();
 
       const sportName = (matchDetails?.sport as { name?: string } | null)?.name ?? 'Match';
+      const locationName =
+        (matchDetails as { location_name?: string | null })?.location_name ?? undefined;
+
+      // Extract time in HH:MM format for notification
+      const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
 
       // Send notifications (fire and forget)
-      notifyMatchCancelled(participantIds, matchId, match.match_date, sportName).catch(err => {
+      notifyMatchCancelled(
+        participantIds,
+        matchId,
+        match.match_date,
+        sportName,
+        startTime,
+        locationName
+      ).catch(err => {
         console.error('Failed to send match cancelled notifications:', err);
       });
     }
@@ -921,7 +1008,7 @@ export async function deleteMatch(matchId: string): Promise<void> {
 /**
  * Helper function to check if a match is full and create a chat if so.
  * Called after a player joins or a join request is accepted.
- * 
+ *
  * @param matchId - The match ID
  * @param triggeredBy - The player ID who triggered the action (for created_by in chat)
  */
@@ -930,7 +1017,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
     // Get match details with participants
     const { data: match, error: matchError } = await supabase
       .from('match')
-      .select(`
+      .select(
+        `
         id,
         format,
         match_date,
@@ -942,7 +1030,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
           player_id,
           status
         )
-      `)
+      `
+      )
       .eq('id', matchId)
       .single();
 
@@ -953,9 +1042,8 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
 
     // Calculate capacity
     const totalSpots = match.format === 'doubles' ? 4 : 2;
-    const joinedParticipants = match.participants?.filter(
-      (p: { status: string }) => p.status === 'joined'
-    ) ?? [];
+    const joinedParticipants =
+      match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
     const joinedCount = joinedParticipants.length;
 
     // Match is full when: host (1) + joined participants = total spots
@@ -982,11 +1070,16 @@ async function createMatchChatIfFull(matchId: string, triggeredBy: string): Prom
         matchFormat,
         sportName,
         match.match_date
-      ).then(conversation => {
-        console.log(`[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`, conversation.id);
-      }).catch(err => {
-        console.error('[createMatchChatIfFull] Failed to create match chat:', err);
-      });
+      )
+        .then(conversation => {
+          console.log(
+            `[createMatchChatIfFull] Created ${matchFormat} chat for match ${matchId}:`,
+            conversation.id
+          );
+        })
+        .catch(err => {
+          console.error('[createMatchChatIfFull] Failed to create match chat:', err);
+        });
     }
   } catch (error) {
     console.error('[createMatchChatIfFull] Error:', error);
@@ -1024,6 +1117,7 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
       timezone,
       created_by,
       preferred_opponent_gender,
+      sport:sport_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1056,8 +1150,11 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
     throw new Error('Match is no longer available');
   }
 
-  // Check if player is the creator (creators can't join their own match as participant)
-  if (match.created_by === playerId) {
+  // Check if player is already a host participant (creators can't join their own match)
+  const isHost = match.participants?.some(
+    (p: { player_id: string; is_host?: boolean | null }) => p.player_id === playerId && p.is_host
+  );
+  if (isHost) {
     throw new Error('You are the host of this match');
   }
 
@@ -1086,25 +1183,34 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   );
 
   // If they have an active participation, they can't join again
-  // Allow re-joining if they previously left, declined an invitation, were refused by host, were kicked, or are waitlisted (and spots opened up)
-  if (
-    existingParticipant &&
-    existingParticipant.status !== 'left' &&
-    existingParticipant.status !== 'declined' &&
-    existingParticipant.status !== 'refused' &&
-    existingParticipant.status !== 'kicked' &&
-    existingParticipant.status !== 'waitlisted'
-  ) {
+  // Allow joining/re-joining if:
+  // - 'pending': invited by host, accepting the invitation
+  // - 'cancelled': invitation was cancelled by host; user can still join the public match
+  // - 'left': previously left the match
+  // - 'declined': previously declined an invitation
+  // - 'refused': host previously rejected their join request
+  // - 'kicked': previously kicked from the match
+  // - 'waitlisted': on waitlist, spots may have opened up
+  const allowedStatuses = [
+    'pending',
+    'cancelled',
+    'left',
+    'declined',
+    'refused',
+    'kicked',
+    'waitlisted',
+  ];
+  if (existingParticipant && !allowedStatuses.includes(existingParticipant.status)) {
     throw new Error('You are already in this match');
   }
 
   // Calculate spots: format determines total capacity (singles=2, doubles=4)
-  // Creator counts as 1, participants with 'joined' status fill remaining spots
+  // Joined participants (now includes creator who has is_host=true) fill spots
   const totalSpots = match.format === 'doubles' ? 4 : 2;
   const joinedParticipants =
     match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
-  // Creator takes 1 spot, so available = total - 1 (creator) - joined participants
-  const availableSpots = totalSpots - 1 - joinedParticipants;
+  // Available = total - joined participants (creator is now included in joined participants)
+  const availableSpots = totalSpots - joinedParticipants;
 
   // Determine status based on join mode and availability
   let participantStatus: 'joined' | 'requested' | 'waitlisted';
@@ -1165,17 +1271,27 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Get player name for notifications (player.id = profile.id)
   const { data: profileData } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', playerId)
     .single();
 
-  // Prefer full_name, fall back to display_name
-  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+  // Prefer first_name + last_name for notifications
+  const playerName =
+    profileData?.first_name && profileData?.last_name
+      ? `${profileData.first_name} ${profileData.last_name}`
+      : profileData?.first_name || 'A player';
 
   // Send notification to host if this is a join request
   if (participantStatus === 'requested') {
     // Notify the host (fire and forget - don't block on notification)
-    notifyMatchJoinRequest(match.created_by, matchId, playerName).catch(err => {
+    const sportName = (match.sport as { name?: string } | null)?.name;
+    notifyMatchJoinRequest(
+      match.created_by,
+      matchId,
+      playerName,
+      sportName,
+      match.match_date
+    ).catch(err => {
       console.error('Failed to send join request notification:', err);
     });
   }
@@ -1183,19 +1299,17 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
   // Send notifications to host and participants when a player directly joins (open access)
   if (participantStatus === 'joined') {
     // Get all joined participants (excluding the new player)
+    // Note: The creator is now a participant, so they'll be included in this list if they're joined
     const otherParticipants =
       match.participants?.filter(
         (p: { player_id: string; status: string }) =>
           p.status === 'joined' && p.player_id !== playerId
       ) ?? [];
 
-    // Collect all user IDs to notify: host + other participants
-    const userIdsToNotify = [
-      match.created_by, // Always notify the host
-      ...otherParticipants.map((p: { player_id: string }) => p.player_id),
-    ];
+    // Collect all user IDs to notify (creator is already included if they're a participant)
+    const userIdsToNotify = otherParticipants.map((p: { player_id: string }) => p.player_id);
 
-    // Remove duplicates (in case host is somehow in participants)
+    // Remove duplicates
     const uniqueUserIds = [...new Set(userIdsToNotify)];
 
     if (uniqueUserIds.length > 0) {
@@ -1237,6 +1351,9 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         }
       }
 
+      // Calculate spots left after this player joined
+      const spotsLeft = availableSpots - 1;
+
       // Notify all users (fire and forget - don't block on notification)
       notifyPlayerJoined(
         uniqueUserIds,
@@ -1244,7 +1361,8 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
         playerName,
         sportName,
         formattedDate,
-        locationName
+        locationName,
+        spotsLeft
       ).catch(err => {
         console.error('Failed to send player joined notifications:', err);
       });
@@ -1264,19 +1382,33 @@ export async function joinMatch(matchId: string, playerId: string): Promise<Join
  * Leave a match as a participant.
  * Updates the participant status to 'left' (soft delete to preserve history).
  *
+ * Creates a reputation event (match_cancelled_late, -25 impact) if ALL conditions are met:
+ * 1. Match is full (all spots taken)
+ * 2. Match was created more than 24 hours before start time (planned match)
+ * 3. Match was NOT edited within 24 hours of start time (no last-minute host changes)
+ * 4. Player is leaving within 24 hours of start time
+ *
  * @throws Error if user is the host, not a participant, or match not found
  */
 export async function leaveMatch(matchId: string, playerId: string): Promise<void> {
-  // First check if user is the match creator and get match details
+  // First check if user is the match host and get match details
+  // Include fields needed for reputation penalty calculation
   const { data: match, error: matchError } = await supabase
     .from('match')
     .select(
       `
       created_by,
+      created_at,
+      updated_at,
+      match_date,
+      start_time,
+      timezone,
+      format,
       sport:sport_id (name),
       participants:match_participant (
         player_id,
-        status
+        status,
+        is_host
       )
     `
     )
@@ -1287,9 +1419,20 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     throw new Error('Match not found');
   }
 
-  if (match.created_by === playerId) {
+  // Check if user is the host (either via is_host flag or created_by for backwards compatibility)
+  const isHost = match.participants?.some(
+    (p: { player_id: string; is_host?: boolean | null }) => p.player_id === playerId && p.is_host
+  );
+  if (isHost || match.created_by === playerId) {
     throw new Error('Hosts cannot leave their own match. Cancel it instead.');
   }
+
+  // Calculate if reputation penalty applies BEFORE updating status
+  // (we need to check if match is full with current player still counted)
+  const joinedParticipants =
+    match.participants?.filter((p: { status: string }) => p.status === 'joined') ?? [];
+  const totalCapacity = match.format === 'doubles' ? 4 : 2;
+  const isMatchFull = joinedParticipants.length >= totalCapacity;
 
   // Update status to 'left'
   const { data, error } = await supabase
@@ -1311,36 +1454,85 @@ export async function leaveMatch(matchId: string, playerId: string): Promise<voi
     throw new Error('You are not a participant in this match');
   }
 
+  // ========================================
+  // CREATE REPUTATION EVENT IF APPLICABLE
+  // ========================================
+  // Check if leaving warrants a reputation penalty per the spec:
+  // Penalty applies when: full match + created >24h before start + not edited <24h before start + leaving <24h before start
+  if (isMatchFull) {
+    const matchStartDateTime = new Date(`${match.match_date}T${match.start_time}`);
+    const now = new Date();
+    const hoursUntilMatch = (matchStartDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Condition: Must be within 24 hours of start time
+    if (hoursUntilMatch > 0 && hoursUntilMatch < 24) {
+      let shouldCreatePenalty = true;
+
+      // Condition: Match must have been created more than 24 hours before start
+      if (match.created_at) {
+        const createdAt = new Date(match.created_at);
+        const hoursFromCreationToStart =
+          (matchStartDateTime.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromCreationToStart < 24) {
+          // Spontaneous/last-minute match - no penalty
+          shouldCreatePenalty = false;
+        }
+      }
+
+      // Condition: Match must NOT have been edited within 24 hours of start
+      if (shouldCreatePenalty && match.updated_at) {
+        const updatedAt = new Date(match.updated_at);
+        const hoursFromUpdateToStart =
+          (matchStartDateTime.getTime() - updatedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursFromUpdateToStart < 24) {
+          // Host made last-minute changes - no penalty for leaving
+          shouldCreatePenalty = false;
+        }
+      }
+
+      if (shouldCreatePenalty) {
+        // Create reputation event for leaving late (same type as host cancelling late per spec)
+        createReputationEvent(playerId, 'match_cancelled_late', { matchId }).catch(err => {
+          console.error('[leaveMatch] Failed to create reputation event:', err);
+        });
+      }
+    }
+  }
+
   // Send notifications to host and remaining participants
   // Get player name for notification
   const { data: profileData } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', playerId)
     .single();
 
-  const playerName = profileData?.full_name || profileData?.display_name || 'A player';
+  const playerName =
+    profileData?.first_name && profileData?.last_name
+      ? `${profileData.first_name} ${profileData.last_name}`
+      : profileData?.first_name || 'A player';
   const sportName = (match.sport as { name?: string } | null)?.name;
 
   // Get all remaining joined participants (excluding the player who left)
+  // Note: The creator is now a participant, so they'll be included in this list if they're joined
   const remainingParticipants =
     match.participants?.filter(
       (p: { player_id: string; status: string }) =>
         p.status === 'joined' && p.player_id !== playerId
     ) ?? [];
 
-  // Recipients include the host and remaining joined participants
-  const userIdsToNotify = [
-    match.created_by,
-    ...remainingParticipants.map((p: { player_id: string }) => p.player_id),
-  ];
+  // Recipients are the remaining joined participants (creator is already included if they're a participant)
+  const userIdsToNotify = remainingParticipants.map((p: { player_id: string }) => p.player_id);
 
   // Remove duplicates
   const uniqueUserIds = [...new Set(userIdsToNotify)];
 
   if (uniqueUserIds.length > 0) {
+    // Calculate spots left after the player left
+    const spotsLeft = totalCapacity - remainingParticipants.length;
+
     // Notify all users (fire and forget - don't block on notification)
-    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName).catch(err => {
+    notifyPlayerLeft(uniqueUserIds, matchId, playerName, sportName, spotsLeft).catch(err => {
       console.error('Failed to send player left notifications:', err);
     });
   }
@@ -1397,6 +1589,10 @@ export async function acceptJoinRequest(
       start_time,
       end_time,
       timezone,
+      location_type,
+      location_name,
+      sport:sport_id (name),
+      facility:facility_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1450,8 +1646,8 @@ export async function acceptJoinRequest(
   const totalSpots = match.format === 'doubles' ? 4 : 2;
   const joinedParticipants =
     match.participants?.filter((p: { status: string }) => p.status === 'joined').length ?? 0;
-  // Creator takes 1 spot
-  const availableSpots = totalSpots - 1 - joinedParticipants;
+  // Creator is now included in joined participants
+  const availableSpots = totalSpots - joinedParticipants;
 
   if (availableSpots <= 0) {
     throw new Error('Match is full. Cannot accept more players.');
@@ -1473,11 +1669,21 @@ export async function acceptJoinRequest(
   }
 
   // Notify the player that their request was accepted (fire and forget)
+  // Extract time in HH:MM format for notification
+  const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+  const sportName = (match.sport as { name?: string } | null)?.name;
+  const locationName =
+    match.location_type === 'tbd'
+      ? undefined
+      : ((match.facility as { name?: string } | null)?.name ?? match.location_name);
+
   notifyJoinRequestAccepted(
     participant.player_id,
     matchId,
     match.match_date,
-    undefined // sportName - would need additional query to get
+    startTime,
+    sportName,
+    locationName
   ).catch(err => {
     console.error('Failed to send join accepted notification:', err);
   });
@@ -1517,8 +1723,10 @@ export async function rejectJoinRequest(
       start_time,
       end_time,
       timezone,
+      sport:sport_id (name),
       participants:match_participant (
         id,
+        player_id,
         status
       )
     `
@@ -1587,7 +1795,13 @@ export async function rejectJoinRequest(
 
   if (participantRecord?.player_id) {
     // Notify the player that their request was rejected (fire and forget)
-    notifyJoinRequestRejected(participantRecord.player_id, matchId).catch(err => {
+    const sportName = (match.sport as { name?: string } | null)?.name;
+    notifyJoinRequestRejected(
+      participantRecord.player_id,
+      matchId,
+      sportName,
+      match.match_date
+    ).catch(err => {
       console.error('Failed to send join rejected notification:', err);
     });
   }
@@ -1668,6 +1882,7 @@ export async function kickParticipant(
       start_time,
       end_time,
       timezone,
+      sport:sport_id (name),
       participants:match_participant (
         id,
         player_id,
@@ -1738,7 +1953,17 @@ export async function kickParticipant(
   ) as { player_id: string } | undefined;
 
   if (participantRecord?.player_id) {
-    notifyPlayerKicked(participantRecord.player_id, matchId).catch(err => {
+    // Extract time in HH:MM format for notification
+    const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+    const sportName = (match.sport as { name?: string } | null)?.name;
+
+    notifyPlayerKicked(
+      participantRecord.player_id,
+      matchId,
+      sportName,
+      match.match_date,
+      startTime
+    ).catch(err => {
       console.error('Failed to send kicked notification:', err);
     });
   }
@@ -1959,11 +2184,14 @@ export async function resendInvitation(
   // Get host profile for notification
   const { data: hostProfile } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', hostId)
     .single();
 
-  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+  const inviterName =
+    hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name || 'A player';
 
   // Get sport name (handle both array and object cases from Supabase types)
   const sportData = match.sport as
@@ -1979,12 +2207,16 @@ export async function resendInvitation(
   ) as { player_id: string } | undefined;
 
   if (participantRecord?.player_id) {
+    // Extract time in HH:MM format for notification
+    const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
     notifyMatchInvitation(
       participantRecord.player_id,
       matchId,
       inviterName,
       sportName,
-      match.match_date
+      match.match_date,
+      startTime
     ).catch(err => {
       console.error('Failed to send invitation notification:', err);
     });
@@ -2103,6 +2335,8 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
         is_host,
         score,
         team_number,
+        feedback_completed,
+        checked_in_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2117,6 +2351,25 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -2301,11 +2554,38 @@ export async function getNearbyMatches(params: SearchNearbyMatchesParams) {
 /**
  * Parameters for fetching player's matches
  */
+/**
+ * Status filter values for upcoming matches
+ */
+export type UpcomingStatusFilter =
+  | 'all'
+  | 'hosting'
+  | 'confirmed'
+  | 'pending'
+  | 'requested'
+  | 'waitlisted'
+  | 'needs_players'
+  | 'ready_to_play';
+
+/**
+ * Status filter values for past matches
+ */
+export type PastStatusFilter =
+  | 'all'
+  | 'feedback_needed'
+  | 'played'
+  | 'hosted'
+  | 'as_participant'
+  | 'expired'
+  | 'cancelled';
+
 export interface GetPlayerMatchesParams {
   userId: string;
   timeFilter: 'upcoming' | 'past';
   /** Optional sport ID to filter matches by */
   sportId?: string;
+  /** Optional status filter for filtering matches by participant status, role, or match state */
+  statusFilter?: UpcomingStatusFilter | PastStatusFilter;
   limit?: number;
   offset?: number;
 }
@@ -2316,16 +2596,18 @@ export interface GetPlayerMatchesParams {
  * Returns full match details with profiles.
  */
 export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams) {
-  const { userId, timeFilter, sportId, limit = 20, offset = 0 } = params;
+  const { userId, timeFilter, sportId, statusFilter = 'all', limit = 20, offset = 0 } = params;
 
   // Use RPC function for timezone-aware filtering based on match END time
   // This ensures matches are considered "past" when their end_time has passed in the match's timezone
+  // Status filter is applied server-side for proper pagination
   const { data: matchIdResults, error: rpcError } = await supabase.rpc('get_player_matches', {
     p_player_id: userId,
     p_time_filter: timeFilter,
     p_sport_id: sportId ?? null,
     p_limit: limit + 1, // Fetch one extra to check if there are more
     p_offset: offset,
+    p_status_filter: statusFilter,
   });
 
   if (rpcError) {
@@ -2379,6 +2661,8 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
         is_host,
         score,
         team_number,
+        feedback_completed,
+        checked_in_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2393,6 +2677,25 @@ export async function getPlayerMatchesWithDetails(params: GetPlayerMatchesParams
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -2578,8 +2881,16 @@ export interface SearchPublicMatchesParams {
   gender?: 'all' | 'male' | 'female';
   cost?: 'all' | 'free' | 'paid';
   joinMode?: 'all' | 'direct' | 'request';
+  /** Duration filter (in minutes), '120+' includes 120 and custom */
+  duration?: 'all' | '30' | '60' | '90' | '120+';
+  /** Court status filter */
+  courtStatus?: 'all' | 'reserved' | 'to_reserve';
+  /** Specific date filter (ISO date string YYYY-MM-DD), overrides dateRange when set */
+  specificDate?: string | null;
   /** The viewing user's gender for eligibility filtering */
   userGender?: string | null;
+  /** Filter by specific facility ID - when set, only returns matches at that facility */
+  facilityId?: string | null;
   limit?: number;
   offset?: number;
 }
@@ -2614,7 +2925,11 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     gender = 'all',
     cost = 'all',
     joinMode = 'all',
+    duration = 'all',
+    courtStatus = 'all',
+    specificDate,
     userGender,
+    facilityId,
     limit = 20,
     offset = 0,
   } = params;
@@ -2637,9 +2952,13 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
     p_gender: gender === 'all' ? null : gender,
     p_cost: cost === 'all' ? null : cost,
     p_join_mode: joinMode === 'all' ? null : joinMode,
+    p_duration: duration === 'all' ? null : duration,
+    p_court_status: courtStatus === 'all' ? null : courtStatus,
+    p_specific_date: specificDate || null,
     p_limit: limit + 1, // Fetch one extra to check if more exist
     p_offset: offset,
     p_user_gender: userGender || null, // Pass user's gender for eligibility filtering
+    p_facility_id: facilityId || null, // Filter by specific facility
   });
 
   if (rpcError) {
@@ -2696,6 +3015,8 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
         is_host,
         score,
         team_number,
+        feedback_completed,
+        checked_in_at,
         created_at,
         updated_at,
         player:player_id (
@@ -2710,6 +3031,25 @@ export async function getPublicMatches(params: SearchPublicMatchesParams) {
           privacy_show_age,
           privacy_show_location,
           privacy_show_stats
+        )
+      ),
+      result:match_result (
+        id,
+        winning_team,
+        team1_score,
+        team2_score,
+        is_verified,
+        disputed,
+        submitted_by,
+        confirmation_deadline,
+        confirmed_by,
+        verified_at,
+        created_at,
+        updated_at,
+        sets:match_set (
+          set_number,
+          team1_score,
+          team2_score
         )
       )
     `
@@ -2952,72 +3292,644 @@ export async function invitePlayersToMatch(
   // Get host's name for notifications
   const { data: hostProfile } = await supabase
     .from('profile')
-    .select('full_name, display_name')
+    .select('first_name, last_name, display_name')
     .eq('id', hostId)
     .single();
 
-  const inviterName = hostProfile?.full_name || hostProfile?.display_name || 'A player';
+  const inviterName =
+    hostProfile?.first_name && hostProfile?.last_name
+      ? `${hostProfile.first_name} ${hostProfile.last_name}`
+      : hostProfile?.first_name || 'A player';
   // Supabase returns relations as arrays when using select, handle both array and single object
   const sportData = match.sport;
   const sport = Array.isArray(sportData) ? sportData[0] : sportData;
   const sportName = sport?.display_name || sport?.name || 'a match';
 
-  // Check which players are already in the match
-  const existingPlayerIds = new Set(
-    (match.participants ?? []).map((p: { player_id: string }) => p.player_id)
-  );
+  // Build a map of existing participants with their status
+  const existingParticipants = new Map<string, { id: string; status: string }>();
+  for (const p of match.participants ?? []) {
+    existingParticipants.set(p.player_id, { id: p.id, status: p.status ?? '' });
+  }
+
+  // Statuses that cannot be re-invited (active participation states)
+  const activeStatuses = ['pending', 'requested', 'joined', 'waitlisted', 'kicked'];
+  // Statuses that CAN be re-invited (player declined, left, etc.)
+  const reinvitableStatuses = ['declined', 'left', 'refused', 'cancelled'];
 
   const alreadyInMatch: string[] = [];
+  const toReinvite: Array<{ participantId: string; playerId: string }> = [];
   const toInvite: string[] = [];
 
   for (const playerId of playerIds) {
-    if (existingPlayerIds.has(playerId)) {
-      alreadyInMatch.push(playerId);
+    const existing = existingParticipants.get(playerId);
+    if (existing) {
+      if (activeStatuses.includes(existing.status)) {
+        // Player has an active status - cannot re-invite
+        alreadyInMatch.push(playerId);
+      } else if (reinvitableStatuses.includes(existing.status)) {
+        // Player has a re-invitable status - update their record
+        toReinvite.push({ participantId: existing.id, playerId });
+      } else {
+        // Unknown status - treat as already in match for safety
+        alreadyInMatch.push(playerId);
+      }
     } else {
+      // No existing record - create new invitation
       toInvite.push(playerId);
     }
   }
 
-  if (toInvite.length === 0) {
+  if (toInvite.length === 0 && toReinvite.length === 0) {
     return { invited: [], alreadyInMatch, failed: [] };
   }
 
-  // Create participant records with 'pending' status
-  const participantsToInsert = toInvite.map(playerId => ({
-    match_id: matchId,
-    player_id: playerId,
-    status: 'pending' as const,
-    is_host: false,
-  }));
+  const invited: MatchParticipant[] = [];
+  const failed: string[] = [];
 
-  const { data: insertedParticipants, error: insertError } = await supabase
-    .from('match_participant')
-    .insert(participantsToInsert)
-    .select();
+  // Update existing records for re-invitable players
+  for (const { participantId, playerId } of toReinvite) {
+    const { data: updatedParticipant, error: updateError } = await supabase
+      .from('match_participant')
+      .update({ status: 'pending', updated_at: new Date().toISOString() })
+      .eq('id', participantId)
+      .select()
+      .single();
 
-  if (insertError) {
-    console.error('[invitePlayersToMatch] Insert error:', insertError);
-    throw new Error(`Failed to invite players: ${insertError.message}`);
+    if (updateError) {
+      console.error('[invitePlayersToMatch] Update error for re-invite:', updateError);
+      failed.push(playerId);
+    } else if (updatedParticipant) {
+      invited.push(updatedParticipant as MatchParticipant);
+    }
   }
 
-  const invited = (insertedParticipants ?? []) as MatchParticipant[];
-  const invitedPlayerIds = new Set(invited.map(p => p.player_id));
-  const failed = toInvite.filter(id => !invitedPlayerIds.has(id));
+  // Create new participant records for players without existing records
+  if (toInvite.length > 0) {
+    const participantsToInsert = toInvite.map(playerId => ({
+      match_id: matchId,
+      player_id: playerId,
+      status: 'pending' as const,
+      is_host: false,
+    }));
 
-  // Send notifications to invited players (fire and forget)
+    const { data: insertedParticipants, error: insertError } = await supabase
+      .from('match_participant')
+      .insert(participantsToInsert)
+      .select();
+
+    if (insertError) {
+      console.error('[invitePlayersToMatch] Insert error:', insertError);
+      // Add all toInvite players to failed
+      failed.push(...toInvite);
+    } else {
+      const insertedList = (insertedParticipants ?? []) as MatchParticipant[];
+      invited.push(...insertedList);
+      // Check if any inserts failed
+      const insertedPlayerIds = new Set(insertedList.map(p => p.player_id));
+      for (const playerId of toInvite) {
+        if (!insertedPlayerIds.has(playerId)) {
+          failed.push(playerId);
+        }
+      }
+    }
+  }
+
+  // Send notifications to all invited players (fire and forget)
+  // Extract time in HH:MM format for notification
+  const startTime = match.start_time ? match.start_time.slice(0, 5) : undefined;
+
   for (const participant of invited) {
     notifyMatchInvitation(
       participant.player_id,
       matchId,
       inviterName,
       sportName,
-      match.match_date
+      match.match_date,
+      startTime
     ).catch(err => {
       console.error('[invitePlayersToMatch] Notification error:', err);
     });
   }
 
   return { invited, alreadyInMatch, failed };
+}
+
+// =============================================================================
+// REPUTATION EVENTS
+// =============================================================================
+
+/**
+ * Result of awarding match completion reputation
+ */
+export interface AwardMatchCompletionResult {
+  /** Player IDs that received reputation events */
+  awarded: string[];
+  /** Player IDs that already had reputation events for this match */
+  skipped: string[];
+  /** Player IDs that had errors */
+  failed: string[];
+}
+
+/**
+ * Award match completion reputation events to all participants.
+ * This should be called when a match is confirmed as completed (either via UI
+ * confirmation or by a scheduled job after match end time).
+ *
+ * Awards:
+ * - 'match_completed' to all participants
+ * - 'first_match_bonus' if it's the player's first match
+ * - 'match_repeat_opponent' if players have played together before
+ *
+ * @param matchId - The match ID
+ * @returns Result with awarded, skipped, and failed player IDs
+ */
+export async function awardMatchCompletionReputation(
+  matchId: string
+): Promise<AwardMatchCompletionResult> {
+  // Fetch match with participants
+  const { data: match, error: matchError } = await supabase
+    .from('match')
+    .select(
+      `
+      id,
+      created_by,
+      cancelled_at,
+      participants:match_participant (
+        player_id,
+        status
+      )
+    `
+    )
+    .eq('id', matchId)
+    .single();
+
+  if (matchError || !match) {
+    throw new Error('Match not found');
+  }
+
+  // Only award for non-cancelled matches
+  if (match.cancelled_at) {
+    return { awarded: [], skipped: [], failed: [] };
+  }
+
+  // Get all players who participated (joined participants, which now includes the creator)
+  const participantPlayerIds = (match.participants ?? [])
+    .filter((p: { status: string }) => p.status === 'joined')
+    .map((p: { player_id: string }) => p.player_id);
+
+  // Creator is now included as a joined participant with is_host=true
+  const uniquePlayerIds = [...new Set(participantPlayerIds)];
+
+  if (uniquePlayerIds.length === 0) {
+    return { awarded: [], skipped: [], failed: [] };
+  }
+
+  // Check if reputation events already exist for this match (avoid duplicates)
+  const { data: existingEvents } = await supabase
+    .from('reputation_event')
+    .select('player_id')
+    .eq('match_id', matchId)
+    .eq('event_type', 'match_completed');
+
+  const playersWithEvents = new Set(
+    (existingEvents ?? []).map((e: { player_id: string }) => e.player_id)
+  );
+
+  const skipped = uniquePlayerIds.filter(id => playersWithEvents.has(id));
+  const toAward = uniquePlayerIds.filter(id => !playersWithEvents.has(id));
+
+  if (toAward.length === 0) {
+    return { awarded: [], skipped, failed: [] };
+  }
+
+  const awarded: string[] = [];
+  const failed: string[] = [];
+
+  // Prepare events for each player
+  for (const playerId of toAward) {
+    try {
+      const eventsToCreate: Array<{
+        playerId: string;
+        eventType: 'match_completed' | 'first_match_bonus' | 'match_repeat_opponent';
+        options?: { matchId?: string; causedByPlayerId?: string };
+      }> = [
+        {
+          playerId,
+          eventType: 'match_completed',
+          options: { matchId },
+        },
+      ];
+
+      // Check if this is the player's first match completion
+      const { data: existingCompletions } = await supabase
+        .from('reputation_event')
+        .select('id')
+        .eq('player_id', playerId)
+        .eq('event_type', 'match_completed')
+        .limit(1);
+
+      if (!existingCompletions || existingCompletions.length === 0) {
+        eventsToCreate.push({
+          playerId,
+          eventType: 'first_match_bonus',
+          options: { matchId },
+        });
+      }
+
+      // Check for repeat opponents
+      const otherPlayerIds = uniquePlayerIds.filter(id => id !== playerId);
+      for (const opponentId of otherPlayerIds) {
+        const hasPlayedBefore = await havePlayedTogether(playerId, opponentId, matchId);
+        if (hasPlayedBefore) {
+          eventsToCreate.push({
+            playerId,
+            eventType: 'match_repeat_opponent',
+            options: { matchId, causedByPlayerId: opponentId },
+          });
+          // Only award once per match (not per opponent)
+          break;
+        }
+      }
+
+      // Create all events for this player
+      await createReputationEvents(eventsToCreate);
+      awarded.push(playerId);
+    } catch (err) {
+      console.error(`[awardMatchCompletionReputation] Failed for player ${playerId}:`, err);
+      failed.push(playerId);
+    }
+  }
+
+  return { awarded, skipped, failed };
+}
+
+/**
+ * Check-in radius in meters
+ */
+const CHECK_IN_RADIUS_METERS = 100;
+
+/**
+ * Result of a check-in attempt
+ */
+export interface CheckInResult {
+  success: boolean;
+  error?: 'too_far' | 'no_location' | 'not_participant' | 'already_checked_in' | 'unknown';
+  distanceMeters?: number;
+}
+
+/**
+ * Check in a player to a match by verifying their location is within
+ * the specified radius of the match location.
+ *
+ * @param matchId - The match ID
+ * @param playerId - The player's ID
+ * @param playerLat - The player's current latitude
+ * @param playerLng - The player's current longitude
+ * @returns CheckInResult indicating success or failure with reason
+ */
+export async function checkInToMatch(
+  matchId: string,
+  playerId: string,
+  playerLat: number,
+  playerLng: number
+): Promise<CheckInResult> {
+  try {
+    // 1. Fetch match with facility coordinates
+    const { data: match, error: matchError } = await supabase
+      .from('match')
+      .select(
+        `
+        id,
+        location_type,
+        custom_latitude,
+        custom_longitude,
+        facility:facility_id (
+          id,
+          latitude,
+          longitude
+        )
+      `
+      )
+      .eq('id', matchId)
+      .single();
+
+    if (matchError || !match) {
+      console.error('[checkInToMatch] Failed to fetch match:', matchError);
+      return { success: false, error: 'unknown' };
+    }
+
+    // 2. Determine target coordinates based on location type
+    let targetLat: number | null = null;
+    let targetLng: number | null = null;
+
+    if (match.location_type === 'facility' && match.facility) {
+      // Handle facility as potential array (Supabase relation quirk)
+      const facility = Array.isArray(match.facility) ? match.facility[0] : match.facility;
+      targetLat = facility?.latitude ?? null;
+      targetLng = facility?.longitude ?? null;
+    } else if (match.location_type === 'custom') {
+      targetLat = match.custom_latitude;
+      targetLng = match.custom_longitude;
+    }
+
+    // 3. Validate we have location coordinates
+    if (targetLat === null || targetLng === null) {
+      console.error('[checkInToMatch] Match has no valid location coordinates:', {
+        matchId,
+        locationType: match.location_type,
+      });
+      return { success: false, error: 'no_location' };
+    }
+
+    // 4. Check if player is already checked in
+    const { data: participant, error: participantError } = await supabase
+      .from('match_participant')
+      .select('id, checked_in_at')
+      .eq('match_id', matchId)
+      .eq('player_id', playerId)
+      .eq('status', 'joined')
+      .single();
+
+    if (participantError || !participant) {
+      console.error('[checkInToMatch] Player is not a participant:', {
+        matchId,
+        playerId,
+        error: participantError,
+      });
+      return { success: false, error: 'not_participant' };
+    }
+
+    if (participant.checked_in_at) {
+      return { success: false, error: 'already_checked_in' };
+    }
+
+    // 5. Calculate distance using Haversine formula
+    const distanceMeters = calculateDistanceMeters(playerLat, playerLng, targetLat, targetLng);
+
+    // 6. Check if within radius
+    if (distanceMeters > CHECK_IN_RADIUS_METERS) {
+      return { success: false, error: 'too_far', distanceMeters };
+    }
+
+    // 7. Update match_participant.checked_in_at
+    const { error: updateError } = await supabase
+      .from('match_participant')
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq('id', participant.id);
+
+    if (updateError) {
+      console.error('[checkInToMatch] Failed to update checked_in_at:', updateError);
+      return { success: false, error: 'unknown' };
+    }
+
+    return { success: true, distanceMeters };
+  } catch (err) {
+    console.error('[checkInToMatch] Unexpected error:', err);
+    return { success: false, error: 'unknown' };
+  }
+}
+
+/**
+ * Result type for getMatchNeedingFeedback
+ */
+export interface PendingFeedbackMatch {
+  match: MatchWithDetails;
+  /** The user's participant record for this match */
+  userParticipant: MatchParticipantWithPlayer;
+}
+
+/**
+ * Get the most recently ended match that requires feedback from the user.
+ *
+ * Returns a match if:
+ * 1. User is a joined participant with feedback_completed = false
+ * 2. Match ended within the last 48 hours (feedback window)
+ * 3. Match was full (all spots filled: 4 for doubles, 2 for singles)
+ *
+ * @param userId - The user's player ID
+ * @returns The most recently ended match needing feedback, or null if none
+ */
+const GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS = {
+  p_player_id: '' as string,
+  p_time_filter: 'past' as const,
+  p_sport_id: null as null,
+  p_limit: 50,
+  p_offset: 0,
+};
+
+async function callGetPlayerMatchesForFeedback(userId: string) {
+  return supabase.rpc('get_player_matches', {
+    ...GET_MATCH_NEEDING_FEEDBACK_RPC_PARAMS,
+    p_player_id: userId,
+  });
+}
+
+export async function getMatchNeedingFeedback(
+  userId: string
+): Promise<PendingFeedbackMatch | null> {
+  // Fetch past matches where user is a joined participant with feedback_completed = false
+  let { data: matchIdResults, error: rpcError } = await callGetPlayerMatchesForFeedback(userId);
+
+  // Retry once on upstream/invalid response (common after db reset or transient PostgREST issues)
+  if (rpcError?.message?.includes('upstream') || rpcError?.message?.includes('invalid response')) {
+    console.warn('[getMatchNeedingFeedback] RPC upstream error, retrying once:', rpcError.message);
+    const retry = await callGetPlayerMatchesForFeedback(userId);
+    rpcError = retry.error;
+    matchIdResults = retry.data;
+  }
+
+  if (rpcError) {
+    console.error(
+      '[getMatchNeedingFeedback] RPC error:',
+      rpcError?.message,
+      rpcError?.details ?? rpcError
+    );
+    return null;
+  }
+
+  const matchIds = (matchIdResults ?? []).map((r: { match_id: string }) => r.match_id);
+
+  if (matchIds.length === 0) {
+    return null;
+  }
+
+  // Fetch full match details for the IDs
+  const { data, error } = await supabase
+    .from('match')
+    .select(
+      `
+      *,
+      sport:sport_id (*),
+      facility:facility_id (*),
+      court:court_id (*),
+      min_rating_score:min_rating_score_id (*),
+      created_by_player:created_by (
+        id,
+        gender,
+        playing_hand,
+        max_travel_distance,
+        reputation_score,
+        notification_match_requests,
+        notification_messages,
+        notification_reminders,
+        privacy_show_age,
+        privacy_show_location,
+        privacy_show_stats
+      ),
+      participants:match_participant (
+        id,
+        match_id,
+        player_id,
+        status,
+        is_host,
+        score,
+        team_number,
+        feedback_completed,
+        match_outcome,
+        checked_in_at,
+        created_at,
+        updated_at,
+        player:player_id (
+          id,
+          gender,
+          playing_hand,
+          max_travel_distance,
+          reputation_score,
+          notification_match_requests,
+          notification_messages,
+          notification_reminders,
+          privacy_show_age,
+          privacy_show_location,
+          privacy_show_stats
+        )
+      )
+    `
+    )
+    .in('id', matchIds)
+    .is('cancelled_at', null); // Exclude cancelled matches
+
+  if (error) {
+    console.error('[getMatchNeedingFeedback] Query error:', error);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Import date utility for feedback window check
+  const { getMatchEndTimeDifferenceFromNow } = await import('@rallia/shared-utils');
+
+  const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+
+  // Filter and find the best match
+  let bestMatch: PendingFeedbackMatch | null = null;
+  let bestEndTimeDiff = -Infinity; // Most recent = closest to 0 (least negative)
+
+  for (const match of data as MatchWithDetails[]) {
+    // Check if match has ended and is within feedback window
+    const endTimeDiff = getMatchEndTimeDifferenceFromNow(
+      match.match_date,
+      match.start_time,
+      match.end_time,
+      match.timezone
+    );
+
+    // Skip if match hasn't ended yet (endTimeDiff > 0)
+    if (endTimeDiff > 0) {
+      continue;
+    }
+
+    // Skip if outside 48h feedback window
+    const timeSinceEnd = Math.abs(endTimeDiff);
+    if (timeSinceEnd >= FORTY_EIGHT_HOURS_MS) {
+      continue;
+    }
+
+    // Find user's participant record
+    const userParticipant = match.participants?.find(
+      (p: MatchParticipantWithPlayer) => p.player_id === userId && p.status === 'joined'
+    );
+
+    // Skip if user is not a joined participant or has completed feedback
+    if (!userParticipant || userParticipant.feedback_completed) {
+      continue;
+    }
+
+    // Check if match was full (all spots filled)
+    const joinedParticipants =
+      match.participants?.filter((p: MatchParticipantWithPlayer) => p.status === 'joined') ?? [];
+    const expectedCount = match.format === 'doubles' ? 4 : 2;
+
+    if (joinedParticipants.length < expectedCount) {
+      continue;
+    }
+
+    // This match is eligible - check if it's the most recent
+    if (endTimeDiff > bestEndTimeDiff) {
+      bestEndTimeDiff = endTimeDiff;
+      bestMatch = { match, userParticipant };
+    }
+  }
+
+  if (!bestMatch) {
+    return null;
+  }
+
+  // Enrich with profiles
+  const match = bestMatch.match;
+  const playerIds = new Set<string>();
+
+  if (match.created_by_player?.id) {
+    playerIds.add(match.created_by_player.id);
+  }
+  if (match.participants) {
+    match.participants.forEach((p: MatchParticipantWithPlayer) => {
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      if (playerObj?.id) {
+        playerIds.add(playerObj.id);
+      }
+    });
+  }
+
+  const profileIds = Array.from(playerIds);
+  const profilesMap: Record<string, Profile> = {};
+
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profile')
+      .select('*')
+      .in('id', profileIds);
+
+    if (!profilesError && profiles) {
+      profiles.forEach(profile => {
+        profilesMap[profile.id] = profile;
+      });
+    }
+  }
+
+  // Attach profile to creator
+  if (match.created_by_player?.id && profilesMap[match.created_by_player.id]) {
+    match.created_by_player.profile = profilesMap[match.created_by_player.id];
+  }
+
+  // Attach profiles to participants
+  if (match.participants) {
+    match.participants = match.participants.map((p: MatchParticipantWithPlayer) => {
+      const playerObj = Array.isArray(p.player) ? p.player[0] : p.player;
+      const playerId = playerObj?.id;
+
+      if (playerId && profilesMap[playerId]) {
+        playerObj.profile = profilesMap[playerId];
+      }
+      if (Array.isArray(p.player) && playerObj) {
+        p.player = playerObj;
+      }
+      return p;
+    });
+  }
+
+  return bestMatch;
 }
 
 /**
@@ -3042,8 +3954,13 @@ export const matchService = {
   rejectJoinRequest,
   cancelJoinRequest,
   kickParticipant,
+  checkInToMatch,
   // Invitations
   invitePlayersToMatch,
+  // Reputation
+  awardMatchCompletionReputation,
+  // Feedback
+  getMatchNeedingFeedback,
 };
 
 export default matchService;

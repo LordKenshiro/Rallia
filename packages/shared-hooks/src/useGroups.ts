@@ -31,6 +31,7 @@ import {
   postMatchToGroup,
   removeMatchFromGroup,
   createPlayedMatch,
+  submitMatchResultForMatch,
   getPendingScoreConfirmations,
   confirmMatchScore,
   disputeMatchScore,
@@ -53,8 +54,10 @@ import {
   type MatchSet,
   type LeaderboardEntry,
   type CreatePlayedMatchInput,
+  type SubmitMatchResultForMatchParams,
   type PendingScoreConfirmation,
 } from '@rallia/shared-services';
+import { matchKeys } from './useCreateMatch';
 
 // Query Keys
 export const groupKeys = {
@@ -66,13 +69,18 @@ export const groupKeys = {
   withMembers: (groupId: string) => [...groupKeys.detail(groupId), 'members'] as const,
   activity: (groupId: string) => [...groupKeys.detail(groupId), 'activity'] as const,
   stats: (groupId: string) => [...groupKeys.detail(groupId), 'stats'] as const,
-  isModerator: (groupId: string, playerId: string) => [...groupKeys.detail(groupId), 'moderator', playerId] as const,
-  isMember: (groupId: string, playerId: string) => [...groupKeys.detail(groupId), 'member', playerId] as const,
+  isModerator: (groupId: string, playerId: string) =>
+    [...groupKeys.detail(groupId), 'moderator', playerId] as const,
+  isMember: (groupId: string, playerId: string) =>
+    [...groupKeys.detail(groupId), 'member', playerId] as const,
   inviteCode: (groupId: string) => [...groupKeys.detail(groupId), 'inviteCode'] as const,
-  matches: (groupId: string, daysBack?: number) => [...groupKeys.detail(groupId), 'matches', daysBack] as const,
+  matches: (groupId: string, daysBack?: number) =>
+    [...groupKeys.detail(groupId), 'matches', daysBack] as const,
   recentMatch: (groupId: string) => [...groupKeys.detail(groupId), 'recentMatch'] as const,
-  leaderboard: (groupId: string, daysBack?: number) => [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
-  pendingConfirmations: (playerId: string) => [...groupKeys.all, 'pendingConfirmations', playerId] as const,
+  leaderboard: (groupId: string, daysBack?: number) =>
+    [...groupKeys.detail(groupId), 'leaderboard', daysBack] as const,
+  pendingConfirmations: (playerId: string) =>
+    [...groupKeys.all, 'pendingConfirmations', playerId] as const,
 };
 
 // =============================================================================
@@ -200,9 +208,16 @@ export function useUpdateGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, playerId, input }: { groupId: string; playerId: string; input: UpdateGroupInput }) =>
-      updateGroup(groupId, playerId, input),
-    onSuccess: (data) => {
+    mutationFn: ({
+      groupId,
+      playerId,
+      input,
+    }: {
+      groupId: string;
+      playerId: string;
+      input: UpdateGroupInput;
+    }) => updateGroup(groupId, playerId, input),
+    onSuccess: data => {
       // Update the cached group
       queryClient.setQueryData(groupKeys.detail(data.id), data);
       queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(data.id) });
@@ -234,8 +249,15 @@ export function useAddGroupMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, inviterId, playerIdToAdd }: { groupId: string; inviterId: string; playerIdToAdd: string }) =>
-      addGroupMember(groupId, inviterId, playerIdToAdd),
+    mutationFn: ({
+      groupId,
+      inviterId,
+      playerIdToAdd,
+    }: {
+      groupId: string;
+      inviterId: string;
+      playerIdToAdd: string;
+    }) => addGroupMember(groupId, inviterId, playerIdToAdd),
     onSuccess: (_, variables) => {
       // Invalidate group members and stats
       queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
@@ -252,8 +274,15 @@ export function useRemoveGroupMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, moderatorId, playerIdToRemove }: { groupId: string; moderatorId: string; playerIdToRemove: string }) =>
-      removeGroupMember(groupId, moderatorId, playerIdToRemove),
+    mutationFn: ({
+      groupId,
+      moderatorId,
+      playerIdToRemove,
+    }: {
+      groupId: string;
+      moderatorId: string;
+      playerIdToRemove: string;
+    }) => removeGroupMember(groupId, moderatorId, playerIdToRemove),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.stats(variables.groupId) });
@@ -286,8 +315,15 @@ export function usePromoteMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, moderatorId, playerIdToPromote }: { groupId: string; moderatorId: string; playerIdToPromote: string }) =>
-      promoteMember(groupId, moderatorId, playerIdToPromote),
+    mutationFn: ({
+      groupId,
+      moderatorId,
+      playerIdToPromote,
+    }: {
+      groupId: string;
+      moderatorId: string;
+      playerIdToPromote: string;
+    }) => promoteMember(groupId, moderatorId, playerIdToPromote),
     onSuccess: async (_, variables) => {
       // Invalidate and refetch to ensure UI updates immediately
       await queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
@@ -304,8 +340,15 @@ export function useDemoteMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, moderatorId, playerIdToDemote }: { groupId: string; moderatorId: string; playerIdToDemote: string }) =>
-      demoteMember(groupId, moderatorId, playerIdToDemote),
+    mutationFn: ({
+      groupId,
+      moderatorId,
+      playerIdToDemote,
+    }: {
+      groupId: string;
+      moderatorId: string;
+      playerIdToDemote: string;
+    }) => demoteMember(groupId, moderatorId, playerIdToDemote),
     onSuccess: async (_, variables) => {
       // Invalidate and refetch to ensure UI updates immediately
       await queryClient.invalidateQueries({ queryKey: groupKeys.withMembers(variables.groupId) });
@@ -324,7 +367,7 @@ export function useJoinGroupByInviteCode() {
   return useMutation({
     mutationFn: ({ inviteCode, playerId }: { inviteCode: string; playerId: string }) =>
       joinGroupByInviteCode(inviteCode, playerId),
-    onSuccess: (result) => {
+    onSuccess: result => {
       if (result.success && result.groupId) {
         // Invalidate player's groups list and the joined group
         queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
@@ -357,7 +400,11 @@ export function useResetGroupInviteCode() {
 /**
  * Get matches posted to a group
  */
-export function useGroupMatches(groupId: string | undefined, daysBack: number = 180, limit: number = 50) {
+export function useGroupMatches(
+  groupId: string | undefined,
+  daysBack: number = 180,
+  limit: number = 50
+) {
   return useQuery({
     queryKey: groupKeys.matches(groupId!, daysBack),
     queryFn: () => getGroupMatches(groupId!, daysBack, limit),
@@ -394,21 +441,30 @@ export function usePostMatchToGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ matchId, groupId, playerId }: { matchId: string; groupId: string; playerId: string }) =>
-      postMatchToGroup(matchId, groupId, playerId),
+    mutationFn: ({
+      matchId,
+      groupId,
+      playerId,
+    }: {
+      matchId: string;
+      groupId: string;
+      playerId: string;
+    }) => postMatchToGroup(matchId, groupId, playerId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
       // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
+      queryClient.invalidateQueries({
+        predicate: query => {
           const key = query.queryKey;
-          return Array.isArray(key) && 
-            key[0] === 'groups' && 
-            key[1] === 'detail' && 
-            key[2] === variables.groupId && 
-            key[3] === 'leaderboard';
-        }
+          return (
+            Array.isArray(key) &&
+            key[0] === 'groups' &&
+            key[1] === 'detail' &&
+            key[2] === variables.groupId &&
+            key[3] === 'leaderboard'
+          );
+        },
       });
       queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.groupId) });
     },
@@ -428,15 +484,17 @@ export function useRemoveMatchFromGroup() {
       queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.groupId) });
       // Use predicate to invalidate all leaderboard queries for this group (regardless of daysBack)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
+      queryClient.invalidateQueries({
+        predicate: query => {
           const key = query.queryKey;
-          return Array.isArray(key) && 
-            key[0] === 'groups' && 
-            key[1] === 'detail' && 
-            key[2] === variables.groupId && 
-            key[3] === 'leaderboard';
-        }
+          return (
+            Array.isArray(key) &&
+            key[0] === 'groups' &&
+            key[1] === 'detail' &&
+            key[2] === variables.groupId &&
+            key[3] === 'leaderboard'
+          );
+        },
       });
     },
   });
@@ -455,19 +513,40 @@ export function useCreatePlayedMatch() {
         queryClient.invalidateQueries({ queryKey: groupKeys.matches(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.recentMatch(variables.networkId) });
         // Use predicate to invalidate all leaderboard queries for this network (regardless of daysBack)
-        queryClient.invalidateQueries({ 
-          predicate: (query) => {
+        queryClient.invalidateQueries({
+          predicate: query => {
             const key = query.queryKey;
-            return Array.isArray(key) && 
-              key[0] === 'groups' && 
-              key[1] === 'detail' && 
-              key[2] === variables.networkId && 
-              key[3] === 'leaderboard';
-          }
+            return (
+              Array.isArray(key) &&
+              key[0] === 'groups' &&
+              key[1] === 'detail' &&
+              key[2] === variables.networkId &&
+              key[3] === 'leaderboard'
+            );
+          },
         });
         queryClient.invalidateQueries({ queryKey: groupKeys.activity(variables.networkId) });
         queryClient.invalidateQueries({ queryKey: groupKeys.stats(variables.networkId) });
       }
+    },
+  });
+}
+
+/**
+ * Submit match result for a specific match (e.g. from match detail during feedback window).
+ * Invalidates match detail and pending confirmations on success.
+ */
+export function useSubmitMatchResultForMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: SubmitMatchResultForMatchParams) => submitMatchResultForMatch(params),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: matchKeys.detail(variables.matchId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.submittedByPlayerId),
+      });
+      queryClient.invalidateQueries({ queryKey: matchKeys.lists() });
     },
   });
 }
@@ -500,7 +579,9 @@ export function useConfirmMatchScore() {
       confirmMatchScore(matchResultId, playerId),
     onSuccess: (_, variables) => {
       // Invalidate pending confirmations
-      queryClient.invalidateQueries({ queryKey: groupKeys.pendingConfirmations(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
       // Invalidate all leaderboards (we don't know which group this affects)
       queryClient.invalidateQueries({ queryKey: [...groupKeys.all, 'detail'] });
     },
@@ -525,7 +606,9 @@ export function useDisputeMatchScore() {
     }) => disputeMatchScore(matchResultId, playerId, reason),
     onSuccess: (_, variables) => {
       // Invalidate pending confirmations
-      queryClient.invalidateQueries({ queryKey: groupKeys.pendingConfirmations(variables.playerId) });
+      queryClient.invalidateQueries({
+        queryKey: groupKeys.pendingConfirmations(variables.playerId),
+      });
     },
   });
 }
@@ -625,7 +708,7 @@ export function useGroupRealtime(groupId: string | undefined, playerId: string |
     });
 
     // Subscribe to group settings changes (name, description, cover)
-    const settingsChannel = subscribeToGroupSettings(groupId, (payload) => {
+    const settingsChannel = subscribeToGroupSettings(groupId, payload => {
       if (payload.eventType === 'DELETE') {
         // Group was deleted, invalidate all related queries
         queryClient.invalidateQueries({

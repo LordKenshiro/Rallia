@@ -10,6 +10,39 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken, unregisterPushToken } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
+import { navigateFromOutside } from '../navigation';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+/**
+ * Notification data payload structure
+ * Matches the payload structure from notificationFactory.ts
+ */
+interface NotificationPayload {
+  matchId?: string;
+  conversationId?: string;
+  playerId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Match-related notification types that should navigate to match detail
+ */
+const MATCH_NOTIFICATION_TYPES = [
+  'match_invitation',
+  'match_join_request',
+  'match_join_accepted',
+  'match_join_rejected',
+  'match_player_joined',
+  'match_cancelled',
+  'match_updated',
+  'match_starting_soon',
+  'match_completed',
+  'player_kicked',
+  'player_left',
+] as const;
 
 /**
  * Check if we're running on a physical device (vs simulator/emulator)
@@ -50,6 +83,16 @@ export interface PushNotificationState {
   isRegistered: boolean;
   isRegistering: boolean;
   error: string | null;
+}
+
+/**
+ * Options for the usePushNotifications hook
+ */
+export interface UsePushNotificationsOptions {
+  /** Callback to set a pending match ID for deep linking */
+  onMatchNotificationTapped?: (matchId: string) => void;
+  /** Whether the splash animation has completed (delays cold start navigation until true) */
+  isSplashComplete?: boolean;
 }
 
 /**
@@ -125,14 +168,17 @@ async function setupAndroidChannel(): Promise<void> {
  *
  * @param userId - The authenticated user's ID (null if not logged in)
  * @param enabled - Whether to attempt registration (default: true)
+ * @param options - Optional configuration including deep link handlers
  */
 export function usePushNotifications(
   userId: string | null | undefined,
-  enabled: boolean = true
+  enabled: boolean = true,
+  options: UsePushNotificationsOptions = {}
 ): PushNotificationState & {
   requestPermissions: () => Promise<boolean>;
   unregister: () => Promise<void>;
 } {
+  const { onMatchNotificationTapped, isSplashComplete = true } = options;
   const [state, setState] = useState<PushNotificationState>({
     expoPushToken: null,
     isRegistered: false,
@@ -202,6 +248,53 @@ export function usePushNotifications(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, enabled]);
 
+  // Ref to store the latest callback to avoid stale closures
+  const onMatchNotificationTappedRef = useRef(onMatchNotificationTapped);
+  useEffect(() => {
+    onMatchNotificationTappedRef.current = onMatchNotificationTapped;
+  }, [onMatchNotificationTapped]);
+
+  /**
+   * Handle a notification response (from tap)
+   * Extracted to reuse for both listener and cold start handling
+   */
+  const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
+    const data = response.notification.request.content.data as NotificationPayload;
+    const notificationType = data.type as string | undefined;
+
+    Logger.logUserAction('push_notification_tapped', { data, type: notificationType });
+
+    // Handle match-related notifications
+    if (data.matchId && notificationType) {
+      const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
+        notificationType as (typeof MATCH_NOTIFICATION_TYPES)[number]
+      );
+
+      if (isMatchNotification) {
+        // Set pending match ID for deep linking
+        if (onMatchNotificationTappedRef.current) {
+          onMatchNotificationTappedRef.current(data.matchId);
+        }
+
+        // Navigate to PlayerMatches screen (My Games)
+        // The screen will check for pending deep link and open the match detail
+        navigateFromOutside('PlayerMatches');
+
+        Logger.logUserAction('push_notification_deep_link', {
+          matchId: data.matchId,
+          type: notificationType,
+        });
+      }
+    }
+
+    // TODO: Handle other notification types (messages, etc.)
+  }, []);
+
+  // Track if we've already handled the initial notification (to prevent double handling)
+  const hasHandledInitialNotification = useRef(false);
+  // Store pending cold start notification until splash completes
+  const pendingColdStartNotification = useRef<Notifications.NotificationResponse | null>(null);
+
   // Set up notification listeners
   useEffect(() => {
     // Listen for incoming notifications while app is foregrounded
@@ -212,16 +305,54 @@ export function usePushNotifications(
       });
     });
 
-    // Listen for user interactions with notifications
+    // Listen for user interactions with notifications (while app is running/backgrounded)
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      Logger.logUserAction('push_notification_tapped', { data });
-
-      // TODO: Handle navigation based on notification data
-      // e.g., navigate to specific match, conversation, etc.
+      handleNotificationResponse(response);
     });
 
+    // Handle cold start: Check if app was opened from a notification when completely killed
+    // This is needed because the listener above won't catch notifications that opened the app
+    // Note: getLastNotificationResponseAsync() is specifically designed for this use case
+    // and should only return a notification when the app was launched from that notification tap
+    const checkInitialNotification = async () => {
+      if (hasHandledInitialNotification.current) {
+        return;
+      }
+
+      try {
+        const response = await Notifications.getLastNotificationResponseAsync();
+        if (response) {
+          const notificationDate = response.notification.date;
+          const now = Date.now();
+          const ageMs = now - notificationDate;
+
+          Logger.logUserAction('push_notification_cold_start_detected', {
+            ageMs,
+            data: response.notification.request.content.data,
+            isSplashComplete,
+          });
+
+          // Store the notification for later handling
+          pendingColdStartNotification.current = response;
+          hasHandledInitialNotification.current = true;
+
+          // If splash is already complete, handle immediately
+          if (isSplashComplete) {
+            handleNotificationResponse(response);
+            pendingColdStartNotification.current = null;
+          }
+          // Otherwise, the effect below will handle it when splash completes
+        }
+      } catch (error) {
+        Logger.error('Failed to check initial notification', error as Error);
+      }
+    };
+
+    // Small delay to ensure the check happens after initial render
+    const timeoutId = setTimeout(checkInitialNotification, 100);
+
     return () => {
+      clearTimeout(timeoutId);
       if (notificationListener.current) {
         notificationListener.current.remove();
       }
@@ -229,7 +360,26 @@ export function usePushNotifications(
         responseListener.current.remove();
       }
     };
-  }, []);
+  }, [handleNotificationResponse, isSplashComplete]);
+
+  // Handle pending cold start notification when splash completes
+  useEffect(() => {
+    if (isSplashComplete && pendingColdStartNotification.current) {
+      Logger.logUserAction('push_notification_cold_start_handling', {
+        data: pendingColdStartNotification.current.notification.request.content.data,
+      });
+
+      // Small delay to ensure navigation is ready after splash
+      const timeoutId = setTimeout(() => {
+        if (pendingColdStartNotification.current) {
+          handleNotificationResponse(pendingColdStartNotification.current);
+          pendingColdStartNotification.current = null;
+        }
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isSplashComplete, handleNotificationResponse]);
 
   // Unregister on logout
   useEffect(() => {

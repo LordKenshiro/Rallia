@@ -10,9 +10,12 @@ export { default as ProofViewer } from './ProofViewer';
 export { default as ProofGallerySection } from './ProofGallerySection';
 
 // Certification Components
-export { CertificationBadge, type BadgeStatus, type CertificationBadgeProps } from './CertificationBadge';
+export {
+  CertificationBadge,
+  type BadgeStatus,
+  type CertificationBadgeProps,
+} from './CertificationBadge';
 export { CertificationSection, type CertificationSectionProps } from './CertificationSection';
 
 // Reference Request Components
 export { RespondToReferenceOverlay } from './RespondToReferenceOverlay';
-

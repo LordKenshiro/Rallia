@@ -15,7 +15,15 @@
 
 import * as React from 'react';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Keyboard, Modal, Alert } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Keyboard,
+  Modal,
+  Alert,
+} from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -25,7 +33,7 @@ import Animated, {
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '@rallia/shared-components';
+import { Text, Skeleton } from '@rallia/shared-components';
 import {
   lightTheme,
   darkTheme,
@@ -38,8 +46,9 @@ import {
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
-import { useActionsSheet, useMatchDetailSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet, useSport } from '../context';
 import { useTranslation, type TranslationKey } from '../hooks';
+import { SportIcon } from './SportIcon';
 import { useTheme } from '@rallia/shared-hooks';
 import { getMatchWithDetails } from '@rallia/shared-services';
 import { MatchCreationWizard } from '../features/matches';
@@ -79,7 +88,7 @@ interface ThemeColors {
  * Action item for the actions wizard
  */
 interface ActionItemProps {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: keyof typeof Ionicons.glyphMap | 'sport';
   title: string;
   description: string;
   onPress: () => void;
@@ -87,6 +96,7 @@ interface ActionItemProps {
 }
 
 const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPress, colors }) => {
+  const { selectedSport } = useSport();
   return (
     <TouchableOpacity
       style={[styles.actionItem, { borderBottomColor: colors.border }]}
@@ -97,7 +107,15 @@ const ActionItem: React.FC<ActionItemProps> = ({ icon, title, description, onPre
       activeOpacity={0.7}
     >
       <View style={[styles.actionIconContainer, { backgroundColor: colors.buttonInactive }]}>
-        <Ionicons name={icon} size={24} color={colors.buttonActive} />
+        {icon === 'sport' ? (
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={24}
+            color={colors.buttonActive}
+          />
+        ) : (
+          <Ionicons name={icon} size={24} color={colors.buttonActive} />
+        )}
       </View>
       <View style={styles.actionTextContainer}>
         <Text size="base" weight="semibold" color={colors.text}>
@@ -162,7 +180,7 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
     <View style={styles.contentContainer}>
       <View style={styles.actionsList}>
         <ActionItem
-          icon="tennisball-outline"
+          icon="sport"
           title={t('actions.createMatch')}
           description={t('actions.createMatchDescription')}
           onPress={onCreateMatch}
@@ -224,12 +242,15 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
 
             <View style={styles.modalOptions}>
               <TouchableOpacity
-                style={[styles.modalOption, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                style={[
+                  styles.modalOption,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
                 onPress={handleSelectGroup}
                 activeOpacity={0.7}
               >
                 <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="people" size={28} color={primary[600]} />
+                  <Ionicons name="people-outline" size={28} color={primary[600]} />
                 </View>
                 <Text size="base" weight="semibold" color={colors.text}>
                   {t('actions.group')}
@@ -240,12 +261,15 @@ const ActionsContent: React.FC<ActionsContentProps> = ({ onClose, onCreateMatch,
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalOption, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                style={[
+                  styles.modalOption,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
                 onPress={handleSelectCommunity}
                 activeOpacity={0.7}
               >
                 <View style={[styles.modalOptionIcon, { backgroundColor: primary[100] }]}>
-                  <Ionicons name="globe" size={28} color={primary[600]} />
+                  <Ionicons name="globe-outline" size={28} color={primary[600]} />
                 </View>
                 <Text size="base" weight="semibold" color={colors.text}>
                   {t('actions.community')}
@@ -289,6 +313,8 @@ export const ActionsBottomSheet: React.FC = () => {
     refreshProfile,
     editMatchData,
     clearEditMatch,
+    shouldOpenMatchCreation,
+    clearMatchCreationFlag,
   } = useActionsSheet();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { theme } = useTheme();
@@ -303,6 +329,31 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Animation value for slide transition
   const slideProgress = useSharedValue(0);
+
+  // Effect to automatically open match creation wizard when flag is set
+  useEffect(() => {
+    if (shouldOpenMatchCreation && contentMode === 'actions' && !showWizard && !isEditMode) {
+      // Clear the flag first
+      clearMatchCreationFlag();
+      // Then trigger the wizard with a small delay to ensure sheet is fully presented
+      setTimeout(() => {
+        setShowWizard(true);
+        // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+        slideProgress.value = withSpring(1, {
+          damping: 80,
+          stiffness: 600,
+          overshootClamping: false,
+        });
+      }, 100);
+    }
+  }, [
+    shouldOpenMatchCreation,
+    contentMode,
+    showWizard,
+    isEditMode,
+    clearMatchCreationFlag,
+    slideProgress,
+  ]);
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -374,6 +425,7 @@ export const ActionsBottomSheet: React.FC = () => {
   const handleCreateMatch = useCallback(() => {
     lightHaptic();
     setShowWizard(true);
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = withSpring(1, { damping: 80, stiffness: 600, overshootClamping: false });
   }, [slideProgress]);
 
@@ -386,6 +438,8 @@ export const ActionsBottomSheet: React.FC = () => {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = withSpring(0, { damping: 80, stiffness: 600, overshootClamping: false });
     // Wait for animation to complete before hiding wizard
     setTimeout(() => {
@@ -400,6 +454,7 @@ export const ActionsBottomSheet: React.FC = () => {
       // Close the sheet and reset wizard state
       closeSheet();
       setShowWizard(false);
+      // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
       slideProgress.value = 0;
       clearEditMatch();
 
@@ -426,6 +481,7 @@ export const ActionsBottomSheet: React.FC = () => {
   // Handle sheet dismiss - just reset local wizard state
   const handleSheetDismiss = useCallback(() => {
     setShowWizard(false);
+    // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are designed to be mutated
     slideProgress.value = 0;
     clearEditMatch();
     // Note: contentMode is reset by openSheet when the sheet is opened again
@@ -433,7 +489,11 @@ export const ActionsBottomSheet: React.FC = () => {
 
   // Handle keyboard dismissal to restore sheet position
   useEffect(() => {
-    const isWizardActive = showWizard || contentMode === 'auth' || contentMode === 'onboarding';
+    const isWizardActive =
+      showWizard ||
+      contentMode === 'auth' ||
+      contentMode === 'onboarding' ||
+      contentMode === 'loading';
     if (!isWizardActive) return;
 
     let hideTimeout: NodeJS.Timeout;
@@ -485,8 +545,51 @@ export const ActionsBottomSheet: React.FC = () => {
     opacity: interpolate(slideProgress.value, [0, 0.5, 1], [0, 0.5, 1]),
   }));
 
+  // Theme-aware skeleton colors (match FacilityDetail / FacilitiesDirectory)
+  const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
+  const skeletonHighlight = isDark ? neutral[700] : '#F2F8FC';
+
   // Determine which content to show based on contentMode from context
   const renderContent = () => {
+    if (contentMode === 'loading') {
+      const ACTION_ITEMS_COUNT = 5;
+      const iconSize = spacingPixels[11];
+      return (
+        <View style={styles.contentContainer}>
+          <View style={styles.actionsList}>
+            {Array.from({ length: ACTION_ITEMS_COUNT }).map((_, index) => (
+              <View key={index} style={[styles.actionItem, { borderBottomColor: colors.border }]}>
+                <Skeleton
+                  width={iconSize}
+                  height={iconSize}
+                  circle
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <View style={styles.actionTextContainer}>
+                  <Skeleton
+                    width="80%"
+                    height={16}
+                    borderRadius={4}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width="60%"
+                    height={12}
+                    borderRadius={4}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ marginTop: spacingPixels[0.5] }}
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
     if (contentMode === 'auth') {
       return (
         <AuthWizard
@@ -629,7 +732,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: spacingPixels[6],
     paddingTop: spacingPixels[2],
-    paddingBottom: spacingPixels[8],
+    paddingBottom: spacingPixels[4],
   },
   actionsList: {
     paddingTop: spacingPixels[2],

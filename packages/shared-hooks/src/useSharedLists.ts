@@ -146,8 +146,14 @@ export function useUpdateSharedContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: UpdateSharedContactParams & { listId: string }) => 
-      updateSharedContact({ id: params.id, name: params.name, phone: params.phone, email: params.email, notes: params.notes }),
+    mutationFn: (params: UpdateSharedContactParams & { listId: string }) =>
+      updateSharedContact({
+        id: params.id,
+        name: params.name,
+        phone: params.phone,
+        email: params.email,
+        notes: params.notes,
+      }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: sharedListsKeys.contacts(variables.listId) });
     },
@@ -161,7 +167,7 @@ export function useDeleteSharedContact() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ contactId, listId: _listId }: { contactId: string; listId: string }) => 
+    mutationFn: ({ contactId, listId: _listId }: { contactId: string; listId: string }) =>
       deleteSharedContact(contactId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: sharedListsKeys.contacts(variables.listId) });
@@ -206,7 +212,12 @@ export function useSharedListsRealtime(playerId: string | undefined) {
       });
 
       // If a specific list was updated, invalidate its detail query too
-      if ((eventType === 'UPDATE' || eventType === 'DELETE') && list && typeof list === 'object' && 'id' in list) {
+      if (
+        (eventType === 'UPDATE' || eventType === 'DELETE') &&
+        list &&
+        typeof list === 'object' &&
+        'id' in list
+      ) {
         const listData = list as SharedContactList;
         if (eventType === 'DELETE') {
           queryClient.removeQueries({ queryKey: sharedListsKeys.list(listData.id) });

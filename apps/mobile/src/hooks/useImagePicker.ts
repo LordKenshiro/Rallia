@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { SheetManager } from 'react-native-actions-sheet';
 import { Logger } from '@rallia/shared-services';
 import { useTranslation } from './useTranslation';
 
@@ -18,15 +19,20 @@ export interface ImagePickerPermissions {
  * Custom hook for handling image selection with permissions
  * Supports both camera and gallery, with platform-specific handling
  *
- * Now supports a custom UI sheet via showPicker state and action callbacks.
+ * Uses SheetManager to show the globally registered ImagePickerSheet.
  * Components can use:
- * - showPicker / setShowPicker: to control sheet visibility
- * - pickFromCamera / pickFromGallery: to trigger the actual selection
- * - permissions: to conditionally disable camera/gallery options
+ * - openPicker(): to show the image picker sheet
+ * - pickFromCamera / pickFromGallery: to trigger selection directly
+ * - image: the selected image URI
  */
-export const useImagePicker = () => {
+export interface UseImagePickerOptions {
+  title?: string;
+  cameraLabel?: string;
+  galleryLabel?: string;
+}
+
+export const useImagePicker = (options?: UseImagePickerOptions) => {
   const [image, setImage] = useState<string | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
   const [permissions, setPermissions] = useState<ImagePickerPermissions>({
     camera: false,
     library: false,
@@ -91,7 +97,7 @@ export const useImagePicker = () => {
 
   /**
    * Opens the image picker sheet (custom UI)
-   * Call this to show the ImagePickerSheet component
+   * Uses SheetManager to show the globally registered ImagePickerSheet
    */
   const openPicker = useCallback(async () => {
     // Web: directly launch image picker (no sheet needed)
@@ -107,10 +113,21 @@ export const useImagePicker = () => {
       return { uri: null, error: t('errors.permissionsDenied') };
     }
 
-    // Show the custom picker sheet
-    setShowPicker(true);
+    // Show the image picker sheet via SheetManager
+    SheetManager.show('image-picker', {
+      payload: {
+        onTakePhoto: pickFromCamera,
+        onChooseFromGallery: pickFromGallery,
+        title: options?.title,
+        cameraLabel: options?.cameraLabel,
+        galleryLabel: options?.galleryLabel,
+        cameraDisabled: !perms.camera,
+        galleryDisabled: !perms.library,
+      },
+    });
+
     return { uri: null }; // Actual result will come from pickFromCamera/pickFromGallery
-  }, [requestPermissions, pickFromGallery, t]);
+  }, [requestPermissions, pickFromGallery, pickFromCamera, t, options]);
 
   /**
    * Legacy pickImage function that uses native Alert
@@ -170,18 +187,12 @@ export const useImagePicker = () => {
     setImage(null);
   }, []);
 
-  const closePicker = useCallback(() => {
-    setShowPicker(false);
-  }, []);
-
   return {
     image,
     // Legacy API (still works, uses native Alert)
     pickImage,
-    // New API (custom UI sheet)
-    showPicker,
+    // New API (uses SheetManager)
     openPicker,
-    closePicker,
     pickFromCamera,
     pickFromGallery,
     permissions,

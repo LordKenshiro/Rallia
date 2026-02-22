@@ -1,17 +1,48 @@
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Building2, Globe, Mail, MapPin, Phone, User } from 'lucide-react';
+import { getSelectedOrganization } from '@/lib/supabase/get-selected-organization';
+import {
+  ArrowRight,
+  Calendar,
+  CalendarCheck,
+  Clock,
+  DollarSign,
+  MapPin,
+  Plus,
+  Settings,
+  TrendingUp,
+  AlertCircle,
+} from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
-// Helper to capitalize strings
-function capitalize(str: string | null | undefined): string {
-  if (!str) return '';
-  return str
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+// Helper to get today's date in YYYY-MM-DD format
+function getTodayDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper to get start of week (Monday)
+function getWeekStartDate(): string {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(today.setDate(diff));
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+}
+
+// Helper to format time
+function formatTime(time: string): string {
+  const [hours, minutes] = time.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,261 +61,366 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch user profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profile')
-    .select('*')
-    .eq('id', user!.id)
-    .single();
+  // Fetch user profile (currently unused but may be needed for future features)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { data: profile } = await supabase.from('profile').select('*').eq('id', user!.id).single();
 
-  // Fetch user's organization memberships with organization details
-  const { data: memberships, error: membershipsError } = await supabase
-    .from('organization_member')
-    .select(
-      `
-      role,
-      joined_at,
-      organization (
-        id,
-        name,
-        nature,
-        email,
-        phone,
-        slug,
-        address,
-        city,
-        country,
-        postal_code,
-        type,
-        description,
-        website,
-        is_active,
-        created_at
-      )
-    `
-    )
-    .eq('user_id', user!.id)
-    .is('left_at', null);
+  // Get the selected organization (respects user's selection from org switcher)
+  const organization = await getSelectedOrganization(user!.id);
 
-  if (membershipsError) {
-    console.error('Error fetching memberships:', membershipsError);
+  // Fetch KPI data if organization exists
+  let todaysBookingsCount = 0;
+  let weekRevenue = 0;
+  let utilizationRate = 0;
+  let pendingActionsCount = 0;
+  let todaysBookings: Array<{
+    id: string;
+    start_time: string;
+    end_time: string;
+    notes: string | null;
+    court: { name: string | null; court_number: number | null } | null;
+  }> = [];
+
+  if (organization) {
+    const todayStr = getTodayDateString();
+    const weekStartStr = getWeekStartDate();
+
+    // First get facility IDs for this organization
+    const { data: facilities } = await supabase
+      .from('facility')
+      .select('id')
+      .eq('organization_id', organization.id)
+      .is('archived_at', null);
+
+    const facilityIds = facilities?.map(f => f.id) || [];
+
+    if (facilityIds.length > 0) {
+      // Get court IDs for these facilities
+      const { data: courts } = await supabase
+        .from('court')
+        .select('id')
+        .in('facility_id', facilityIds)
+        .eq('is_active', true);
+
+      const courtIds = courts?.map(c => c.id) || [];
+
+      if (courtIds.length > 0) {
+        // Fetch today's bookings count
+        const { count: todayCount } = await supabase
+          .from('booking')
+          .select('*', { count: 'exact', head: true })
+          .in('court_id', courtIds)
+          .eq('booking_date', todayStr)
+          .not('status', 'eq', 'cancelled');
+
+        todaysBookingsCount = todayCount || 0;
+
+        // Fetch today's bookings for schedule widget
+        const { data: todayBookingsData } = await supabase
+          .from('booking')
+          .select(
+            `
+            id,
+            start_time,
+            end_time,
+            notes,
+            court:court_id (
+              name,
+              court_number
+            )
+          `
+          )
+          .in('court_id', courtIds)
+          .eq('booking_date', todayStr)
+          .not('status', 'eq', 'cancelled')
+          .order('start_time', { ascending: true })
+          .limit(5);
+
+        todaysBookings = (todayBookingsData || []) as unknown as typeof todaysBookings;
+
+        // Fetch this week's revenue
+        const { data: weekBookings } = await supabase
+          .from('booking')
+          .select('price_cents')
+          .in('court_id', courtIds)
+          .gte('booking_date', weekStartStr)
+          .lte('booking_date', todayStr)
+          .in('status', ['confirmed', 'completed']);
+
+        weekRevenue = (weekBookings || []).reduce((sum, b) => sum + (b.price_cents || 0), 0) / 100;
+
+        // Fetch pending actions count (pending or awaiting_approval bookings)
+        const { count: pendingCount } = await supabase
+          .from('booking')
+          .select('*', { count: 'exact', head: true })
+          .in('court_id', courtIds)
+          .in('status', ['pending', 'awaiting_approval']);
+
+        pendingActionsCount = pendingCount || 0;
+
+        // Calculate utilization for today (simple approximation)
+        // Assuming 14 hours of operating time (7am-9pm) and 1-hour slots
+        const totalPossibleSlots = courtIds.length * 14; // courts * hours per day
+        utilizationRate =
+          totalPossibleSlots > 0 ? Math.round((todaysBookingsCount / totalPossibleSlots) * 100) : 0;
+      }
+    }
   }
 
-  // Get the first active organization (for now, showing one)
-  const membership = memberships?.[0];
-  const organization = membership?.organization as any;
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(date);
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-CA', {
+      style: 'currency',
+      currency: 'CAD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   return (
     <div className="flex flex-col w-full gap-8">
-      <div>
-        <h1 className="text-3xl font-bold">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2 mb-0">{t('description')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-0">{t('title')}</h1>
+          <p className="text-muted-foreground mb-0">{t('description')}</p>
+        </div>
+        <Button asChild>
+          <Link href="/dashboard/bookings/new">
+            <Plus className="mr-2 size-4" />
+            {t('quickActions.newBooking')}
+          </Link>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Profile Card */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <User className="h-5 w-5 text-primary" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-lg">{t('profileTitle')}</CardTitle>
-                <CardDescription className="m-0">{t('profileDescription')}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-              <div className="p-2 bg-primary/10 rounded-md">
-                <Mail className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                  {t('email')}
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {t('kpi.todaysBookings')}
                 </p>
-                <p className="text-sm font-medium m-0">{user!.email}</p>
+                <p className="text-3xl font-bold mb-1">{todaysBookingsCount}</p>
+                <p className="text-xs text-muted-foreground">{t('kpi.todaysBookingsDesc')}</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <CalendarCheck className="size-6 text-blue-500" />
               </div>
             </div>
-
-            {profile?.full_name && (
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                <div className="p-2 bg-primary/10 rounded-md">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                    {t('fullName')}
-                  </p>
-                  <p className="text-sm font-medium m-0">{profile.full_name}</p>
-                </div>
-              </div>
-            )}
-
-            {profile?.display_name && (
-              <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                <div className="p-2 bg-primary/10 rounded-md">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                    {t('displayName')}
-                  </p>
-                  <p className="text-sm font-medium m-0">{profile.display_name}</p>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Organization Card */}
-        {organization && (
-          <Card className="overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b">
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {t('kpi.weekRevenue')}
+                </p>
+                <p className="text-3xl font-bold mb-1">{formatCurrency(weekRevenue)}</p>
+                <p className="text-xs text-muted-foreground">{t('kpi.weekRevenueDesc')}</p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <DollarSign className="size-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {t('kpi.utilization')}
+                </p>
+                <p className="text-3xl font-bold mb-1">{utilizationRate}%</p>
+                <p className="text-xs text-muted-foreground">{t('kpi.utilizationDesc')}</p>
+              </div>
+              <div className="p-3 bg-purple-500/10 rounded-lg">
+                <TrendingUp className="size-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {t('kpi.pendingActions')}
+                </p>
+                <p className="text-3xl font-bold mb-1">{pendingActionsCount}</p>
+                <p className="text-xs text-muted-foreground">{t('kpi.pendingActionsDesc')}</p>
+              </div>
+              <div className="p-3 bg-orange-500/10 rounded-lg">
+                <AlertCircle className="size-6 text-orange-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/dashboard/facilities" className="block group">
+          <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all">
+            <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <Building2 className="h-5 w-5 text-primary" />
+                  <div className="p-2.5 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                    <MapPin className="size-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{t('organizationTitle')}</CardTitle>
-                    <CardDescription className="m-0">
-                      {t('organizationDescription')}
-                    </CardDescription>
+                    <p className="font-semibold mb-0">{t('quickActions.facilities')}</p>
+                    <p className="text-sm text-muted-foreground mb-0">
+                      {t('quickActions.facilitiesDesc')}
+                    </p>
                   </div>
                 </div>
+                <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-lg font-semibold m-0">{organization.name}</p>
-                <div className="flex flex-wrap gap-2">
-                  {organization.type && (
-                    <Badge variant="outline" className="font-medium">
-                      {capitalize(organization.type)}
-                    </Badge>
-                  )}
-                  {organization.nature && (
-                    <Badge variant="outline" className="font-medium">
-                      {capitalize(organization.nature)}
-                    </Badge>
-                  )}
-                  {membership && (
-                    <Badge variant="default" className="font-medium">
-                      {capitalize(membership.role)}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {organization.email && (
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <Mail className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                      {t('email')}
-                    </p>
-                    <a
-                      href={`mailto:${organization.email}`}
-                      className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                    >
-                      {organization.email}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {organization.phone && (
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <Phone className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                      {t('phone')}
-                    </p>
-                    <a
-                      href={`tel:${organization.phone}`}
-                      className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                    >
-                      {organization.phone}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {(organization.city || organization.country) && (
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <MapPin className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                      {t('location')}
-                    </p>
-                    <p className="text-sm font-medium m-0">
-                      {[organization.city, capitalize(organization.country)]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {organization.website && (
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <Globe className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
-                      {t('website')}
-                    </p>
-                    <a
-                      href={organization.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium hover:underline hover:text-primary transition-colors"
-                    >
-                      {organization.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {organization.description && (
-                <div className="bg-muted/20 rounded-lg p-4">
-                  <p className="text-sm font-medium text-muted-foreground mb-2 mt-0">
-                    {t('description')}
-                  </p>
-                  <p className="text-sm leading-relaxed m-0">{organization.description}</p>
-                </div>
-              )}
-
-              {membership?.joined_at && (
-                <div className="text-center p-3 bg-muted/20 rounded-lg">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 mt-0">
-                    {t('joinedAt')}
-                  </p>
-                  <p className="text-sm font-semibold m-0">{formatDate(membership.joined_at)}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
-        )}
+        </Link>
+
+        <Link href="/dashboard/availability" className="block group">
+          <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                    <Calendar className="size-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-0">{t('quickActions.availability')}</p>
+                    <p className="text-sm text-muted-foreground mb-0">
+                      {t('quickActions.availabilityDesc')}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="size-4 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/bookings" className="block group">
+          <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                    <CalendarCheck className="size-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-0">{t('quickActions.bookings')}</p>
+                    <p className="text-sm text-muted-foreground mb-0">
+                      {t('quickActions.bookingsDesc')}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="size-4 text-muted-foreground group-hover:text-green-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/settings" className="block group">
+          <Card className="h-full hover:border-primary/50 hover:shadow-md transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                    <Settings className="size-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-0">{t('quickActions.settings')}</p>
+                    <p className="text-sm text-muted-foreground mb-0">
+                      {t('quickActions.settingsDesc')}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="size-4 text-muted-foreground group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
+
+      {/* Today's Schedule */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-md">
+                <Clock className="size-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{t('todaySchedule.title')}</CardTitle>
+                <CardDescription>
+                  {new Date().toLocaleDateString(undefined, {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/bookings">
+                {t('todaySchedule.viewAll')}
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {todaysBookings.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="size-12 mx-auto mb-3 opacity-50" />
+              <p>{t('todaySchedule.noBookings')}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {todaysBookings.map(booking => {
+                // Extract guest name from notes if available
+                let guestName = t('todaySchedule.guest');
+                if (booking.notes) {
+                  const guestMatch = booking.notes.match(/Guest:\s*([^|]+)/);
+                  if (guestMatch) {
+                    guestName = guestMatch[1].trim();
+                  }
+                }
+                return (
+                  <Link
+                    key={booking.id}
+                    href={`/dashboard/bookings/${booking.id}`}
+                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors group mb-0"
+                  >
+                    <div className="flex flex-col items-center justify-center bg-primary/10 rounded-lg px-3 py-2 min-w-[70px]">
+                      <span className="text-sm font-semibold text-primary">
+                        {formatTime(booking.start_time)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTime(booking.end_time)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate mb-0">
+                        {booking.court?.name || `Court ${booking.court?.court_number}`}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate mb-0">{guestName}</p>
+                    </div>
+                    <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

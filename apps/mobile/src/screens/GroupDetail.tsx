@@ -23,8 +23,18 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
-import { lightHaptic, selectionHaptic, mediumHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import {
   useGroupWithMembers,
   useGroupStats,
@@ -38,20 +48,13 @@ import {
   useGroupRealtime,
   useScoreConfirmationsRealtime,
   type GroupActivity as GroupActivityType,
+  type GroupMatch,
 } from '@rallia/shared-hooks';
 import type { RootStackParamList } from '../navigation/types';
+import { SheetManager } from 'react-native-actions-sheet';
 import { primary } from '@rallia/design-system';
 import {
-  EditGroupModal,
-  AddMemberModal,
-  MemberListModal,
-  GroupOptionsModal,
-  InviteLinkModal,
-  RecentGamesModal,
-} from '../features/groups';
-import {
   AddScoreIntroModal,
-  MatchTypeModal,
   AddScoreModal,
   PendingScoresSection,
   type MatchType,
@@ -66,6 +69,12 @@ type TabKey = 'home' | 'leaderboard' | 'activity';
 
 const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
 
+const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
+  home: 'home-outline',
+  leaderboard: 'podium-outline',
+  activity: 'flash-outline',
+};
+
 export default function GroupDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<GroupDetailRouteProp>();
@@ -74,19 +83,15 @@ export default function GroupDetailScreen() {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [showMemberListModal, setShowMemberListModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
-  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
-  const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
   const [showAddScoreModal, setShowAddScoreModal] = useState(false);
   const [selectedMatchType, setSelectedMatchType] = useState<MatchType>('single');
   const [hasSeenAddScoreIntro, setHasSeenAddScoreIntro] = useState<boolean | null>(null);
@@ -114,7 +119,10 @@ export default function GroupDetailScreen() {
   const { data: isModerator } = useIsGroupModerator(groupId, playerId);
   const { data: recentMatch } = useMostRecentGroupMatch(groupId);
   const { data: allMatches } = useGroupMatches(groupId, 180, 100);
-  const { data: leaderboard } = useGroupLeaderboard(groupId, leaderboardPeriod === 0 ? 3650 : leaderboardPeriod);
+  const { data: leaderboard } = useGroupLeaderboard(
+    groupId,
+    leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
+  );
 
   // Subscribe to real-time updates for this group
   useGroupRealtime(groupId, playerId);
@@ -125,16 +133,23 @@ export default function GroupDetailScreen() {
   const deleteGroupMutation = useDeleteGroup();
 
   const handleOpenChat = useCallback(() => {
-    if (group?.conversation_id) {
-      lightHaptic();
-      navigation.navigate('Chat', { 
-        conversationId: group.conversation_id,
-        title: group.name,
-      });
-    }
-  }, [group, navigation]);
+    if (!group?.conversation_id) return;
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('ChatConversation', {
+      conversationId: group.conversation_id,
+      title: group.name,
+    });
+  }, [group, guardAction, navigation]);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    selectionHaptic();
+    setSelectedMatchType(type);
+    setShowAddScoreModal(true);
+  }, []);
 
   const handleAddGame = useCallback(() => {
+    if (!guardAction()) return;
     mediumHaptic();
     // Check if user has seen the intro before
     if (hasSeenAddScoreIntro === false) {
@@ -142,102 +157,109 @@ export default function GroupDetailScreen() {
       setShowAddScoreIntro(true);
     } else {
       // User has dismissed intro before - go directly to match type
-      setShowMatchTypeModal(true);
+      SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
     }
-  }, [hasSeenAddScoreIntro]);
+  }, [guardAction, hasSeenAddScoreIntro, handleMatchTypeSelect]);
 
   const handleAddScoreIntroComplete = useCallback(() => {
     setShowAddScoreIntro(false);
-    setShowMatchTypeModal(true);
-  }, []);
+    SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+  }, [handleMatchTypeSelect]);
 
-  const handleMatchTypeSelect = useCallback((type: MatchType) => {
-    selectionHaptic();
-    setSelectedMatchType(type);
-    setShowMatchTypeModal(false);
-    setShowAddScoreModal(true);
-  }, []);
-
-  const handleAddScoreSuccess = useCallback((_matchId: string) => {
-    setShowAddScoreModal(false);
-    refetch(); // Refresh group data including leaderboard
-  }, [refetch]);
+  const handleAddScoreSuccess = useCallback(
+    (_matchId: string) => {
+      setShowAddScoreModal(false);
+      refetch(); // Refresh group data including leaderboard
+    },
+    [refetch]
+  );
 
   const handleLeaveGroup = useCallback(() => {
-    Alert.alert(
-      t('groups.leaveGroup'),
-      t('groups.confirmations.leave'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.leave'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!playerId) return;
-            try {
-              await leaveGroupMutation.mutateAsync({ groupId, playerId });
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('groups.errors.failedToLeave' as TranslationKey));
-            }
-          },
+    Alert.alert(t('groups.leaveGroup'), t('groups.confirmations.leave'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.leave'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!playerId) return;
+          try {
+            await leaveGroupMutation.mutateAsync({ groupId, playerId });
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert(
+              t('common.error'),
+              error instanceof Error ? error.message : t('groups.errors.failedToLeave')
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [groupId, playerId, leaveGroupMutation, navigation, t]);
 
   const handleDeleteGroup = useCallback(() => {
-    Alert.alert(
-      t('groups.deleteGroup'),
-      t('groups.confirmations.delete'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!playerId) return;
-            try {
-              await deleteGroupMutation.mutateAsync({ groupId, playerId });
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('groups.errors.failedToDelete' as TranslationKey));
-            }
-          },
+    Alert.alert(t('groups.deleteGroup'), t('groups.confirmations.delete'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!playerId) return;
+          try {
+            await deleteGroupMutation.mutateAsync({ groupId, playerId });
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert(
+              t('common.error'),
+              error instanceof Error ? error.message : t('groups.errors.failedToDelete')
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [groupId, playerId, deleteGroupMutation, navigation, t]);
 
-  const handleShowOptions = useCallback(() => {
-    setShowOptionsModal(true);
-  }, []);
-
-  // Build options for the menu modal
+  // Build options for the menu modal (must be before handleShowOptions)
   const menuOptions = useMemo(() => {
     const isCreator = group?.created_by === playerId;
-    const options: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; destructive?: boolean }[] = [];
+    const options: {
+      id: string;
+      label: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      onPress: () => void;
+      destructive?: boolean;
+    }[] = [];
 
     // Share invite link - available to all members
     options.push({
       id: 'invite',
-      label: t('groups.options.shareInviteLink' as TranslationKey),
+      label: t('groups.options.shareInviteLink'),
       icon: 'link-outline',
-      onPress: () => setShowInviteLinkModal(true),
+      onPress: () =>
+        SheetManager.show('invite-link', {
+          payload: {
+            groupId,
+            groupName: group?.name ?? '',
+            currentUserId: playerId ?? '',
+            isModerator: isModerator ?? false,
+          },
+        }),
     });
 
-    if (isModerator) {
+    if (isModerator && group) {
       options.push({
         id: 'edit',
-        label: t('groups.options.editGroup' as TranslationKey),
+        label: t('groups.options.editGroup'),
         icon: 'create-outline',
-        onPress: () => setShowEditModal(true),
+        onPress: () =>
+          SheetManager.show('edit-group', {
+            payload: { group, onSuccess: () => refetch() },
+          }),
       });
     }
 
     options.push({
       id: 'leave',
-      label: t('groups.options.leaveGroup' as TranslationKey),
+      label: t('groups.options.leaveGroup'),
       icon: 'exit-outline',
       onPress: handleLeaveGroup,
       destructive: true,
@@ -246,7 +268,7 @@ export default function GroupDetailScreen() {
     if (isCreator) {
       options.push({
         id: 'delete',
-        label: t('groups.options.deleteGroup' as TranslationKey),
+        label: t('groups.options.deleteGroup'),
         icon: 'trash-outline',
         onPress: handleDeleteGroup,
         destructive: true,
@@ -254,83 +276,102 @@ export default function GroupDetailScreen() {
     }
 
     return options;
-  }, [group, playerId, isModerator, handleLeaveGroup, handleDeleteGroup, t]);
+  }, [group, groupId, playerId, isModerator, refetch, handleLeaveGroup, handleDeleteGroup, t]);
+
+  const handleShowOptions = useCallback(() => {
+    SheetManager.show('group-options', {
+      payload: { options: menuOptions, title: 'Group Options' },
+    });
+  }, [menuOptions]);
 
   // Format activity time
-  const formatActivityTime = useCallback((dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  const formatActivityTime = useCallback(
+    (dateStr: string) => {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 60) return t('groups.time.minutesAgo' as TranslationKey, { count: diffMins });
-    if (diffHours < 24) return t('groups.time.hoursAgo' as TranslationKey, { count: diffHours });
-    if (diffDays < 7) return t('groups.time.daysAgo' as TranslationKey, { count: diffDays });
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }, [t]);
+      if (diffMins < 60) return t('groups.time.minutesAgo', { count: diffMins });
+      if (diffHours < 24) return t('groups.time.hoursAgo', { count: diffHours });
+      if (diffDays < 7) return t('groups.time.daysAgo', { count: diffDays });
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    },
+    [t]
+  );
 
   // Group activities by day
   const groupedActivities = useMemo(() => {
     if (!activities) return [];
-    
+
     const groups: { title: string; data: GroupActivityType[] }[] = [];
     let currentDay = '';
-    
+
     for (const activity of activities) {
       const date = new Date(activity.created_at);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       let dayLabel: string;
       if (date.toDateString() === today.toDateString()) {
-        dayLabel = t('groups.activityMessages.today' as TranslationKey);
+        dayLabel = t('groups.activityMessages.today');
       } else if (date.toDateString() === yesterday.toDateString()) {
-        dayLabel = t('groups.activityMessages.yesterday' as TranslationKey);
+        dayLabel = t('groups.activityMessages.yesterday');
       } else {
-        dayLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+        dayLabel = date.toLocaleDateString(undefined, {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+        });
       }
-      
+
       if (dayLabel !== currentDay) {
         groups.push({ title: dayLabel, data: [] });
         currentDay = dayLabel;
       }
-      
+
       groups[groups.length - 1].data.push(activity);
     }
-    
+
     return groups;
   }, [activities, t]);
 
   // Get activity message
-  const getActivityMessage = useCallback((activity: GroupActivityType) => {
-    const actorName = activity.actor?.profile?.first_name || t('groups.activityMessages.someone' as TranslationKey);
-    
-    switch (activity.activity_type) {
-      case 'member_joined':
-        // Show "Added by [name]" if someone else added them
-        if (activity.added_by_name) {
-          return t('groups.activityMessages.wasAddedBy' as TranslationKey, { actorName, addedByName: activity.added_by_name });
-        }
-        return t('groups.activityMessages.joinedTheGroup' as TranslationKey, { actorName });
-      case 'member_left':
-        return t('groups.activityMessages.leftTheGroup' as TranslationKey, { actorName });
-      case 'member_promoted':
-        return t('groups.activityMessages.promotedMember' as TranslationKey, { actorName });
-      case 'member_demoted':
-        return t('groups.activityMessages.demotedMember' as TranslationKey, { actorName });
-      case 'game_created':
-        return t('groups.activityMessages.createdGame' as TranslationKey, { actorName });
-      case 'message_sent':
-        return t('groups.activityMessages.sentMessage' as TranslationKey, { actorName });
-      case 'group_updated':
-        return t('groups.activityMessages.updatedGroup' as TranslationKey, { actorName });
-      default:
-        return t('groups.activityMessages.performedAction' as TranslationKey, { actorName });
-    }
-  }, [t]);
+  const getActivityMessage = useCallback(
+    (activity: GroupActivityType) => {
+      const actorName = activity.actor?.profile?.first_name || t('groups.activityMessages.someone');
+
+      switch (activity.activity_type) {
+        case 'member_joined':
+          // Show "Added by [name]" if someone else added them
+          if (activity.added_by_name) {
+            return t('groups.activityMessages.wasAddedBy', {
+              actorName,
+              addedByName: activity.added_by_name,
+            });
+          }
+          return t('groups.activityMessages.joinedTheGroup', { actorName });
+        case 'member_left':
+          return t('groups.activityMessages.leftTheGroup', { actorName });
+        case 'member_promoted':
+          return t('groups.activityMessages.promotedMember', { actorName });
+        case 'member_demoted':
+          return t('groups.activityMessages.demotedMember', { actorName });
+        case 'game_created':
+          return t('groups.activityMessages.createdGame', { actorName });
+        case 'message_sent':
+          return t('groups.activityMessages.sentMessage', { actorName });
+        case 'group_updated':
+          return t('groups.activityMessages.updatedGroup', { actorName });
+        default:
+          return t('groups.activityMessages.performedAction', { actorName });
+      }
+    },
+    [t]
+  );
 
   const renderTabContent = () => {
     // Calculate activity ring segments
@@ -356,8 +397,8 @@ export default function GroupDetailScreen() {
 
     // Starting rotation for each segment (members starts at top, -90deg)
     const membersRotation = -90;
-    const gamesRotation = membersRotation + (membersPercent * 360);
-    const messagesRotation = gamesRotation + (gamesPercent * 360);
+    const gamesRotation = membersRotation + membersPercent * 360;
+    const messagesRotation = gamesRotation + gamesPercent * 360;
 
     switch (activeTab) {
       case 'home':
@@ -368,14 +409,19 @@ export default function GroupDetailScreen() {
               <PendingScoresSection
                 playerId={playerId}
                 groupId={groupId}
-                title={t('groups.detail.scoresToConfirm' as TranslationKey)}
+                title={t('groups.detail.scoresToConfirm')}
               />
             )}
 
             {/* Stats Card */}
-            <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                {t('groups.detail.last7DaysActivities' as TranslationKey)}
+                {t('groups.detail.last7DaysActivities')}
               </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
@@ -445,27 +491,37 @@ export default function GroupDetailScreen() {
                       <Text weight="bold" size="xl" style={{ color: colors.text }}>
                         {totalActivities}
                       </Text>
-                      <Text size="xs" style={{ color: colors.textSecondary }}>{t('groups.activity.activities' as TranslationKey)}</Text>
+                      <Text size="xs" style={{ color: colors.textSecondary }}>
+                        {t('groups.activity.activities')}
+                      </Text>
                     </View>
                   </View>
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.newMembers' as TranslationKey, { count: membersCount })}
+                      {t('groups.activity.newMembers', { count: membersCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={20}
+                      color="#FF9500"
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.gamesCreated' as TranslationKey, { count: gamesCount })}
+                      {t('groups.activity.gamesCreated', { count: gamesCount })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="chatbubble-ellipses" size={20} color={isDark ? '#8E8E93' : '#C7C7CC'} />
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={20}
+                      color={isDark ? '#8E8E93' : '#C7C7CC'}
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('groups.activity.newMessages' as TranslationKey, { count: messagesCount })}
+                      {t('groups.activity.newMessages', { count: messagesCount })}
                     </Text>
                   </View>
                 </View>
@@ -474,11 +530,16 @@ export default function GroupDetailScreen() {
 
             {/* About Section */}
             {group?.description && (
-              <View style={[styles.aboutCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.aboutCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.aboutHeader}>
                   <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.home.about' as TranslationKey)}
+                    {t('groups.home.about')}
                   </Text>
                 </View>
                 <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
@@ -488,17 +549,22 @@ export default function GroupDetailScreen() {
             )}
 
             {/* Leaderboard Preview */}
-            <View style={[styles.leaderboardPreview, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.leaderboardPreview,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.leaderboard.title')}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('groups.home.viewAll' as TranslationKey)}
+                    {t('groups.home.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -510,18 +576,23 @@ export default function GroupDetailScreen() {
                       <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
                         {index + 1}.
                       </Text>
-                      <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
+                      <View
+                        style={[
+                          styles.smallAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
+                        {entry.player?.profile?.profile_picture_url ? (
                           <Image
-                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
+                            source={{ uri: entry.player.profile.profile_picture_url }}
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)}
+                        {entry.player?.profile?.first_name || t('groups.recentGames.player')}
                       </Text>
                       <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
                         {entry.games_played}
@@ -530,8 +601,11 @@ export default function GroupDetailScreen() {
                   ))}
                 </View>
               ) : (
-                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  {t('groups.detail.noGamesPlayedYet' as TranslationKey)}
+                <Text
+                  size="sm"
+                  style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
+                >
+                  {t('groups.detail.noGamesPlayedYet')}
                 </Text>
               )}
             </View>
@@ -540,34 +614,58 @@ export default function GroupDetailScreen() {
 
       case 'leaderboard': {
         const periodOptions = [
-          { value: 30, label: t('groups.leaderboardPeriod.30days' as TranslationKey) },
-          { value: 90, label: t('groups.leaderboardPeriod.90days' as TranslationKey) },
-          { value: 180, label: t('groups.leaderboardPeriod.180days' as TranslationKey) },
-          { value: 0, label: t('groups.leaderboardPeriod.allTime' as TranslationKey) },
+          { value: 30, label: t('groups.leaderboardPeriod.30days') },
+          { value: 90, label: t('groups.leaderboardPeriod.90days') },
+          { value: 180, label: t('groups.leaderboardPeriod.180days') },
+          { value: 0, label: t('groups.leaderboardPeriod.allTime') },
         ];
-        
+
         return (
           <View style={styles.tabContent}>
             {/* Recent Games Section */}
-            <View style={[styles.recentGamesCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.recentGamesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.recentGames.title' as TranslationKey)}
+                    {t('groups.recentGames.title')}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                <TouchableOpacity
+                  onPress={() =>
+                    SheetManager.show('recent-games', {
+                      payload: {
+                        matches: allMatches || [],
+                        onMatchPress: (match: unknown) => {
+                          SheetManager.hide('recent-games');
+                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                        },
+                        onPlayerPress: (playerId: string) => {
+                          SheetManager.hide('recent-games');
+                          navigateToPlayerProfile(playerId);
+                        },
+                      },
+                    })
+                  }
+                >
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('groups.recentGames.viewAll' as TranslationKey)}
+                    {t('groups.recentGames.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
-              
+
               {/* Most Recent Match Card */}
               {recentMatch?.match ? (
-                <TouchableOpacity 
-                  style={[styles.matchCard, { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border }]}
+                <TouchableOpacity
+                  style={[
+                    styles.matchCard,
+                    { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border },
+                  ]}
                   onPress={() => {
                     navigation.navigate('PlayedMatchDetail', { match: recentMatch });
                   }}
@@ -576,29 +674,57 @@ export default function GroupDetailScreen() {
                   {/* Match Header */}
                   <View style={styles.matchHeader}>
                     <View style={styles.matchInfo}>
-                      <Ionicons 
-                        name={recentMatch.match.sport?.name?.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'} 
-                        size={16} 
-                        color={colors.primary} 
+                      <SportIcon
+                        sportName={recentMatch.match.sport?.name ?? 'tennis'}
+                        size={16}
+                        color={colors.primary}
                       />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        {recentMatch.match.sport?.name || t('common.game' as TranslationKey)} · {new Date(recentMatch.match.match_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {recentMatch.match.sport?.name || t('common.game')} ·{' '}
+                        {new Date(recentMatch.match.match_date).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </Text>
                     </View>
-                    <View style={[
-                      styles.matchBadge, 
-                      { backgroundColor: recentMatch.match.player_expectation === 'competitive' ? '#E8F5E9' : '#FFF3E0' }
-                    ]}>
-                      <Ionicons 
-                        name={recentMatch.match.player_expectation === 'competitive' ? 'trophy' : 'fitness'} 
-                        size={12} 
-                        color={recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00'} 
+                    <View
+                      style={[
+                        styles.matchBadge,
+                        {
+                          backgroundColor:
+                            recentMatch.match.player_expectation === 'competitive'
+                              ? '#E8F5E9'
+                              : '#FFF3E0',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          recentMatch.match.player_expectation === 'competitive'
+                            ? 'trophy'
+                            : 'fitness'
+                        }
+                        size={12}
+                        color={
+                          recentMatch.match.player_expectation === 'competitive'
+                            ? '#2E7D32'
+                            : '#EF6C00'
+                        }
                       />
-                      <Text size="xs" weight="semibold" style={{ 
-                        color: recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00',
-                        marginLeft: 4,
-                      }}>
-                        {recentMatch.match.player_expectation === 'competitive' ? t('groups.recentGames.competitive' as TranslationKey) : t('groups.recentGames.practice' as TranslationKey)}
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        style={{
+                          color:
+                            recentMatch.match.player_expectation === 'competitive'
+                              ? '#2E7D32'
+                              : '#EF6C00',
+                          marginLeft: 4,
+                        }}
+                      >
+                        {recentMatch.match.player_expectation === 'competitive'
+                          ? t('groups.recentGames.competitive')
+                          : t('groups.recentGames.practice')}
                       </Text>
                     </View>
                   </View>
@@ -607,72 +733,88 @@ export default function GroupDetailScreen() {
                   <View style={styles.matchPlayersContainer}>
                     {/* Team 1 Card */}
                     {(() => {
-                      const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
+                      const team1Players = recentMatch.match.participants.filter(
+                        p => p.team_number === 1
+                      );
                       const isWinner = recentMatch.match?.result?.winning_team === 1;
-                      
+
                       return (
-                        <View style={[
-                          styles.teamCard,
-                          isWinner && styles.winnerTeamCard,
-                          isWinner && { borderColor: '#F59E0B' },
-                        ]}>
+                        <View
+                          style={[
+                            styles.teamCard,
+                            isWinner && styles.winnerTeamCard,
+                            isWinner && { borderColor: '#F59E0B' },
+                          ]}
+                        >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
-                          
+
                           {/* Team Avatars - overlapping for doubles, tappable to view profile */}
                           <View style={styles.teamAvatarsContainer}>
                             {team1Players.map((participant, index) => (
-                              <TouchableOpacity 
-                                key={participant.id} 
+                              <TouchableOpacity
+                                key={participant.id}
                                 style={[
-                                  styles.teamPlayerAvatar, 
+                                  styles.teamPlayerAvatar,
                                   { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
                                   index > 0 && styles.teamAvatarOverlap,
                                 ]}
-                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                onPress={() =>
+                                  participant.player_id &&
+                                  navigateToPlayerProfile(participant.player_id)
+                                }
                                 activeOpacity={0.7}
                               >
-                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
+                                {participant.player?.profile?.profile_picture_url ? (
                                   <Image
-                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
                           </View>
-                          
+
                           {/* Team Names */}
-                          <Text 
-                            size="xs" 
-                            weight={isWinner ? 'semibold' : 'regular'} 
+                          <Text
+                            size="xs"
+                            weight={isWinner ? 'semibold' : 'regular'}
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team1Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)).join(', ')}
+                            {team1Players
+                              .map(
+                                p => p.player?.profile?.first_name || t('groups.recentGames.player')
+                              )
+                              .join(', ')}
                           </Text>
-                          
+
                           {/* Team Score - same for all team members */}
                           {recentMatch.match?.result && (
-                            <Text 
-                              size="sm" 
-                              weight="bold" 
-                              style={{ 
+                            <Text
+                              size="sm"
+                              weight="bold"
+                              style={{
                                 color: isWinner ? '#F59E0B' : colors.textMuted,
                                 marginTop: 4,
                               }}
                             >
-                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                              {recentMatch.match.result.sets &&
+                              recentMatch.match.result.sets.length > 0
                                 ? recentMatch.match.result.sets
                                     .sort((a, b) => a.set_number - b.set_number)
                                     .map(set => set.team1_score)
                                     .join('  ')
-                                : recentMatch.match.result.team1_score ?? '-'}
+                                : (recentMatch.match.result.team1_score ?? '-')}
                             </Text>
                           )}
                         </View>
@@ -680,76 +822,97 @@ export default function GroupDetailScreen() {
                     })()}
 
                     {/* VS */}
-                    <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
+                    <Text
+                      weight="semibold"
+                      style={{ color: colors.textMuted, marginHorizontal: 12 }}
+                    >
+                      vs
+                    </Text>
 
                     {/* Team 2 Card */}
                     {(() => {
-                      const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
+                      const team2Players = recentMatch.match.participants.filter(
+                        p => p.team_number === 2
+                      );
                       const isWinner = recentMatch.match?.result?.winning_team === 2;
-                      
+
                       return (
-                        <View style={[
-                          styles.teamCard,
-                          isWinner && styles.winnerTeamCard,
-                          isWinner && { borderColor: '#F59E0B' },
-                        ]}>
+                        <View
+                          style={[
+                            styles.teamCard,
+                            isWinner && styles.winnerTeamCard,
+                            isWinner && { borderColor: '#F59E0B' },
+                          ]}
+                        >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
-                          
+
                           {/* Team Avatars - overlapping for doubles, tappable to view profile */}
                           <View style={styles.teamAvatarsContainer}>
                             {team2Players.map((participant, index) => (
-                              <TouchableOpacity 
-                                key={participant.id} 
+                              <TouchableOpacity
+                                key={participant.id}
                                 style={[
-                                  styles.teamPlayerAvatar, 
+                                  styles.teamPlayerAvatar,
                                   { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
                                   index > 0 && styles.teamAvatarOverlap,
                                 ]}
-                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                onPress={() =>
+                                  participant.player_id &&
+                                  navigateToPlayerProfile(participant.player_id)
+                                }
                                 activeOpacity={0.7}
                               >
-                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
+                                {participant.player?.profile?.profile_picture_url ? (
                                   <Image
-                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
                           </View>
-                          
+
                           {/* Team Names */}
-                          <Text 
-                            size="xs" 
-                            weight={isWinner ? 'semibold' : 'regular'} 
+                          <Text
+                            size="xs"
+                            weight={isWinner ? 'semibold' : 'regular'}
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team2Players.map(p => p.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)).join(', ')}
+                            {team2Players
+                              .map(
+                                p => p.player?.profile?.first_name || t('groups.recentGames.player')
+                              )
+                              .join(', ')}
                           </Text>
-                          
+
                           {/* Team Score - same for all team members */}
                           {recentMatch.match?.result && (
-                            <Text 
-                              size="sm" 
-                              weight="bold" 
-                              style={{ 
+                            <Text
+                              size="sm"
+                              weight="bold"
+                              style={{
                                 color: isWinner ? '#F59E0B' : colors.textMuted,
                                 marginTop: 4,
                               }}
                             >
-                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                              {recentMatch.match.result.sets &&
+                              recentMatch.match.result.sets.length > 0
                                 ? recentMatch.match.result.sets
                                     .sort((a, b) => a.set_number - b.set_number)
                                     .map(set => set.team2_score)
                                     .join('  ')
-                                : recentMatch.match.result.team2_score ?? '-'}
+                                : (recentMatch.match.result.team2_score ?? '-')}
                             </Text>
                           )}
                         </View>
@@ -759,39 +922,59 @@ export default function GroupDetailScreen() {
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptyMatch}>
-                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={32}
+                    color={colors.textMuted}
+                  />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t('groups.recentGames.noGames' as TranslationKey)}
+                    {t('groups.recentGames.noGames')}
                   </Text>
                 </View>
               )}
             </View>
 
             {/* Leaderboard Section */}
-            <View style={[styles.leaderboardCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.leaderboardCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="podium" size={20} color={colors.textSecondary} />
+                  <Ionicons name="podium-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('groups.leaderboard.title')}
                   </Text>
                   <TouchableOpacity style={styles.infoButton}>
-                    <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={18}
+                      color={colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
-                
+
                 {/* Period Filter Dropdown */}
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.periodFilter, { backgroundColor: isDark ? '#2C2C2E' : '#F0F0F0' }]}
                   onPress={() => {
-                    const nextIndex = (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) % periodOptions.length;
+                    const nextIndex =
+                      (periodOptions.findIndex(o => o.value === leaderboardPeriod) + 1) %
+                      periodOptions.length;
                     setLeaderboardPeriod(periodOptions[nextIndex].value as 30 | 90 | 180 | 0);
                   }}
                 >
                   <Text size="sm" style={{ color: colors.text }}>
                     {periodOptions.find(o => o.value === leaderboardPeriod)?.label}
                   </Text>
-                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={{ marginLeft: 4 }} />
+                  <Ionicons
+                    name="chevron-down"
+                    size={16}
+                    color={colors.textMuted}
+                    style={{ marginLeft: 4 }}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -802,51 +985,79 @@ export default function GroupDetailScreen() {
                     <View style={styles.podiumContainer}>
                       {/* 2nd Place */}
                       <View style={styles.podiumItem}>
-                        <View style={[styles.podiumAvatar, styles.podiumAvatar2nd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {getProfilePictureUrl(leaderboard[1].player?.profile?.profile_picture_url) ? (
+                        <View
+                          style={[
+                            styles.podiumAvatar,
+                            styles.podiumAvatar2nd,
+                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                          ]}
+                        >
+                          {leaderboard[1].player?.profile?.profile_picture_url ? (
                             <Image
-                              source={{ uri: getProfilePictureUrl(leaderboard[1].player?.profile?.profile_picture_url)! }}
+                              source={{ uri: leaderboard[1].player.profile.profile_picture_url }}
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={28} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={28} color={colors.textMuted} />
                           )}
                           <View style={[styles.rankBadge, { backgroundColor: '#C0C0C0' }]}>
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>2</Text>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
+                              2
+                            </Text>
                           </View>
                         </View>
                       </View>
 
                       {/* 1st Place */}
                       <View style={styles.podiumItem}>
-                        <View style={[styles.podiumAvatar, styles.podiumAvatar1st, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {getProfilePictureUrl(leaderboard[0].player?.profile?.profile_picture_url) ? (
+                        <View
+                          style={[
+                            styles.podiumAvatar,
+                            styles.podiumAvatar1st,
+                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                          ]}
+                        >
+                          {leaderboard[0].player?.profile?.profile_picture_url ? (
                             <Image
-                              source={{ uri: getProfilePictureUrl(leaderboard[0].player?.profile?.profile_picture_url)! }}
+                              source={{ uri: leaderboard[0].player.profile.profile_picture_url }}
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={32} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={32} color={colors.textMuted} />
                           )}
-                          <View style={[styles.rankBadge, styles.rankBadge1st, { backgroundColor: '#FFD700' }]}>
-                            <Ionicons name="trophy" size={14} color="#FFF" />
+                          <View
+                            style={[
+                              styles.rankBadge,
+                              styles.rankBadge1st,
+                              { backgroundColor: '#FFD700' },
+                            ]}
+                          >
+                            <Ionicons name="trophy-outline" size={14} color="#FFF" />
                           </View>
                         </View>
                       </View>
 
                       {/* 3rd Place */}
                       <View style={styles.podiumItem}>
-                        <View style={[styles.podiumAvatar, styles.podiumAvatar3rd, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                          {getProfilePictureUrl(leaderboard[2].player?.profile?.profile_picture_url) ? (
+                        <View
+                          style={[
+                            styles.podiumAvatar,
+                            styles.podiumAvatar3rd,
+                            { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                          ]}
+                        >
+                          {leaderboard[2].player?.profile?.profile_picture_url ? (
                             <Image
-                              source={{ uri: getProfilePictureUrl(leaderboard[2].player?.profile?.profile_picture_url)! }}
+                              source={{ uri: leaderboard[2].player.profile.profile_picture_url }}
                               style={styles.avatarImage}
                             />
                           ) : (
-                            <Ionicons name="person" size={24} color={colors.textMuted} />
+                            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                           )}
                           <View style={[styles.rankBadge, { backgroundColor: '#CD7F32' }]}>
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>3</Text>
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
+                              3
+                            </Text>
                           </View>
                         </View>
                       </View>
@@ -855,39 +1066,67 @@ export default function GroupDetailScreen() {
 
                   {/* Stats Header */}
                   <View style={styles.leaderboardHeader}>
-                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>{t('groups.leaderboard.players' as TranslationKey)}</Text>
-                    <Text size="xs" style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}>{t('groups.leaderboard.gamesPlayed' as TranslationKey)}</Text>
+                    <Text size="xs" style={{ color: colors.textMuted, flex: 1 }}>
+                      {t('groups.leaderboard.players')}
+                    </Text>
+                    <Text
+                      size="xs"
+                      style={{ color: colors.textMuted, width: 80, textAlign: 'center' }}
+                    >
+                      {t('groups.leaderboard.gamesPlayed')}
+                    </Text>
                   </View>
 
                   {/* Leaderboard List */}
                   {leaderboard.map((entry, index) => (
-                    <View key={entry.player_id} style={[styles.leaderboardRow, { borderBottomColor: colors.border }]}>
+                    <View
+                      key={entry.player_id}
+                      style={[styles.leaderboardRow, { borderBottomColor: colors.border }]}
+                    >
                       <View style={styles.leaderboardRank}>
                         {index < 3 ? (
-                          <View style={[
-                            styles.topRankBadge, 
-                            { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' }
-                          ]}>
-                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>{index + 1}</Text>
+                          <View
+                            style={[
+                              styles.topRankBadge,
+                              {
+                                backgroundColor:
+                                  index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32',
+                              },
+                            ]}
+                          >
+                            <Text size="xs" weight="bold" style={{ color: '#FFF' }}>
+                              {index + 1}
+                            </Text>
                           </View>
                         ) : (
                           <Text style={{ color: colors.textMuted }}>{index + 1}</Text>
                         )}
                       </View>
-                      <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
+                      <View
+                        style={[
+                          styles.leaderboardAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
+                        {entry.player?.profile?.profile_picture_url ? (
                           <Image
-                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
+                            source={{ uri: entry.player.profile.profile_picture_url }}
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={18} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={18} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 12 }}>
-                        {entry.player?.profile?.display_name || entry.player?.profile?.first_name || t('groups.recentGames.player' as TranslationKey)}
+                        {entry.player?.profile?.display_name ||
+                          entry.player?.profile?.first_name ||
+                          t('groups.recentGames.player')}
                       </Text>
-                      <Text size="sm" weight="semibold" style={{ color: colors.text, width: 80, textAlign: 'center' }}>
+                      <Text
+                        size="sm"
+                        weight="semibold"
+                        style={{ color: colors.text, width: 80, textAlign: 'center' }}
+                      >
                         {entry.games_played}
                       </Text>
                     </View>
@@ -897,7 +1136,7 @@ export default function GroupDetailScreen() {
                 <View style={styles.emptyLeaderboard}>
                   <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
                   <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                    {t('groups.detail.playGamesToAppear' as TranslationKey)}
+                    {t('groups.detail.playGamesToAppear')}
                   </Text>
                 </View>
               )}
@@ -910,38 +1149,54 @@ export default function GroupDetailScreen() {
         return (
           <View style={styles.tabContent}>
             {groupedActivities.length === 0 ? (
-              <View style={[styles.emptyActivity, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.emptyActivity,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 <Ionicons name="time-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.detail.noRecentActivity' as TranslationKey)}
+                  {t('groups.detail.noRecentActivity')}
                 </Text>
               </View>
             ) : (
               groupedActivities.map((section, sectionIndex) => (
                 <View key={sectionIndex} style={styles.activitySection}>
-                  <Text weight="semibold" size="sm" style={[styles.activityDayHeader, { color: colors.textSecondary }]}>
+                  <Text
+                    weight="semibold"
+                    size="sm"
+                    style={[styles.activityDayHeader, { color: colors.textSecondary }]}
+                  >
                     {section.title}
                   </Text>
-                  {section.data.map((activity) => (
+                  {section.data.map(activity => (
                     <TouchableOpacity
                       key={activity.id}
-                      style={[styles.activityItem, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                      style={[
+                        styles.activityItem,
+                        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                      ]}
                       onPress={() => {
-                        // Navigate to player profile if actor exists
                         if (activity.actor?.id) {
-                          navigation.navigate('PlayerProfile', { playerId: activity.actor.id });
+                          navigateToPlayerProfile(activity.actor.id);
                         }
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.activityAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {getProfilePictureUrl(activity.actor?.profile?.profile_picture_url) ? (
+                      <View
+                        style={[
+                          styles.activityAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
+                        {activity.actor?.profile?.profile_picture_url ? (
                           <Image
-                            source={{ uri: getProfilePictureUrl(activity.actor?.profile?.profile_picture_url)! }}
+                            source={{ uri: activity.actor.profile.profile_picture_url }}
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={20} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.activityContent}>
@@ -968,7 +1223,10 @@ export default function GroupDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={getSafeAreaEdges(['top'])}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -978,12 +1236,13 @@ export default function GroupDetailScreen() {
 
   if (!group) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={getSafeAreaEdges(['top'])}
+      >
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
-          <Text style={{ color: colors.textSecondary, marginTop: 16 }}>
-            {t('groups.notFound' as TranslationKey)}
-          </Text>
+          <Text style={{ color: colors.textSecondary, marginTop: 16 }}>{t('groups.notFound')}</Text>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.primary }]}
             onPress={() => navigation.goBack()}
@@ -1000,11 +1259,7 @@ export default function GroupDetailScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={false}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-          />
+          <RefreshControl refreshing={false} onRefresh={refetch} tintColor={colors.primary} />
         }
       >
         {/* Header Section - with cover image or default icon */}
@@ -1015,23 +1270,47 @@ export default function GroupDetailScreen() {
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.headerSection, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
+          <View
+            style={[
+              styles.headerSection,
+              { backgroundColor: isDark ? primary[900] : primary[100] },
+            ]}
+          >
             <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="people" size={48} color={colors.primary} />
+              <Ionicons name="people-outline" size={48} color={colors.primary} />
             </View>
           </View>
         )}
 
         {/* Group Info Card */}
-        <View style={[styles.infoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <Text weight="bold" size="xl" style={{ color: colors.text }}>
             {group.name}
           </Text>
-          
+
           {/* Members Row */}
           <TouchableOpacity
             style={styles.membersRow}
-            onPress={() => setShowMemberListModal(true)}
+            onPress={() =>
+              group &&
+              SheetManager.show('member-list', {
+                payload: {
+                  group,
+                  currentUserId: playerId ?? '',
+                  isModerator: isModerator ?? false,
+                  onMemberRemoved: () => refetch(),
+                  onPlayerPress: (playerId: string) => {
+                    SheetManager.hide('member-list');
+                    navigateToPlayerProfile(playerId);
+                  },
+                },
+              })
+            }
           >
             <Text size="sm" style={{ color: colors.textSecondary }}>
               {t('common.memberCount', { count: group.member_count })}
@@ -1042,16 +1321,16 @@ export default function GroupDetailScreen() {
                   key={member.id}
                   style={[
                     styles.memberAvatar,
-                    { 
+                    {
                       backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA',
                       marginLeft: index > 0 ? -8 : 0,
                       zIndex: 5 - index,
                     },
                   ]}
                 >
-                  {getProfilePictureUrl(member.player?.profile?.profile_picture_url) ? (
+                  {member.player?.profile?.profile_picture_url ? (
                     <Image
-                      source={{ uri: getProfilePictureUrl(member.player?.profile?.profile_picture_url)! }}
+                      source={{ uri: member.player.profile.profile_picture_url }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (
@@ -1062,7 +1341,9 @@ export default function GroupDetailScreen() {
                 </View>
               ))}
               {group.member_count > 5 && (
-                <View style={[styles.memberAvatar, { backgroundColor: colors.primary, marginLeft: -8 }]}>
+                <View
+                  style={[styles.memberAvatar, { backgroundColor: colors.primary, marginLeft: -8 }]}
+                >
                   <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
                     +{group.member_count - 5}
                   </Text>
@@ -1073,40 +1354,62 @@ export default function GroupDetailScreen() {
 
           {/* Action Buttons Row */}
           <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-              onPress={() => setShowAddMemberModal(true)}
-            >
-              <Ionicons name="person-add" size={18} color={colors.primary} />
-              <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                {t('groups.detail.addMember' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
+            {group.member_count < group.max_members && (
+              <TouchableOpacity
+                style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
+                onPress={() =>
+                  SheetManager.show('add-member', {
+                    payload: {
+                      groupId,
+                      currentMemberIds: group?.members.map(m => m.player_id) ?? [],
+                      onSuccess: () => refetch(),
+                    },
+                  })
+                }
+              >
+                <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+                <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
+                  {t('groups.detail.addMember')}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
             >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
+              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tab Bar */}
-        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {TAB_KEYS.map((tabKey) => (
+        <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+          {TAB_KEYS.map(tabKey => (
             <TouchableOpacity
               key={tabKey}
               style={[
                 styles.tab,
-                activeTab === tabKey && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                activeTab === tabKey && [
+                  styles.activeTab,
+                  { backgroundColor: colors.cardBackground },
+                ],
               ]}
               onPress={() => setActiveTab(tabKey)}
             >
+              <Ionicons
+                name={TAB_ICONS[tabKey]}
+                size={18}
+                color={activeTab === tabKey ? colors.primary : colors.textMuted}
+              />
               <Text
-                weight={activeTab === tabKey ? 'semibold' : 'regular'}
-                style={{ color: activeTab === tabKey ? colors.primary : colors.textSecondary }}
+                size="sm"
+                weight={activeTab === tabKey ? 'semibold' : 'medium'}
+                style={{
+                  color: activeTab === tabKey ? colors.primary : colors.textMuted,
+                  marginLeft: 6,
+                }}
               >
-                {t(`groups.tabs.${tabKey}` as TranslationKey)}
+                {t(`groups.tabs.${tabKey}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1114,7 +1417,7 @@ export default function GroupDetailScreen() {
 
         {/* Tab Content */}
         {renderTabContent()}
-        
+
         {/* Bottom spacing for chat button */}
         <View style={{ height: 80 }} />
       </ScrollView>
@@ -1125,7 +1428,7 @@ export default function GroupDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleAddGame}
         >
-          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.leaderboard.addPlayedGame')}
           </Text>
@@ -1135,79 +1438,12 @@ export default function GroupDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
-            {t('groups.chatWithMembers' as TranslationKey)}
+            {t('groups.chatWithMembers')}
           </Text>
         </TouchableOpacity>
       ) : null}
-
-      {/* Modals */}
-      <EditGroupModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        group={group}
-        onSuccess={() => {
-          setShowEditModal(false);
-          refetch();
-        }}
-      />
-
-      <AddMemberModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        groupId={groupId}
-        currentMemberIds={group.members.map(m => m.player_id)}
-        onSuccess={() => {
-          setShowAddMemberModal(false);
-          refetch();
-        }}
-      />
-
-      <MemberListModal
-        visible={showMemberListModal}
-        onClose={() => setShowMemberListModal(false)}
-        group={group}
-        currentUserId={playerId || ''}
-        isModerator={isModerator || false}
-        onMemberRemoved={() => refetch()}
-        onPlayerPress={(playerId) => {
-          setShowMemberListModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
-        }}
-      />
-
-      <GroupOptionsModal
-        visible={showOptionsModal}
-        onClose={() => setShowOptionsModal(false)}
-        options={menuOptions}
-        title="Group Options"
-      />
-
-      {group && (
-        <InviteLinkModal
-          visible={showInviteLinkModal}
-          onClose={() => setShowInviteLinkModal(false)}
-          groupId={groupId}
-          groupName={group.name}
-          currentUserId={playerId || ''}
-          isModerator={isModerator || false}
-        />
-      )}
-
-      <RecentGamesModal
-        visible={showRecentGamesModal}
-        onClose={() => setShowRecentGamesModal(false)}
-        matches={allMatches || []}
-        onMatchPress={(match) => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayedMatchDetail', { match });
-        }}
-        onPlayerPress={(playerId) => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
-        }}
-      />
 
       {/* Add Score Flow Modals */}
       <AddScoreIntroModal
@@ -1223,12 +1459,6 @@ export default function GroupDetailScreen() {
           }
           handleAddScoreIntroComplete();
         }}
-      />
-
-      <MatchTypeModal
-        visible={showMatchTypeModal}
-        onClose={() => setShowMatchTypeModal(false)}
-        onSelect={handleMatchTypeSelect}
       />
 
       <AddScoreModal
@@ -1349,16 +1579,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabBar: {
+  tabContainer: {
     flexDirection: 'row',
     marginTop: 24,
     marginHorizontal: 16,
-    borderBottomWidth: 1,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabContent: {
     padding: 16,

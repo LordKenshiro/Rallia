@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/components/theme-provider';
 import { routing } from '@/i18n/routing';
+import { getTranslations, type Locale as SharedLocale } from '@rallia/shared-translations';
 import type { Metadata } from 'next';
 import { Locale, NextIntlClientProvider } from 'next-intl';
 import { Inter, Outfit, Poppins, Space_Grotesk } from 'next/font/google';
@@ -109,11 +110,12 @@ export default async function LocaleLayout({
   const { locale } = await params;
 
   // Validate locale
-  if (!routing.locales.includes(locale as any)) {
+  if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
 
-  const messages = (await import(`@/messages/${locale}.json`)).default;
+  // Get translations from shared package
+  const messages = getTranslations(locale as SharedLocale);
 
   return (
     <html lang={locale} suppressHydrationWarning>

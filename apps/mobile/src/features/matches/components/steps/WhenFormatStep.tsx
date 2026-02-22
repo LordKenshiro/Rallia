@@ -338,10 +338,10 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       {/* Step title */}
       <View style={styles.stepHeader}>
         <Text size="lg" weight="bold" color={colors.text}>
-          {t('matchCreation.step2Title' as TranslationKey)}
+          {t('matchCreation.step2Title')}
         </Text>
         <Text size="sm" color={colors.textMuted}>
-          {t('matchCreation.step2Description' as TranslationKey)}
+          {t('matchCreation.step2Description')}
         </Text>
       </View>
 
@@ -362,7 +362,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             color={isDark ? accent[200] : accent[800]}
             style={styles.lockedBannerText}
           >
-            {t('matchCreation.fields.lockedFromBooking' as TranslationKey)}
+            {t('matchCreation.fields.lockedFromBooking')}
           </Text>
         </View>
       )}
@@ -370,7 +370,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       {/* Date picker */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.matchDate' as TranslationKey)}
+          {t('matchCreation.fields.matchDate')}
         </Text>
         <TouchableOpacity
           style={[
@@ -385,7 +385,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             setShowDatePicker(true);
           }}
           disabled={isLocked}
-          accessibilityLabel={t('matchCreation.accessibility.selectDate' as TranslationKey)}
+          accessibilityLabel={t('matchCreation.accessibility.selectDate')}
         >
           <Ionicons
             name="calendar-outline"
@@ -417,7 +417,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       {/* Time picker */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.startTime' as TranslationKey)}
+          {t('matchCreation.fields.startTime')}
         </Text>
         <TouchableOpacity
           style={[
@@ -432,7 +432,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             setShowTimePicker(true);
           }}
           disabled={isLocked}
-          accessibilityLabel={t('matchCreation.accessibility.selectTime' as TranslationKey)}
+          accessibilityLabel={t('matchCreation.accessibility.selectTime')}
         >
           <Ionicons
             name="time-outline"
@@ -464,7 +464,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       {/* Timezone picker */}
       <View style={styles.fieldGroup}>
         <Text size="sm" weight="semibold" color={colors.textSecondary} style={styles.label}>
-          {t('matchCreation.fields.timezone' as TranslationKey)}
+          {t('matchCreation.fields.timezone')}
         </Text>
         <TouchableOpacity
           style={[
@@ -478,7 +478,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             setShowTimezonePicker(true);
           }}
           disabled={isLocked}
-          accessibilityLabel={t('matchCreation.accessibility.selectTimezone' as TranslationKey)}
+          accessibilityLabel={t('matchCreation.accessibility.selectTimezone')}
         >
           <Ionicons
             name="globe-outline"
@@ -521,15 +521,15 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('matchCreation.fields.matchDate' as TranslationKey)}
+                  {t('matchCreation.fields.matchDate')}
                 </Text>
                 <TouchableOpacity onPress={handleDateDone} style={styles.pickerHeaderButton}>
                   <Text size="base" weight="semibold" color={colors.buttonActive}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -560,15 +560,15 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleTimeCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('matchCreation.fields.startTime' as TranslationKey)}
+                  {t('matchCreation.fields.startTime')}
                 </Text>
                 <TouchableOpacity onPress={handleTimeDone} style={styles.pickerHeaderButton}>
                   <Text size="base" weight="semibold" color={colors.buttonActive}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -601,11 +601,11 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                 style={styles.pickerHeaderButton}
               >
                 <Text size="base" color={colors.textMuted}>
-                  {t('common.cancel' as TranslationKey)}
+                  {t('common.cancel')}
                 </Text>
               </TouchableOpacity>
               <Text size="base" weight="semibold" color={colors.text}>
-                {t('matchCreation.fields.timezone' as TranslationKey)}
+                {t('matchCreation.fields.timezone')}
               </Text>
               <View style={styles.pickerHeaderButton} />
             </View>
@@ -639,7 +639,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                     </Text>
                   </View>
                   {item.value === timezone && (
-                    <Ionicons name="checkmark" size={20} color={colors.buttonActive} />
+                    <Ionicons name="checkmark-outline" size={20} color={colors.buttonActive} />
                   )}
                 </TouchableOpacity>
               )}
@@ -652,7 +652,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
       <View style={[styles.fieldGroup, isLocked && styles.fieldGroupLocked]}>
         <View style={styles.fieldLabelRow}>
           <Text size="sm" weight="semibold" color={colors.textSecondary}>
-            {t('matchCreation.fields.duration' as TranslationKey)}
+            {t('matchCreation.fields.duration')}
           </Text>
           {isLocked && <Ionicons name="lock-closed" size={12} color={colors.textMuted} />}
         </View>
@@ -665,7 +665,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
           {(['30', '60', '90', '120'] as const).map(dur => (
             <OptionButton
               key={dur}
-              label={t(`matchCreation.duration.${dur}` as TranslationKey)}
+              label={t(`matchCreation.duration.${dur}`)}
               selected={duration === dur}
               onPress={() => {
                 if (isLocked) return;
@@ -679,7 +679,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
             />
           ))}
           <OptionButton
-            label={t('matchCreation.duration.custom' as TranslationKey)}
+            label={t('matchCreation.duration.custom')}
             selected={duration === 'custom'}
             onPress={() => {
               if (isLocked) return;
@@ -724,7 +724,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
                 onFocus={() => setIsCustomDurationFocused(true)}
               />
               <Text size="base" color={colors.textMuted}>
-                {t('matchCreation.fields.customDurationUnit' as TranslationKey) || 'minutes'}
+                {t('matchCreation.fields.customDurationUnit') || 'minutes'}
               </Text>
             </View>
             {errors.customDurationMinutes && (
@@ -733,7 +733,7 @@ export const WhenFormatStep: React.FC<WhenFormatStepProps> = ({
               </Text>
             )}
             <Text size="xs" color={colors.textMuted} style={styles.customDurationHint}>
-              {t('matchCreation.fields.customDurationHint' as TranslationKey) ||
+              {t('matchCreation.fields.customDurationHint') ||
                 'Enter a duration between 15 and 480 minutes'}
             </Text>
           </View>

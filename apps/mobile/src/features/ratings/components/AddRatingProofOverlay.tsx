@@ -1,13 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, Heading } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
-import {
-  spacingPixels,
-  radiusPixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
 
 interface AddRatingProofOverlayProps {
   visible: boolean;
@@ -22,11 +20,9 @@ interface ProofTypeOption {
   descriptionKey: string;
 }
 
-const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
-  visible,
-  onClose,
-  onSelectProofType,
-}) => {
+export function AddRatingProofActionSheet({ payload }: SheetProps<'add-rating-proof'>) {
+  const onClose = () => SheetManager.hide('add-rating-proof');
+  const onSelectProofType = payload?.onSelectProofType;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
 
@@ -59,67 +55,147 @@ const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
 
   const handleSelectType = (type: 'external_link' | 'video' | 'image' | 'document') => {
     lightHaptic();
-    onSelectProofType(type);
-    onClose();
+    onSelectProofType?.(type);
+    // Don't hide here - let the parent handle closing and opening the next sheet
   };
 
   return (
-    <Overlay visible={visible} onClose={onClose} type="bottom">
-      <View style={styles.container}>
-        <Heading level={3} color={colors.text} style={styles.title}>
-          {t('profile.ratingProofs.addProof')}
-        </Heading>
-        <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
-          {t('profile.ratingProofs.chooseProofType')}
-        </Text>
-
-        <View style={styles.optionsContainer}>
-          {proofTypes.map((option) => (
-            <TouchableOpacity
-              key={option.type}
-              style={[
-                styles.optionCard,
-                {
-                  backgroundColor: colors.cardBackground,
-                  borderColor: colors.border,
-                },
-              ]}
-              onPress={() => handleSelectType(option.type)}
-              activeOpacity={0.7}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: colors.primary + '20' },
-                ]}
-              >
-                <Ionicons name={option.icon} size={24} color={colors.primary} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text size="base" weight="semibold" color={colors.text}>
-                  {t(option.titleKey as never)}
-                </Text>
-                <Text size="sm" color={colors.textMuted} numberOfLines={2}>
-                  {t(option.descriptionKey as never)}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          ))}
+              {t('profile.ratingProofs.addProof')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
+
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
+            {t('profile.ratingProofs.chooseProofType')}
+          </Text>
+
+          <View style={styles.optionsContainer}>
+            {proofTypes.map(option => (
+              <TouchableOpacity
+                key={option.type}
+                style={[
+                  styles.optionCard,
+                  {
+                    backgroundColor: colors.cardBackground,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => handleSelectType(option.type)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+                  <Ionicons name={option.icon} size={24} color={colors.primary} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text size="base" weight="semibold" color={colors.text}>
+                    {t(option.titleKey as never)}
+                  </Text>
+                  <Text size="sm" color={colors.textMuted} numberOfLines={2}>
+                    {t(option.descriptionKey as never)}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
       </View>
-    </Overlay>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const AddRatingProofOverlay: React.FC<AddRatingProofOverlayProps> = ({
+  visible,
+  onClose,
+  onSelectProofType,
+}) => {
+  React.useEffect(() => {
+    if (visible) {
+      SheetManager.show('add-rating-proof', {
+        payload: {
+          onSelectProofType,
+        },
+      });
+    }
+  }, [visible, onSelectProofType]);
+
+  React.useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('add-rating-proof');
+    }
+  }, [visible]);
+
+  return null;
 };
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    textAlign: 'center',
-    marginBottom: spacingPixels[1],
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
   },
   subtitle: {
     textAlign: 'center',

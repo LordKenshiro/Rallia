@@ -11,9 +11,18 @@
  */
 
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleProp, ViewStyle, GestureResponderEvent, Text as RNText } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  GestureResponderEvent,
+  Text as RNText,
+} from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CopilotStep } from 'react-native-copilot';
 import { WalkthroughableView } from '../context/TourContext';
@@ -24,20 +33,25 @@ import {
   ProfilePictureButton,
   NotificationButton,
   SettingsButton,
-  SportSelector,
 } from '@rallia/shared-components';
+import { useActionsSheet, useSport, useOverlay } from '../context';
+import SportSelector from '../components/SportSelector';
+import TennisIcon from '../../assets/icons/tennis.svg';
+import PickleballIcon from '../../assets/icons/pickleball.svg';
+import TennisCourtIcon from '../../assets/icons/tennis-court.svg';
 import { useUnreadNotificationCount, useProfile, useTotalUnreadCount } from '@rallia/shared-hooks';
-import { useActionsSheet, useSport } from '../context';
-import { useAuth, useThemeStyles, useTranslation } from '../hooks';
+import { useAuth, useThemeStyles, useTranslation, useRequireOnboarding } from '../hooks';
 import { useTheme } from '@rallia/shared-hooks';
 import { useAppNavigation } from './hooks';
-import { spacingPixels, fontSizePixels, fontWeightNumeric } from '@rallia/design-system';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { spacingPixels, fontSizePixels } from '@rallia/design-system';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type {
+  NativeStackNavigationProp,
+  NativeStackHeaderProps,
+} from '@react-navigation/native-stack';
 
 // Screens
 import Home from '../screens/Home';
-import Map from '../screens/Map';
-import Match from '../screens/Match';
 import Community from '../screens/Community';
 import Chat from '../screens/Chat';
 import ChatConversation from '../screens/ChatConversation';
@@ -55,6 +69,7 @@ import SharedLists from '../screens/SharedLists';
 import SharedListDetail from '../screens/SharedListDetail';
 import Groups from '../screens/Groups';
 import GroupDetail from '../screens/GroupDetail';
+import PreOnboardingScreen from '../screens/PreOnboarding';
 import GroupChatInfo from '../screens/GroupChatInfo';
 import PlayedMatchDetail from '../screens/PlayedMatchDetail';
 import Communities from '../screens/Communities';
@@ -83,6 +98,8 @@ import type {
 } from './types';
 import PublicMatches from '../features/matches/screens/PublicMatches';
 import PlayerMatches from '../features/matches/screens/PlayerMatches';
+import { FacilitiesDirectory, FacilityDetail } from '../features/facilities';
+import { MyBookingsScreen, BookingDetailScreen } from '../features/bookings';
 
 // =============================================================================
 // TYPED NAVIGATORS
@@ -122,16 +139,21 @@ function NotificationButtonWithBadge({ color }: { color?: string }) {
 /**
  * Sport selector with context integration
  * Uses useSport hook to get/set selected sport and useTheme for dark mode
- * Only displays when onboarding is completed
+ * Shows for:
+ * - Signed-out users (guests) browsing public matches
+ * - Signed-in users who have completed onboarding
  */
 function SportSelectorWithContext() {
   const { selectedSport, userSports, setSelectedSport } = useSport();
   const { theme } = useTheme();
   const { session } = useAuth();
   const { contentMode } = useActionsSheet();
-  const { profile, refetch } = useProfile();
+  const { refetch } = useProfile();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
+
+  // Determine if user is a guest (not signed in)
+  // const isGuest = !session?.user;
 
   // Refetch profile when auth state changes (e.g., user first authenticates)
   useEffect(() => {
@@ -152,10 +174,11 @@ function SportSelectorWithContext() {
     prevContentModeRef.current = contentMode;
   }, [contentMode, session?.user, refetch]);
 
-  // Only show sport selector if onboarding is completed
-  if (!profile?.onboarding_completed) {
-    return null;
-  }
+  // For signed-in users, only show if onboarding is completed
+  // For guests, always allow (they browse all public matches)
+  // if (!isGuest && !profile?.onboarding_completed) {
+  //   return null;
+  // }
 
   // Don't show sport selector if user has only one or no sports
   if (!userSports || userSports.length <= 1) {
@@ -174,6 +197,8 @@ function SportSelectorWithContext() {
           userSports={userSports}
           onSelectSport={setSelectedSport}
           isDark={isDark}
+          confirmBeforeSwitch
+          t={t as (key: string) => string}
         />
       </WalkthroughableView>
     </CopilotStep>
@@ -185,52 +210,87 @@ function SportSelectorWithContext() {
 // =============================================================================
 
 /**
- * Common header style for shared screens (UserProfile, Settings, etc.)
- * Note: Colors are applied dynamically via inline styles in screen options
+ * Custom header for shared screens (UserProfile, Settings, etc.)
+ * Matches MainTabHeader height/style but shows back button + centered title.
  */
-const getSharedScreenOptions = (colors: ReturnType<typeof useThemeStyles>['colors']) => ({
+function SharedScreenHeader({ navigation, options }: NativeStackHeaderProps) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useThemeStyles();
+  const title = typeof options.headerTitle === 'string' ? options.headerTitle : '';
+  const HeaderRight = options.headerRight;
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.headerBackground,
+        paddingTop: insets.top,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.border,
+      }}
+    >
+      <View
+        style={{
+          height: HEADER_CONTENT_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: spacingPixels[1],
+        }}
+      >
+        <View style={{ position: 'absolute', left: 0 }}>
+          <ThemedBackButton navigation={navigation} />
+        </View>
+        <RNText
+          style={{
+            fontSize: fontSizePixels.lg,
+            fontWeight: '600',
+            color: colors.headerForeground,
+          }}
+        >
+          {title}
+        </RNText>
+        {HeaderRight && (
+          <View style={{ position: 'absolute', right: spacingPixels[1] }}>
+            <HeaderRight tintColor={colors.headerForeground} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const getSharedScreenOptions = () => ({
   headerShown: true,
-  headerStyle: { backgroundColor: colors.headerBackground },
-  headerTintColor: colors.headerForeground,
-  headerTitleStyle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: String(fontWeightNumeric.semibold) as '600',
-    color: colors.headerForeground,
-  },
-  headerTitleAlign: 'center' as const,
+  header: (props: NativeStackHeaderProps) => <SharedScreenHeader {...props} />,
 });
 
 /**
- * Profile picture button with auth-aware behavior
- * - If authenticated: navigates to UserProfile
- * - If not authenticated: opens auth sheet
+ * Profile picture button with auth and onboarding-aware behavior
+ * - If authenticated and onboarded: navigates to UserProfile
+ * - If not authenticated or not onboarded: opens auth/onboarding sheet
  */
 function ProfilePictureButtonWithAuth() {
   const navigation = useAppNavigation();
-  const { session } = useAuth();
-  const { openSheet } = useActionsSheet();
+  const { isReady, guardAction } = useRequireOnboarding();
+  useAuth();
+  useActionsSheet();
   const { t } = useTranslation();
 
   const handlePress = () => {
-    if (session?.user) {
-      // Authenticated: navigate to profile
+    if (isReady) {
+      // Authenticated and onboarded: navigate to profile
       navigation.navigate('UserProfile', {});
     } else {
-      // Not authenticated: open auth sheet
-      openSheet();
+      // Not authenticated or not onboarded: open auth/onboarding sheet
+      guardAction();
     }
   };
 
   const { isDark } = useThemeStyles();
   return (
-    <CopilotStep
-      text={t('tour.header.profile.description')}
-      order={6}
-      name="header-profile"
-    >
+    <CopilotStep text={t('tour.header.profile.description')} order={6} name="header-profile">
       <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center' }}>
         <ProfilePictureButton onPress={handlePress} isDark={isDark} />
-        <ThemeLogo width={100} height={30} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -243,12 +303,15 @@ function HeaderRightButtons() {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   return (
-    <CopilotStep
-      text={t('tour.header.actions.description')}
-      order={8}
-      name="header-actions"
-    >
-      <WalkthroughableView style={{ flexDirection: 'row', alignItems: 'center', gap: spacingPixels[2], marginRight: spacingPixels[2] }}>
+    <CopilotStep text={t('tour.header.actions.description')} order={8} name="header-actions">
+      <WalkthroughableView
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacingPixels[2],
+          marginRight: spacingPixels[2],
+        }}
+      >
         <NotificationButtonWithBadge color={colors.headerForeground} />
         <SettingsButton color={colors.headerForeground} />
       </WalkthroughableView>
@@ -257,23 +320,63 @@ function HeaderRightButtons() {
 }
 
 /**
+ * Custom header for main tab screens with configurable content height.
+ * Native stack's headerStyle.height has no effect on iOS, so we use
+ * a fully custom header via the `header` prop instead.
+ */
+const HEADER_CONTENT_HEIGHT = 52; // default native is 44
+
+function MainTabHeader() {
+  const insets = useSafeAreaInsets();
+  const { colors } = useThemeStyles();
+
+  return (
+    <View
+      style={{
+        backgroundColor: colors.headerBackground,
+        paddingTop: insets.top,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.border,
+      }}
+    >
+      <View
+        style={{
+          height: HEADER_CONTENT_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacingPixels[1],
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <ProfilePictureButtonWithAuth />
+          <SportSelectorWithContext />
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            paddingBottom: 4,
+          }}
+        >
+          <ThemeLogo width={100} height={30} />
+        </View>
+        <HeaderRightButtons />
+      </View>
+    </View>
+  );
+}
+
+/**
  * Header options for main tab screens (Home, Courts, Community, Chat)
  */
 function useMainScreenOptions() {
-  const { colors } = useThemeStyles();
   return {
     headerShown: true,
-    headerStyle: {
-      backgroundColor: colors.headerBackground,
-    },
-    headerTitleStyle: {
-      fontSize: fontSizePixels.lg,
-      fontWeight: String(fontWeightNumeric.semibold) as '600',
-      color: colors.headerForeground,
-    },
-    headerLeft: () => <ProfilePictureButtonWithAuth />,
-    headerTitle: () => <SportSelectorWithContext />,
-    headerRight: () => <HeaderRightButtons />,
+    header: () => <MainTabHeader />,
   };
 }
 
@@ -282,30 +385,11 @@ function useMainScreenOptions() {
 // =============================================================================
 
 /**
- * Map icon button for header right
- */
-function MapIconButton() {
-  const navigation = useAppNavigation();
-  const { colors } = useThemeStyles();
-
-  return (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('Map')}
-      style={{ marginRight: spacingPixels[2] }}
-      activeOpacity={0.7}
-    >
-      <Ionicons name="map" size={24} color={colors.headerForeground} />
-    </TouchableOpacity>
-  );
-}
-
-/**
  * Header options for PublicMatches screen
  */
 function usePublicMatchesScreenOptions() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return ({
     navigation,
@@ -315,7 +399,6 @@ function usePublicMatchesScreenOptions() {
     ...sharedOptions,
     headerTitle: t('screens.publicMatches'),
     headerLeft: () => <ThemedBackButton navigation={navigation} />,
-    headerRight: () => <MapIconButton />,
   });
 }
 
@@ -323,9 +406,8 @@ function usePublicMatchesScreenOptions() {
  * Header options for PlayerMatches screen
  */
 function usePlayerMatchesScreenOptions() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const sharedOptions = getSharedScreenOptions();
 
   return ({
     navigation,
@@ -370,19 +452,39 @@ function HomeStack() {
 }
 
 /**
- * Courts Stack - Facility discovery
- * Note: Currently uses Map component as placeholder for FacilitiesDirectory
+ * Courts Stack - Facility discovery and booking
  */
 function CourtsStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions();
+
   return (
     <CourtsStackNavigator.Navigator id="CourtsStack" screenOptions={fastAnimationOptions}>
       <CourtsStackNavigator.Screen
         name="FacilitiesDirectory"
-        component={Match} // Placeholder - will be FacilitiesDirectory
+        component={FacilitiesDirectory}
         options={mainScreenOptions}
       />
-      {/* Future screens: FacilityDetail */}
+      <CourtsStackNavigator.Screen
+        name="FacilityDetail"
+        component={FacilityDetail}
+        options={({ navigation, route }) => {
+          const rootNav = navigation.getParent()?.getParent() as
+            | NativeStackNavigationProp<RootStackParamList>
+            | undefined;
+          const returnTo = route.params?.returnTo;
+          const goBack =
+            returnTo === 'MyBookings' && rootNav
+              ? () => rootNav.navigate('MyBookings')
+              : () => navigation.goBack();
+          return {
+            ...sharedOptions,
+            headerTitle: t('facilitiesTab.title'),
+            headerLeft: () => <ThemedBackButton navigation={{ goBack }} />,
+          };
+        }}
+      />
     </CourtsStackNavigator.Navigator>
   );
 }
@@ -392,6 +494,9 @@ function CourtsStack() {
  */
 function CommunityStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions();
+
   return (
     <CommunityStackNavigator.Navigator id="CommunityStack" screenOptions={fastAnimationOptions}>
       <CommunityStackNavigator.Screen
@@ -402,34 +507,38 @@ function CommunityStack() {
       <CommunityStackNavigator.Screen
         name="ShareLists"
         component={SharedLists}
-        options={{
-          title: 'Shared Lists',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.shareLists') || 'Shared Lists',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="SharedListDetail"
         component={SharedListDetail}
-        options={{
-          title: 'List',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('sharedLists.title') || 'List',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="Groups"
         component={Groups}
-        options={{
-          title: 'Groups',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.groups') || 'Groups',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
       <CommunityStackNavigator.Screen
         name="Communities"
         component={Communities}
-        options={{
-          title: 'Communities',
-          headerBackTitle: 'Back',
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('community.communities') || 'Communities',
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </CommunityStackNavigator.Navigator>
   );
@@ -440,6 +549,8 @@ function CommunityStack() {
  */
 function ChatStack() {
   const mainScreenOptions = useMainScreenOptions();
+  const { t } = useTranslation();
+  const sharedOptions = getSharedScreenOptions();
   return (
     <ChatStackNavigator.Navigator id="ChatStack" screenOptions={fastAnimationOptions}>
       <ChatStackNavigator.Screen
@@ -448,18 +559,13 @@ function ChatStack() {
         options={mainScreenOptions}
       />
       <ChatStackNavigator.Screen
-        name="ChatScreen"
-        component={ChatConversation}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <ChatStackNavigator.Screen
         name="ArchivedChats"
         component={ArchivedChats}
-        options={{
-          headerShown: false,
-        }}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('chat.archivedChats.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </ChatStackNavigator.Navigator>
   );
@@ -543,6 +649,15 @@ function ActionsPlaceholder() {
   return null;
 }
 
+/**
+ * Main screen wrapper: bottom tabs.
+ * MatchDetailSheet, ActionsBottomSheet and FeedbackSheet are rendered
+ * at the top level inside NavigationContainer in App.tsx.
+ */
+function MainWithSheets() {
+  return <BottomTabs />;
+}
+
 // =============================================================================
 // BOTTOM TABS
 // =============================================================================
@@ -557,48 +672,48 @@ const TAB_ICON_PADDING = 8;
 /**
  * Home tab icon with tour step
  */
+/**
+ * Home tab icon. Shows tennis.svg when tennis is selected, pickleball.svg when pickleball is selected.
+ */
 function HomeTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
+  const { selectedSport } = useSport();
+  const isPickleball = selectedSport?.name?.toLowerCase() === 'pickleball';
+  const IconComponent = isPickleball ? PickleballIcon : TennisIcon;
   return (
-    <CopilotStep
-      text={t('tour.mainNavigation.home.description')}
-      order={1}
-      name="home-tab"
-    >
-      <WalkthroughableView 
-        style={{ 
-          width: size + TAB_ICON_PADDING * 2, 
-          height: size + TAB_ICON_PADDING * 2, 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+    <CopilotStep text={t('tour.mainNavigation.home.description')} order={1} name="home-tab">
+      <WalkthroughableView
+        style={{
+          width: size + TAB_ICON_PADDING * 2,
+          height: size + TAB_ICON_PADDING * 2,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Ionicons name="home" size={size} color={color} />
+        <IconComponent width={size} height={size} fill={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
 }
 
 /**
- * Courts/Games tab icon with tour step
+ * Courts/Games tab icon with tour step. Uses tennis-court.svg.
  */
 function CourtsTabIcon({ color, size }: { color: string; size: number }) {
   const { t } = useTranslation();
   return (
-    <CopilotStep
-      text={t('tour.mainNavigation.matches.description')}
-      order={2}
-      name="courts-tab"
-    >
-      <WalkthroughableView 
-        style={{ 
-          width: size + TAB_ICON_PADDING * 2, 
-          height: size + TAB_ICON_PADDING * 2, 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+    <CopilotStep text={t('tour.mainNavigation.matches.description')} order={2} name="courts-tab">
+      <WalkthroughableView
+        style={{
+          width: size + TAB_ICON_PADDING * 2,
+          height: size + TAB_ICON_PADDING * 2,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Ionicons name="tennisball" size={size} color={color} />
+        <View style={{ transform: [{ rotate: '90deg' }] }}>
+          <TennisCourtIcon width={size} height={size} stroke={color} />
+        </View>
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -616,15 +731,15 @@ function ActionsTabIcon({ color, size }: { color: string; size: number }) {
       order={3}
       name="actions-tab"
     >
-      <WalkthroughableView 
-        style={{ 
-          width: adjustedSize + TAB_ICON_PADDING * 2, 
-          height: adjustedSize + TAB_ICON_PADDING * 2, 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+      <WalkthroughableView
+        style={{
+          width: adjustedSize + TAB_ICON_PADDING * 2,
+          height: adjustedSize + TAB_ICON_PADDING * 2,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Ionicons name="add-circle" size={adjustedSize} color={color} />
+        <Ionicons name="add-circle-outline" size={adjustedSize} color={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -641,15 +756,15 @@ function CommunityTabIcon({ color, size }: { color: string; size: number }) {
       order={4}
       name="community-tab"
     >
-      <WalkthroughableView 
-        style={{ 
-          width: size + TAB_ICON_PADDING * 2, 
-          height: size + TAB_ICON_PADDING * 2, 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+      <WalkthroughableView
+        style={{
+          width: size + TAB_ICON_PADDING * 2,
+          height: size + TAB_ICON_PADDING * 2,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Ionicons name="people" size={size} color={color} />
+        <Ionicons name="people-outline" size={size} color={color} />
       </WalkthroughableView>
     </CopilotStep>
   );
@@ -663,26 +778,22 @@ function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
   const { session } = useAuth();
   const { data: unreadCount } = useTotalUnreadCount(session?.user?.id);
   const { colors } = useThemeStyles();
-  
+
   const count = unreadCount ?? 0;
   const showBadge = count > 0;
   const displayCount = count > 99 ? '99+' : count.toString();
 
   return (
-    <CopilotStep
-      text={t('tour.mainNavigation.chat.description')}
-      order={5}
-      name="chat-tab"
-    >
-      <WalkthroughableView 
-        style={{ 
-          width: size + TAB_ICON_PADDING * 2, 
-          height: size + TAB_ICON_PADDING * 2, 
-          alignItems: 'center', 
-          justifyContent: 'center' 
+    <CopilotStep text={t('tour.mainNavigation.chat.description')} order={5} name="chat-tab">
+      <WalkthroughableView
+        style={{
+          width: size + TAB_ICON_PADDING * 2,
+          height: size + TAB_ICON_PADDING * 2,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <Ionicons name="chatbubbles" size={size} color={color} />
+        <Ionicons name="chatbubbles-outline" size={size} color={color} />
         {showBadge && (
           <View
             style={{
@@ -715,6 +826,28 @@ function ChatTabIconWithTour({ color, size }: { color: string; size: number }) {
   );
 }
 
+type TabName = keyof BottomTabParamList;
+
+/**
+ * Listener that resets a tab's nested stack to its root screen when the tab loses focus.
+ * This ensures users always see the home screen when switching back to a tab.
+ */
+const resetStackOnBlur = ({
+  navigation,
+  route,
+}: BottomTabScreenProps<BottomTabParamList, TabName>) => ({
+  blur: () => {
+    const state = navigation.getState();
+    const tabRoute = state.routes.find(r => r.key === route.key);
+    if (tabRoute?.state && typeof tabRoute.state.index === 'number' && tabRoute.state.index > 0) {
+      navigation.dispatch({
+        ...StackActions.popToTop(),
+        target: tabRoute.state.key,
+      });
+    }
+  },
+});
+
 function BottomTabs() {
   const { colors } = useThemeStyles();
   return (
@@ -741,6 +874,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <HomeTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Courts"
@@ -748,6 +882,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <CourtsTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Actions"
@@ -770,6 +905,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <CommunityTabIcon color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
       <Tab.Screen
         name="Chat"
@@ -777,6 +913,7 @@ function BottomTabs() {
         options={{
           tabBarIcon: ({ color, size }) => <ChatTabIconWithTour color={color} size={size} />,
         }}
+        listeners={resetStackOnBlur}
       />
     </Tab.Navigator>
   );
@@ -792,7 +929,7 @@ function BottomTabs() {
  */
 function ThemedBackButton({
   navigation,
-  icon = 'chevron-back',
+  icon = 'chevron-back-outline',
 }: {
   navigation: { goBack: () => void };
   icon?: string;
@@ -821,23 +958,33 @@ function ThemedBackButton({
  * Main App Navigator
  *
  * Structure:
- * - Main: Bottom tabs with minimal stacks
- * - Shared screens: UserProfile, SportProfile, Settings, Notifications, Map, RatingProofs
+ * - PreOnboarding: First-time wizard (sports, postal code, location permission) for new users
+ * - Main: Bottom tabs with minimal stacks (shown after pre-onboarding complete)
+ * - Shared screens: UserProfile, SportProfile, Settings, Notifications, RatingProofs
  *   These are full-screen (tabs hidden) and accessible from anywhere
  */
 export default function AppNavigator() {
-  const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const sharedOptions = getSharedScreenOptions(colors);
+  const { isSportSelectionComplete } = useOverlay();
+  const sharedOptions = getSharedScreenOptions();
 
   return (
     <RootStack.Navigator
       id="RootStack"
-      initialRouteName="Main"
+      initialRouteName={isSportSelectionComplete ? 'Main' : 'PreOnboarding'}
       screenOptions={fastAnimationOptions}
     >
-      {/* Main app entry */}
-      <RootStack.Screen name="Main" component={BottomTabs} options={{ headerShown: false }} />
+      {/* First-time pre-onboarding wizard - shown before Main for new users */}
+      {!isSportSelectionComplete && (
+        <RootStack.Screen
+          name="PreOnboarding"
+          component={PreOnboardingScreen}
+          options={{ headerShown: false, animation: 'fade' }}
+        />
+      )}
+
+      {/* Main app entry - only rendered after sport selection is complete */}
+      <RootStack.Screen name="Main" component={MainWithSheets} options={{ headerShown: false }} />
 
       {/* Shared screens - full screen, tabs hidden */}
       <RootStack.Screen
@@ -1050,11 +1197,31 @@ export default function AppNavigator() {
       />
 
       <RootStack.Screen
-        name="Chat"
+        name="ChatConversation"
         component={ChatConversation}
         options={{
           headerShown: false,
         }}
+      />
+
+      <RootStack.Screen
+        name="MyBookings"
+        component={MyBookingsScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
+      />
+
+      <RootStack.Screen
+        name="BookingDetail"
+        component={BookingDetailScreen}
+        options={({ navigation }) => ({
+          ...sharedOptions,
+          headerTitle: t('myBookings.detail.title'),
+          headerLeft: () => <ThemedBackButton navigation={navigation} />,
+        })}
       />
     </RootStack.Navigator>
   );

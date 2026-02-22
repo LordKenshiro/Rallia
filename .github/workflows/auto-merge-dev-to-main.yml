@@ -2,87 +2,70 @@ name: Auto Merge Dev to Main (Daily)
 
 on:
   schedule:
-    # Runs at 11:59 PM UTC every day
-    # Adjust timezone: For EST add 5 hours, PST add 8 hours
-    - cron: '59 23 * * *'
-  workflow_dispatch:  # Allow manual trigger from Actions tab
+    - cron: '0 15 * * *' # 10:00 AM EST (15:00 UTC) daily
+  workflow_dispatch:
 
 jobs:
-  check-and-merge:
-    name: Check for changes and merge dev to main
+  merge-dev-to-main:
+    name: Merge dev to main
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
-    
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Check if dev has changes compared to main
-        id: check_changes
-        run: |
-          git fetch origin main
-          git fetch origin dev
-          
-          # Check if dev has commits ahead of main
-          COMMITS_AHEAD=$(git rev-list --count origin/main..origin/dev)
-          echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
-          
-          if [ "$COMMITS_AHEAD" -gt 0 ]; then
-            echo "✅ Dev branch has $COMMITS_AHEAD commits ahead of main"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "ℹ️ Dev branch has no new changes"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Pull Request from dev to main
-        if: steps.check_changes.outputs.has_changes == 'true'
-        id: create_pr
-        uses: repo-sync/pull-request@v2
-        with:
-          source_branch: dev
-          destination_branch: main
-          pr_title: "🚀 Daily Auto-Merge: Dev → Main"
-          pr_body: |
-            ## Automated Daily Merge
-            
-            This PR was automatically created by GitHub Actions to merge the latest changes from `dev` into `main`.
-            
-            **Changes**: ${{ steps.check_changes.outputs.commits_ahead }} commits
-            **Triggered**: Scheduled daily merge (end of day)
-            **Date**: ${{ github.event.repository.updated_at }}
-            
-            ### ✅ Pre-merge Checklist
-            - All CI checks must pass
-            - No merge conflicts
-            - Code review (optional based on settings)
-            
-            ---
-            *This PR will auto-merge once all checks pass.*
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          pr_label: "auto-merge,daily-release"
-
-      - name: Enable auto-merge
-        if: steps.check_changes.outputs.has_changes == 'true' && steps.create_pr.outputs.pr_number != ''
-        run: |
-          gh pr merge ${{ steps.create_pr.outputs.pr_number }} \
-            --auto \
-            --squash \
-            --delete-branch=false
+      - name: Check for changes and create/merge PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: No changes to merge
-        if: steps.check_changes.outputs.has_changes == 'false'
+          GH_REPO: ${{ github.repository }}
         run: |
-          echo "ℹ️ No changes detected in dev branch. Skipping merge."
+          set -euo pipefail
+
+          # Check if dev is ahead of main
+          COMPARISON=$(gh api "repos/${GH_REPO}/compare/main...dev" --jq '{ahead: .ahead_by, status: .status}')
+          COMMITS_AHEAD=$(echo "$COMPARISON" | jq -r '.ahead')
+
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "No changes in dev relative to main. Nothing to do."
+            exit 0
+          fi
+
+          echo "Dev is $COMMITS_AHEAD commit(s) ahead of main."
+
+          # Check for an existing open PR from dev -> main
+          EXISTING_PR=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Existing PR #${EXISTING_PR} found. Enabling auto-merge."
+            PR_NUMBER="$EXISTING_PR"
+          else
+            echo "Creating new PR..."
+            PR_URL=$(gh pr create \
+              --base main \
+              --head dev \
+              --title "Daily Auto-Merge: Dev to Main" \
+              --body "$(cat <<EOF
+          ## Automated Daily Merge
+
+          This PR was automatically created to merge the latest changes from \`dev\` into \`main\`.
+
+          **Changes**: ${COMMITS_AHEAD} commit(s)
+          **Triggered**: $(date -u '+%Y-%m-%d %H:%M UTC')
+
+          ### Pre-merge checklist
+          - All CI checks must pass
+          - No merge conflicts
+
+          ---
+          *This PR will auto-merge once all checks pass.*
+          EOF
+            )" \
+              --label "auto-merge")
+
+            PR_NUMBER=$(gh pr view "$PR_URL" --json number --jq '.number')
+            echo "Created PR #${PR_NUMBER}."
+          fi
+
+          # Enable auto-merge (squash, keep dev branch)
+          gh pr merge "$PR_NUMBER" --auto --squash
+          echo "Auto-merge enabled for PR #${PR_NUMBER}."

@@ -25,8 +25,18 @@ import type { RouteProp } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Text } from '@rallia/shared-components';
-import { lightHaptic, mediumHaptic, selectionHaptic, getProfilePictureUrl } from '@rallia/shared-utils';
-import { useThemeStyles, useAuth, useTranslation, type TranslationKey } from '../hooks';
+import { lightHaptic, mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { getSafeAreaEdges } from '../utils';
+import {
+  useThemeStyles,
+  useAuth,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  useRequireOnboarding,
+  type TranslationKey,
+} from '../hooks';
+import { useSport } from '../context';
+import { SportIcon } from '../components/SportIcon';
 import {
   useCommunityWithMembers,
   useIsCommunityModerator,
@@ -37,30 +47,19 @@ import {
   useRejectCommunityMember,
   useCommunityRealtime,
   usePendingRequestsRealtime,
-  useCommunityAccess,
-  useRequestToJoinCommunity,
   useGroupStats,
   useGroupActivity,
   useGroupLeaderboard,
   useMostRecentGroupMatch,
   useGroupMatches,
 } from '@rallia/shared-hooks';
+import type { GroupMatch } from '@rallia/shared-hooks';
 import type { GroupWithMembers } from '@rallia/shared-services';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { RootStackParamList } from '../navigation/types';
 import { primary } from '@rallia/design-system';
-import {
-  MemberListModal,
-  GroupOptionsModal,
-  InviteLinkModal,
-  RecentGamesModal,
-} from '../features/groups';
 import { AddCommunityMemberModal, EditCommunityModal } from '../features/communities';
-import {
-  AddScoreIntroModal,
-  MatchTypeModal,
-  AddScoreModal,
-  type MatchType,
-} from '../features/matches';
+import { AddScoreIntroModal, AddScoreModal, type MatchType } from '../features/matches';
 
 const HEADER_HEIGHT = 140;
 
@@ -70,6 +69,12 @@ type CommunityDetailRouteProp = RouteProp<RootStackParamList, 'CommunityDetail'>
 type TabKey = 'home' | 'leaderboard' | 'activity';
 
 const TAB_KEYS: TabKey[] = ['home', 'leaderboard', 'activity'];
+
+const TAB_ICONS: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
+  home: 'home-outline',
+  leaderboard: 'podium-outline',
+  activity: 'flash-outline',
+};
 
 // Storage key for "never show intro again"
 const ADD_SCORE_INTRO_KEY = 'rallia_add_score_intro_dismissed';
@@ -82,18 +87,15 @@ export default function CommunityDetailScreen() {
   const { colors, isDark } = useThemeStyles();
   const { session } = useAuth();
   const { t } = useTranslation();
+  const { guardAction } = useRequireOnboarding();
+  const { selectedSport } = useSport();
   const playerId = session?.user?.id;
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
 
   const [activeTab, setActiveTab] = useState<TabKey>('home');
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-  const [showMemberListModal, setShowMemberListModal] = useState(false);
-  const [showOptionsModal, setShowOptionsModal] = useState(false);
-  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
   const [showPendingRequestsModal, setShowPendingRequestsModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showRecentGamesModal, setShowRecentGamesModal] = useState(false);
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<30 | 90 | 180 | 0>(30);
-  
+
   // Add Score flow state
   const [showAddScoreIntro, setShowAddScoreIntro] = useState(false);
   const [showMatchTypeModal, setShowMatchTypeModal] = useState(false);
@@ -117,14 +119,16 @@ export default function CommunityDetailScreen() {
 
   const { data: community, isLoading, refetch } = useCommunityWithMembers(communityId);
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
-  const { data: accessInfo } = useCommunityAccess(communityId, playerId);
   const { data: pendingRequests, refetch: refetchPendingRequests } = usePendingCommunityMembers(
     isModerator ? communityId : undefined,
     playerId
   );
   const { data: stats } = useGroupStats(communityId);
   const { data: activities } = useGroupActivity(communityId, 50);
-  const { data: leaderboard } = useGroupLeaderboard(communityId, leaderboardPeriod === 0 ? 3650 : leaderboardPeriod);
+  const { data: leaderboard } = useGroupLeaderboard(
+    communityId,
+    leaderboardPeriod === 0 ? 3650 : leaderboardPeriod
+  );
   const { data: recentMatch } = useMostRecentGroupMatch(communityId);
   const { data: allMatches } = useGroupMatches(communityId, 180, 100);
 
@@ -137,133 +141,114 @@ export default function CommunityDetailScreen() {
   const deleteCommunityMutation = useDeleteCommunity();
   const approveMemberMutation = useApproveCommunityMember();
   const rejectMemberMutation = useRejectCommunityMember();
-  const requestToJoinMutation = useRequestToJoinCommunity();
 
   const handleOpenChat = useCallback(() => {
-    if (community?.conversation_id) {
-      lightHaptic();
-      navigation.navigate('Chat', {
-        conversationId: community.conversation_id,
-        title: community.name,
-      });
-    }
-  }, [community, navigation]);
+    if (!community?.conversation_id) return;
+    if (!guardAction()) return;
+    lightHaptic();
+    navigation.navigate('ChatConversation', {
+      conversationId: community.conversation_id,
+      title: community.name,
+    });
+  }, [community, guardAction, navigation]);
 
   const handleLeaveCommunity = useCallback(() => {
-    Alert.alert(
-      t('community.leaveCommunity'),
-      t('community.confirmations.leave'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.leave'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!playerId) return;
-            try {
-              await leaveCommunityMutation.mutateAsync({ communityId, playerId });
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('community.errors.failedToLeave' as TranslationKey));
-            }
-          },
+    Alert.alert(t('community.leaveCommunity'), t('community.confirmations.leave'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.leave'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!playerId) return;
+          try {
+            await leaveCommunityMutation.mutateAsync({ communityId, playerId });
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert(
+              t('common.error'),
+              error instanceof Error ? error.message : t('community.errors.failedToLeave')
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [communityId, playerId, leaveCommunityMutation, navigation, t]);
 
   const handleDeleteCommunity = useCallback(() => {
-    Alert.alert(
-      t('community.deleteCommunity'),
-      t('community.confirmations.delete'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            if (!playerId) return;
-            try {
-              await deleteCommunityMutation.mutateAsync({ communityId, playerId });
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert(t('common.error'), error instanceof Error ? error.message : t('community.errors.failedToDelete' as TranslationKey));
-            }
-          },
+    Alert.alert(t('community.deleteCommunity'), t('community.confirmations.delete'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          if (!playerId) return;
+          try {
+            await deleteCommunityMutation.mutateAsync({ communityId, playerId });
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert(
+              t('common.error'),
+              error instanceof Error ? error.message : t('community.errors.failedToDelete')
+            );
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [communityId, playerId, deleteCommunityMutation, navigation, t]);
 
-  const handleShowOptions = useCallback(() => {
-    setShowOptionsModal(true);
-  }, []);
-
-  // Add Game flow handlers
-  const handleAddGame = useCallback(() => {
-    mediumHaptic();
-    // Check if user has seen the intro before
-    if (hasSeenAddScoreIntro === false) {
-      // First time - show the intro
-      setShowAddScoreIntro(true);
-    } else {
-      // User has dismissed intro before - go directly to match type
-      setShowMatchTypeModal(true);
-    }
-  }, [hasSeenAddScoreIntro]);
-
-  const handleAddScoreIntroComplete = useCallback(() => {
-    setShowAddScoreIntro(false);
-    setShowMatchTypeModal(true);
-  }, []);
-
-  const handleMatchTypeSelect = useCallback((type: MatchType) => {
-    selectionHaptic();
-    setSelectedMatchType(type);
-    setShowMatchTypeModal(false);
-    setShowAddScoreModal(true);
-  }, []);
-
-  const handleAddScoreSuccess = useCallback((_matchId: string) => {
-    setShowAddScoreModal(false);
-    refetch();
-  }, [refetch]);
-
-  // Build options for the menu modal
+  // Build options for the menu modal (must be before handleShowOptions)
   const menuOptions = useMemo(() => {
     const isCreator = community?.created_by === playerId;
-    const options: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; destructive?: boolean }[] = [];
+    const options: {
+      id: string;
+      label: string;
+      icon: keyof typeof Ionicons.glyphMap;
+      onPress: () => void;
+      destructive?: boolean;
+    }[] = [];
 
-    // Share invite link - available to all members
     options.push({
       id: 'invite',
-      label: t('community.options.shareInviteLink' as TranslationKey),
+      label: t('community.options.shareInviteLink'),
       icon: 'link-outline',
-      onPress: () => setShowInviteLinkModal(true),
+      onPress: () =>
+        SheetManager.show('invite-link', {
+          payload: {
+            groupId: communityId,
+            groupName: community?.name ?? '',
+            currentUserId: playerId ?? '',
+            isModerator: isModerator ?? false,
+            type: 'community',
+          },
+        }),
     });
 
-    // View pending requests (moderators only)
     if (isModerator && pendingRequests && pendingRequests.length > 0) {
       options.push({
         id: 'requests',
-        label: t('community.options.pendingRequests' as TranslationKey, { count: pendingRequests.length }),
+        label: t('community.options.pendingRequests', {
+          count: pendingRequests.length,
+        }),
         icon: 'person-add-outline',
         onPress: () => setShowPendingRequestsModal(true),
       });
     }
 
-    if (isModerator) {
+    if (isModerator && community) {
       options.push({
         id: 'edit',
-        label: t('community.options.editCommunity' as TranslationKey),
+        label: t('community.options.editCommunity'),
         icon: 'create-outline',
-        onPress: () => setShowEditModal(true),
+        onPress: () =>
+          SheetManager.show('edit-community', {
+            payload: { community, onSuccess: () => refetch() },
+          }),
       });
     }
 
     options.push({
       id: 'leave',
-      label: t('community.options.leaveCommunity' as TranslationKey),
+      label: t('community.options.leaveCommunity'),
       icon: 'exit-outline',
       onPress: handleLeaveCommunity,
       destructive: true,
@@ -272,7 +257,7 @@ export default function CommunityDetailScreen() {
     if (isCreator) {
       options.push({
         id: 'delete',
-        label: t('community.options.deleteCommunity' as TranslationKey),
+        label: t('community.options.deleteCommunity'),
         icon: 'trash-outline',
         onPress: handleDeleteCommunity,
         destructive: true,
@@ -280,7 +265,56 @@ export default function CommunityDetailScreen() {
     }
 
     return options;
-  }, [community, playerId, isModerator, pendingRequests, handleLeaveCommunity, handleDeleteCommunity, t]);
+  }, [
+    community,
+    communityId,
+    playerId,
+    isModerator,
+    pendingRequests,
+    refetch,
+    handleLeaveCommunity,
+    handleDeleteCommunity,
+    t,
+  ]);
+
+  const handleShowOptions = useCallback(() => {
+    SheetManager.show('group-options', {
+      payload: { options: menuOptions, title: 'Community Options' },
+    });
+  }, [menuOptions]);
+
+  const handleMatchTypeSelect = useCallback((type: MatchType) => {
+    selectionHaptic();
+    setSelectedMatchType(type);
+    setShowAddScoreModal(true);
+  }, []);
+
+  // Add Game flow handlers
+  const handleAddGame = useCallback(() => {
+    if (!guardAction()) return;
+    mediumHaptic();
+    // Check if user has seen the intro before
+    if (hasSeenAddScoreIntro === false) {
+      // First time - show the intro
+      setShowAddScoreIntro(true);
+    } else {
+      // User has dismissed intro before - go directly to match type
+      SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+    }
+  }, [guardAction, hasSeenAddScoreIntro, handleMatchTypeSelect]);
+
+  const handleAddScoreIntroComplete = useCallback(() => {
+    setShowAddScoreIntro(false);
+    SheetManager.show('match-type', { payload: { onSelect: handleMatchTypeSelect } });
+  }, [handleMatchTypeSelect]);
+
+  const handleAddScoreSuccess = useCallback(
+    (_matchId: string) => {
+      setShowAddScoreModal(false);
+      refetch();
+    },
+    [refetch]
+  );
 
   const renderTabContent = () => {
     // Calculate activity ring segments for Last 7 days
@@ -306,22 +340,27 @@ export default function CommunityDetailScreen() {
 
     // Starting rotation for each segment (members starts at top, -90deg)
     const membersRotation = -90;
-    const gamesRotation = membersRotation + (membersPercent * 360);
-    const messagesRotation = gamesRotation + (gamesPercent * 360);
+    const gamesRotation = membersRotation + membersPercent * 360;
+    const messagesRotation = gamesRotation + gamesPercent * 360;
 
     switch (activeTab) {
       case 'home':
         return (
           <View style={styles.tabContent}>
             {/* Community Stats Card */}
-            <View style={[styles.communityStatsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.communityStatsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
                 Community Stats
               </Text>
               <View style={styles.communityStatsList}>
                 <View style={styles.communityStatItem}>
                   <View style={[styles.communityStatIcon, { backgroundColor: '#5AC8FA20' }]}>
-                    <Ionicons name="people" size={24} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={24} color="#5AC8FA" />
                   </View>
                   <View style={styles.communityStatInfo}>
                     <Text weight="bold" size="lg" style={{ color: colors.text }}>
@@ -333,11 +372,16 @@ export default function CommunityDetailScreen() {
                   </View>
                 </View>
                 <View style={styles.communityStatItem}>
-                  <View style={[styles.communityStatIcon, { backgroundColor: community?.is_public ? '#34C75920' : '#FF950020' }]}>
-                    <Ionicons 
-                      name={community?.is_public ? 'globe-outline' : 'lock-closed-outline'} 
-                      size={24} 
-                      color={community?.is_public ? '#34C759' : '#FF9500'} 
+                  <View
+                    style={[
+                      styles.communityStatIcon,
+                      { backgroundColor: community?.is_public ? '#34C75920' : '#FF950020' },
+                    ]}
+                  >
+                    <Ionicons
+                      name={community?.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                      size={24}
+                      color={community?.is_public ? '#34C759' : '#FF9500'}
                     />
                   </View>
                   <View style={styles.communityStatInfo}>
@@ -352,12 +396,20 @@ export default function CommunityDetailScreen() {
               </View>
               {isModerator && pendingRequests && pendingRequests.length > 0 && (
                 <TouchableOpacity
-                  style={[styles.pendingRequestsBanner, { backgroundColor: '#FF3B3010', borderColor: '#FF3B30' }]}
+                  style={[
+                    styles.pendingRequestsBanner,
+                    { backgroundColor: '#FF3B3010', borderColor: '#FF3B30' },
+                  ]}
                   onPress={() => setShowPendingRequestsModal(true)}
                 >
-                  <Ionicons name="person-add" size={20} color="#FF3B30" />
-                  <Text size="sm" weight="semibold" style={{ color: '#FF3B30', marginLeft: 8, flex: 1 }}>
-                    {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+                  <Ionicons name="person-add-outline" size={20} color="#FF3B30" />
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    style={{ color: '#FF3B30', marginLeft: 8, flex: 1 }}
+                  >
+                    {pendingRequests.length} pending request
+                    {pendingRequests.length !== 1 ? 's' : ''}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color="#FF3B30" />
                 </TouchableOpacity>
@@ -365,9 +417,14 @@ export default function CommunityDetailScreen() {
             </View>
 
             {/* Last 7 Days Activities Card */}
-            <View style={[styles.statsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.statsCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <Text weight="semibold" size="base" style={{ color: colors.text, marginBottom: 16 }}>
-                {t('community.detail.last7DaysActivities' as TranslationKey)}
+                {t('community.detail.last7DaysActivities')}
               </Text>
               <View style={styles.statsRow}>
                 <View style={styles.statCircle}>
@@ -437,27 +494,43 @@ export default function CommunityDetailScreen() {
                       <Text weight="bold" size="xl" style={{ color: colors.text }}>
                         {totalActivities}
                       </Text>
-                      <Text size="xs" style={{ color: colors.textSecondary }}>{t('community.detail.activities' as TranslationKey)}</Text>
+                      <Text size="xs" style={{ color: colors.textSecondary }}>
+                        {t('community.detail.activities')}
+                      </Text>
                     </View>
                   </View>
                 </View>
                 <View style={styles.statsList}>
                   <View style={styles.statItem}>
-                    <Ionicons name="people" size={20} color="#5AC8FA" />
+                    <Ionicons name="people-outline" size={20} color="#5AC8FA" />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMembers' as TranslationKey, { count: membersCountLast7Days })}
+                      {t('community.detail.newMembers', {
+                        count: membersCountLast7Days,
+                      })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="tennisball" size={20} color="#FF9500" />
+                    <SportIcon
+                      sportName={selectedSport?.name ?? 'tennis'}
+                      size={20}
+                      color="#FF9500"
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.gamesCreated' as TranslationKey, { count: gamesCountLast7Days })}
+                      {t('community.detail.gamesCreated', {
+                        count: gamesCountLast7Days,
+                      })}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
-                    <Ionicons name="chatbubble-ellipses" size={20} color={isDark ? '#8E8E93' : '#C7C7CC'} />
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={20}
+                      color={isDark ? '#8E8E93' : '#C7C7CC'}
+                    />
                     <Text size="sm" style={{ color: colors.text, marginLeft: 10 }}>
-                      {t('community.detail.newMessages' as TranslationKey, { count: messagesCountLast7Days })}
+                      {t('community.detail.newMessages', {
+                        count: messagesCountLast7Days,
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -466,11 +539,16 @@ export default function CommunityDetailScreen() {
 
             {/* About Section */}
             {community?.description && (
-              <View style={[styles.aboutCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.aboutCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.aboutHeader}>
                   <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('community.detail.about' as TranslationKey)}
+                    {t('community.detail.about')}
                   </Text>
                 </View>
                 <Text style={{ color: colors.textSecondary, lineHeight: 22, marginTop: 8 }}>
@@ -480,17 +558,22 @@ export default function CommunityDetailScreen() {
             )}
 
             {/* Leaderboard Preview */}
-            <View style={[styles.leaderboardPreview, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.leaderboardPreview,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Ionicons name="trophy-outline" size={20} color={colors.primary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
                     {t('community.leaderboard.title')}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setActiveTab('leaderboard')}>
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll' as TranslationKey)}
+                    {t('community.detail.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -502,18 +585,23 @@ export default function CommunityDetailScreen() {
                       <Text weight="semibold" style={{ color: colors.textMuted, width: 20 }}>
                         {index + 1}.
                       </Text>
-                      <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                        {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
+                      <View
+                        style={[
+                          styles.smallAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
+                        {entry.player?.profile?.profile_picture_url ? (
                           <Image
-                            source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
+                            source={{ uri: entry.player.profile.profile_picture_url }}
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <Text size="sm" style={{ color: colors.text, flex: 1, marginLeft: 8 }}>
-                        {entry.player?.profile?.first_name || t('common.player' as TranslationKey)}
+                        {entry.player?.profile?.first_name || t('common.player')}
                       </Text>
                       <Text size="sm" weight="semibold" style={{ color: colors.primary }}>
                         {entry.games_played}
@@ -522,20 +610,32 @@ export default function CommunityDetailScreen() {
                   ))}
                 </View>
               ) : (
-                <Text size="sm" style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  {t('community.leaderboard.noGamesYet' as TranslationKey)}
+                <Text
+                  size="sm"
+                  style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}
+                >
+                  {t('community.leaderboard.noGamesYet')}
                 </Text>
               )}
             </View>
 
             {/* Pending Requests Section (moderators only) */}
             {isModerator && pendingRequests && pendingRequests.length > 0 && (
-              <View style={[styles.pendingRequestsCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.pendingRequestsCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.sectionHeader}>
                   <View style={styles.sectionTitle}>
-                    <Ionicons name="person-add" size={20} color="#FF9500" />
-                    <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                      {t('community.pendingRequests.title' as TranslationKey)}
+                    <Ionicons name="person-add-outline" size={20} color="#FF9500" />
+                    <Text
+                      weight="semibold"
+                      size="base"
+                      style={{ color: colors.text, marginLeft: 8 }}
+                    >
+                      {t('community.pendingRequests.title')}
                     </Text>
                     <View style={[styles.badgeCount, { backgroundColor: '#FF3B30' }]}>
                       <Text size="xs" weight="bold" style={{ color: '#FFFFFF' }}>
@@ -545,32 +645,42 @@ export default function CommunityDetailScreen() {
                   </View>
                   <TouchableOpacity onPress={() => setShowPendingRequestsModal(true)}>
                     <Text size="sm" style={{ color: colors.primary }}>
-                      {t('community.detail.viewAll' as TranslationKey)}
+                      {t('community.detail.viewAll')}
                     </Text>
                   </TouchableOpacity>
                 </View>
                 {/* Show first 3 pending requests */}
                 <View style={styles.pendingRequestsList}>
-                  {pendingRequests.slice(0, 3).map((request) => (
-                    <View key={request.id} style={[styles.pendingRequestItem, { borderBottomColor: colors.border }]}>
-                      <View style={[styles.smallAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                  {pendingRequests.slice(0, 3).map(request => (
+                    <View
+                      key={request.id}
+                      style={[styles.pendingRequestItem, { borderBottomColor: colors.border }]}
+                    >
+                      <View
+                        style={[
+                          styles.smallAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
                         {request.player_profile_picture ? (
                           <Image
                             source={{ uri: request.player_profile_picture }}
                             style={styles.avatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={14} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.pendingRequestInfo}>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
-                          {request.player_name || t('common.player' as TranslationKey)}
+                          {request.player_name || t('common.player')}
                         </Text>
                         <Text size="xs" style={{ color: colors.textSecondary }}>
-                          {request.referrer_name 
-                            ? t('community.referredBy' as TranslationKey, { name: request.referrer_name }) 
-                            : t('community.pendingRequests.joinRequest' as TranslationKey)}
+                          {request.referrer_name
+                            ? t('community.referredBy', {
+                                name: request.referrer_name,
+                              })
+                            : t('community.pendingRequests.joinRequest')}
                         </Text>
                       </View>
                       <View style={styles.pendingRequestActions}>
@@ -579,7 +689,11 @@ export default function CommunityDetailScreen() {
                           onPress={async () => {
                             if (!playerId) return;
                             try {
-                              await approveMemberMutation.mutateAsync({ communityId, memberId: request.id, approverId: playerId });
+                              await approveMemberMutation.mutateAsync({
+                                communityId,
+                                memberId: request.id,
+                                approverId: playerId,
+                              });
                               refetchPendingRequests();
                               refetch();
                             } catch (error) {
@@ -587,21 +701,28 @@ export default function CommunityDetailScreen() {
                             }
                           }}
                         >
-                          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.miniRejectButton, { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA' }]}
+                          style={[
+                            styles.miniRejectButton,
+                            { backgroundColor: isDark ? '#3A3A3C' : '#E5E5EA' },
+                          ]}
                           onPress={async () => {
                             if (!playerId) return;
                             try {
-                              await rejectMemberMutation.mutateAsync({ communityId, memberId: request.id, rejectorId: playerId });
+                              await rejectMemberMutation.mutateAsync({
+                                communityId,
+                                memberId: request.id,
+                                rejectorId: playerId,
+                              });
                               refetchPendingRequests();
                             } catch (error) {
                               console.error('[CommunityDetail] Error rejecting member:', error);
                             }
                           }}
                         >
-                          <Ionicons name="close" size={16} color={colors.text} />
+                          <Ionicons name="close-outline" size={16} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -614,34 +735,58 @@ export default function CommunityDetailScreen() {
 
       case 'leaderboard': {
         const periodOptions = [
-          { value: 30, label: t('groups.leaderboardPeriod.30days' as TranslationKey) },
-          { value: 90, label: t('groups.leaderboardPeriod.90days' as TranslationKey) },
-          { value: 180, label: t('groups.leaderboardPeriod.180days' as TranslationKey) },
-          { value: 0, label: t('groups.leaderboardPeriod.allTime' as TranslationKey) },
+          { value: 30, label: t('groups.leaderboardPeriod.30days') },
+          { value: 90, label: t('groups.leaderboardPeriod.90days') },
+          { value: 180, label: t('groups.leaderboardPeriod.180days') },
+          { value: 0, label: t('groups.leaderboardPeriod.allTime') },
         ];
 
         return (
           <View style={styles.tabContent}>
             {/* Recent Games Section */}
-            <View style={[styles.recentGamesCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.recentGamesCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitle}>
-                  <Ionicons name="time" size={20} color={colors.textSecondary} />
+                  <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
                   <Text weight="semibold" size="base" style={{ color: colors.text, marginLeft: 8 }}>
-                    {t('groups.recentGames.title' as TranslationKey)}
+                    {t('groups.recentGames.title')}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowRecentGamesModal(true)}>
+                <TouchableOpacity
+                  onPress={() =>
+                    SheetManager.show('recent-games', {
+                      payload: {
+                        matches: allMatches || [],
+                        onMatchPress: (match: unknown) => {
+                          SheetManager.hide('recent-games');
+                          navigation.navigate('PlayedMatchDetail', { match: match as GroupMatch });
+                        },
+                        onPlayerPress: (playerId: string) => {
+                          SheetManager.hide('recent-games');
+                          navigateToPlayerProfile(playerId);
+                        },
+                      },
+                    })
+                  }
+                >
                   <Text size="sm" style={{ color: colors.primary }}>
-                    {t('community.detail.viewAll' as TranslationKey)}
+                    {t('community.detail.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
-              
+
               {/* Most Recent Match Card */}
               {recentMatch?.match ? (
-                <TouchableOpacity 
-                  style={[styles.matchCard, { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border }]}
+                <TouchableOpacity
+                  style={[
+                    styles.matchCard,
+                    { backgroundColor: isDark ? '#1C1C1E' : '#F8F8F8', borderColor: colors.border },
+                  ]}
                   onPress={() => {
                     navigation.navigate('PlayedMatchDetail', { match: recentMatch });
                   }}
@@ -650,31 +795,57 @@ export default function CommunityDetailScreen() {
                   {/* Match Header */}
                   <View style={styles.matchHeader}>
                     <View style={styles.matchInfo}>
-                      <Ionicons 
-                        name={recentMatch.match.sport?.name?.toLowerCase() === 'tennis' ? 'tennisball' : 'american-football'} 
-                        size={16} 
-                        color={colors.primary} 
+                      <SportIcon
+                        sportName={recentMatch.match.sport?.name ?? 'tennis'}
+                        size={16}
+                        color={colors.primary}
                       />
                       <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 6 }}>
-                        {recentMatch.match.sport?.name || 'Sport'} · {new Date(recentMatch.match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {recentMatch.match.sport?.name || 'Sport'} ·{' '}
+                        {new Date(recentMatch.match.match_date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </Text>
                     </View>
-                    <View style={[
-                      styles.matchBadge, 
-                      { backgroundColor: recentMatch.match.player_expectation === 'competitive' ? '#E8F5E9' : '#FFF3E0' }
-                    ]}>
-                      <Ionicons 
-                        name={recentMatch.match.player_expectation === 'competitive' ? 'trophy' : 'fitness'} 
-                        size={12} 
-                        color={recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00'} 
+                    <View
+                      style={[
+                        styles.matchBadge,
+                        {
+                          backgroundColor:
+                            recentMatch.match.player_expectation === 'competitive'
+                              ? '#E8F5E9'
+                              : '#FFF3E0',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          recentMatch.match.player_expectation === 'competitive'
+                            ? 'trophy'
+                            : 'fitness'
+                        }
+                        size={12}
+                        color={
+                          recentMatch.match.player_expectation === 'competitive'
+                            ? '#2E7D32'
+                            : '#EF6C00'
+                        }
                       />
-                      <Text size="xs" weight="semibold" style={{ 
-                        color: recentMatch.match.player_expectation === 'competitive' ? '#2E7D32' : '#EF6C00',
-                        marginLeft: 4,
-                      }}>
-                        {recentMatch.match.player_expectation === 'competitive' 
-                          ? t('groups.recentGames.competitive' as TranslationKey) 
-                          : t('groups.recentGames.practice' as TranslationKey)}
+                      <Text
+                        size="xs"
+                        weight="semibold"
+                        style={{
+                          color:
+                            recentMatch.match.player_expectation === 'competitive'
+                              ? '#2E7D32'
+                              : '#EF6C00',
+                          marginLeft: 4,
+                        }}
+                      >
+                        {recentMatch.match.player_expectation === 'competitive'
+                          ? t('groups.recentGames.competitive')
+                          : t('groups.recentGames.practice')}
                       </Text>
                     </View>
                   </View>
@@ -683,72 +854,86 @@ export default function CommunityDetailScreen() {
                   <View style={styles.matchPlayersContainer}>
                     {/* Team 1 Card */}
                     {(() => {
-                      const team1Players = recentMatch.match.participants.filter(p => p.team_number === 1);
+                      const team1Players = recentMatch.match.participants.filter(
+                        p => p.team_number === 1
+                      );
                       const isWinner = recentMatch.match?.result?.winning_team === 1;
-                      
+
                       return (
-                        <View style={[
-                          styles.teamCard,
-                          isWinner && styles.winnerTeamCard,
-                          isWinner && { borderColor: '#F59E0B' },
-                        ]}>
+                        <View
+                          style={[
+                            styles.teamCard,
+                            isWinner && styles.winnerTeamCard,
+                            isWinner && { borderColor: '#F59E0B' },
+                          ]}
+                        >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
-                          
+
                           {/* Team Avatars */}
                           <View style={styles.teamAvatarsContainer}>
                             {team1Players.map((participant, index) => (
-                              <TouchableOpacity 
-                                key={participant.id} 
+                              <TouchableOpacity
+                                key={participant.id}
                                 style={[
-                                  styles.teamPlayerAvatar, 
+                                  styles.teamPlayerAvatar,
                                   { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
                                   index > 0 && styles.teamAvatarOverlap,
                                 ]}
-                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                onPress={() =>
+                                  participant.player_id &&
+                                  navigateToPlayerProfile(participant.player_id)
+                                }
                                 activeOpacity={0.7}
                               >
-                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
+                                {participant.player?.profile?.profile_picture_url ? (
                                   <Image
-                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
                           </View>
-                          
+
                           {/* Team Names */}
-                          <Text 
-                            size="xs" 
-                            weight={isWinner ? 'semibold' : 'regular'} 
+                          <Text
+                            size="xs"
+                            weight={isWinner ? 'semibold' : 'regular'}
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team1Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                            {team1Players
+                              .map(p => p.player?.profile?.first_name || 'Player')
+                              .join(', ')}
                           </Text>
-                          
+
                           {/* Team Score */}
                           {recentMatch.match?.result && (
-                            <Text 
-                              size="sm" 
-                              weight="bold" 
-                              style={{ 
+                            <Text
+                              size="sm"
+                              weight="bold"
+                              style={{
                                 color: isWinner ? '#F59E0B' : colors.textMuted,
                                 marginTop: 4,
                               }}
                             >
-                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                              {recentMatch.match.result.sets &&
+                              recentMatch.match.result.sets.length > 0
                                 ? recentMatch.match.result.sets
                                     .sort((a, b) => a.set_number - b.set_number)
                                     .map(set => set.team1_score)
                                     .join('  ')
-                                : recentMatch.match.result.team1_score ?? '-'}
+                                : (recentMatch.match.result.team1_score ?? '-')}
                             </Text>
                           )}
                         </View>
@@ -756,76 +941,95 @@ export default function CommunityDetailScreen() {
                     })()}
 
                     {/* VS */}
-                    <Text weight="semibold" style={{ color: colors.textMuted, marginHorizontal: 12 }}>vs</Text>
+                    <Text
+                      weight="semibold"
+                      style={{ color: colors.textMuted, marginHorizontal: 12 }}
+                    >
+                      vs
+                    </Text>
 
                     {/* Team 2 Card */}
                     {(() => {
-                      const team2Players = recentMatch.match.participants.filter(p => p.team_number === 2);
+                      const team2Players = recentMatch.match.participants.filter(
+                        p => p.team_number === 2
+                      );
                       const isWinner = recentMatch.match?.result?.winning_team === 2;
-                      
+
                       return (
-                        <View style={[
-                          styles.teamCard,
-                          isWinner && styles.winnerTeamCard,
-                          isWinner && { borderColor: '#F59E0B' },
-                        ]}>
+                        <View
+                          style={[
+                            styles.teamCard,
+                            isWinner && styles.winnerTeamCard,
+                            isWinner && { borderColor: '#F59E0B' },
+                          ]}
+                        >
                           {isWinner && (
                             <View style={styles.teamWinnerBadge}>
-                              <Ionicons name="trophy" size={12} color="#F59E0B" />
+                              <Ionicons name="trophy-outline" size={12} color="#F59E0B" />
                             </View>
                           )}
-                          
+
                           {/* Team Avatars */}
                           <View style={styles.teamAvatarsContainer}>
                             {team2Players.map((participant, index) => (
-                              <TouchableOpacity 
-                                key={participant.id} 
+                              <TouchableOpacity
+                                key={participant.id}
                                 style={[
-                                  styles.teamPlayerAvatar, 
+                                  styles.teamPlayerAvatar,
                                   { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
                                   index > 0 && styles.teamAvatarOverlap,
                                 ]}
-                                onPress={() => participant.player_id && navigation.navigate('PlayerProfile', { playerId: participant.player_id })}
+                                onPress={() =>
+                                  participant.player_id &&
+                                  navigateToPlayerProfile(participant.player_id)
+                                }
                                 activeOpacity={0.7}
                               >
-                                {getProfilePictureUrl(participant.player?.profile?.profile_picture_url) ? (
+                                {participant.player?.profile?.profile_picture_url ? (
                                   <Image
-                                    source={{ uri: getProfilePictureUrl(participant.player?.profile?.profile_picture_url)! }}
+                                    source={{ uri: participant.player.profile.profile_picture_url }}
                                     style={styles.teamAvatarImage}
                                   />
                                 ) : (
-                                  <Ionicons name="person" size={20} color={colors.textMuted} />
+                                  <Ionicons
+                                    name="person-outline"
+                                    size={20}
+                                    color={colors.textMuted}
+                                  />
                                 )}
                               </TouchableOpacity>
                             ))}
                           </View>
-                          
+
                           {/* Team Names */}
-                          <Text 
-                            size="xs" 
-                            weight={isWinner ? 'semibold' : 'regular'} 
+                          <Text
+                            size="xs"
+                            weight={isWinner ? 'semibold' : 'regular'}
                             style={{ color: colors.text, marginTop: 6, textAlign: 'center' }}
                             numberOfLines={2}
                           >
-                            {team2Players.map(p => p.player?.profile?.first_name || 'Player').join(', ')}
+                            {team2Players
+                              .map(p => p.player?.profile?.first_name || 'Player')
+                              .join(', ')}
                           </Text>
-                          
+
                           {/* Team Score */}
                           {recentMatch.match?.result && (
-                            <Text 
-                              size="sm" 
-                              weight="bold" 
-                              style={{ 
+                            <Text
+                              size="sm"
+                              weight="bold"
+                              style={{
                                 color: isWinner ? '#F59E0B' : colors.textMuted,
                                 marginTop: 4,
                               }}
                             >
-                              {recentMatch.match.result.sets && recentMatch.match.result.sets.length > 0
+                              {recentMatch.match.result.sets &&
+                              recentMatch.match.result.sets.length > 0
                                 ? recentMatch.match.result.sets
                                     .sort((a, b) => a.set_number - b.set_number)
                                     .map(set => set.team2_score)
                                     .join('  ')
-                                : recentMatch.match.result.team2_score ?? '-'}
+                                : (recentMatch.match.result.team2_score ?? '-')}
                             </Text>
                           )}
                         </View>
@@ -835,17 +1039,26 @@ export default function CommunityDetailScreen() {
                 </TouchableOpacity>
               ) : (
                 <View style={styles.emptyMatch}>
-                  <Ionicons name="tennisball-outline" size={32} color={colors.textMuted} />
+                  <SportIcon
+                    sportName={selectedSport?.name ?? 'tennis'}
+                    size={32}
+                    color={colors.textMuted}
+                  />
                   <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8 }}>
-                    {t('groups.detail.noRecentGames' as TranslationKey)}
+                    {t('groups.detail.noRecentGames')}
                   </Text>
                 </View>
               )}
             </View>
 
             {/* Period Selector */}
-            <View style={[styles.periodSelector, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-              {periodOptions.map((option) => (
+            <View
+              style={[
+                styles.periodSelector,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
+              {periodOptions.map(option => (
                 <TouchableOpacity
                   key={option.value}
                   style={[
@@ -866,41 +1079,62 @@ export default function CommunityDetailScreen() {
             </View>
 
             {/* Leaderboard List */}
-            <View style={[styles.leaderboardCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.leaderboardCard,
+                { backgroundColor: colors.cardBackground, borderColor: colors.border },
+              ]}
+            >
               {leaderboard && leaderboard.length > 0 ? (
                 leaderboard.map((entry, index) => (
                   <TouchableOpacity
                     key={entry.player_id}
                     style={[
                       styles.leaderboardItem,
-                      index < leaderboard.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                      index < leaderboard.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.border,
+                      },
                     ]}
-                    onPress={() => navigation.navigate('PlayerProfile', { playerId: entry.player_id })}
+                    onPress={() => navigateToPlayerProfile(entry.player_id)}
                   >
                     <View style={styles.leaderboardRank}>
                       {index < 3 ? (
-                        <View style={[
-                          styles.rankBadge,
-                          { backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' },
-                        ]}>
+                        <View
+                          style={[
+                            styles.rankBadge,
+                            {
+                              backgroundColor:
+                                index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32',
+                            },
+                          ]}
+                        >
                           <Text weight="bold" size="sm" style={{ color: '#FFFFFF' }}>
                             {index + 1}
                           </Text>
                         </View>
                       ) : (
-                        <Text weight="semibold" style={{ color: colors.textMuted, width: 28, textAlign: 'center' }}>
+                        <Text
+                          weight="semibold"
+                          style={{ color: colors.textMuted, width: 28, textAlign: 'center' }}
+                        >
                           {index + 1}
                         </Text>
                       )}
                     </View>
-                    <View style={[styles.leaderboardAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-                      {getProfilePictureUrl(entry.player?.profile?.profile_picture_url) ? (
+                    <View
+                      style={[
+                        styles.leaderboardAvatar,
+                        { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                      ]}
+                    >
+                      {entry.player?.profile?.profile_picture_url ? (
                         <Image
-                          source={{ uri: getProfilePictureUrl(entry.player?.profile?.profile_picture_url)! }}
+                          source={{ uri: entry.player.profile.profile_picture_url }}
                           style={styles.leaderboardAvatarImage}
                         />
                       ) : (
-                        <Ionicons name="person" size={20} color={colors.textMuted} />
+                        <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                       )}
                     </View>
                     <View style={styles.leaderboardInfo}>
@@ -931,11 +1165,16 @@ export default function CommunityDetailScreen() {
         return (
           <View style={styles.tabContent}>
             {activities && activities.length > 0 ? (
-              <View style={[styles.activityList, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.activityList,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 {activities.slice(0, 20).map((activity, index) => {
                   const actorName = activity.actor?.profile?.first_name || 'Someone';
                   let message = '';
-                  let icon: keyof typeof Ionicons.glyphMap = 'ellipse';
+                  let icon: keyof typeof Ionicons.glyphMap | 'sport' = 'ellipse';
                   let iconColor: string = colors.primary;
 
                   switch (activity.activity_type) {
@@ -951,19 +1190,9 @@ export default function CommunityDetailScreen() {
                       icon = 'exit';
                       iconColor = '#FF3B30';
                       break;
-                    case 'member_promoted':
-                      message = `${actorName} was promoted to moderator`;
-                      icon = 'arrow-up-circle';
-                      iconColor = '#34C759';
-                      break;
-                    case 'member_demoted':
-                      message = `${actorName} was demoted to member`;
-                      icon = 'arrow-down-circle';
-                      iconColor = '#FF9500';
-                      break;
                     case 'game_created':
                       message = `${actorName} created a new game`;
-                      icon = 'tennisball';
+                      icon = 'sport'; // Rendered as SportIcon below
                       iconColor = '#FF9500';
                       break;
                     case 'message_sent':
@@ -983,18 +1212,34 @@ export default function CommunityDetailScreen() {
                       key={activity.id}
                       style={[
                         styles.activityItem,
-                        index < Math.min(activities.length, 20) - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                        index < Math.min(activities.length, 20) - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: colors.border,
+                        },
                       ]}
                       onPress={() => {
                         // Navigate to player profile if actor exists
                         if (activity.actor?.id) {
-                          navigation.navigate('PlayerProfile', { playerId: activity.actor.id });
+                          navigateToPlayerProfile(activity.actor.id);
                         }
                       }}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.activityIcon, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
-                        <Ionicons name={icon} size={16} color={iconColor} />
+                      <View
+                        style={[
+                          styles.activityIcon,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' },
+                        ]}
+                      >
+                        {icon === 'sport' ? (
+                          <SportIcon
+                            sportName={selectedSport?.name ?? 'tennis'}
+                            size={16}
+                            color={iconColor}
+                          />
+                        ) : (
+                          <Ionicons name={icon} size={16} color={iconColor} />
+                        )}
                       </View>
                       <View style={styles.activityContent}>
                         <Text size="sm" style={{ color: colors.text }}>
@@ -1010,10 +1255,15 @@ export default function CommunityDetailScreen() {
                 })}
               </View>
             ) : (
-              <View style={[styles.emptyActivity, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.emptyActivity,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
                 <Ionicons name="time-outline" size={48} color={colors.textMuted} />
                 <Text style={{ color: colors.textSecondary, marginTop: 12 }}>
-                  {t('groups.detail.noRecentActivity' as TranslationKey)}
+                  {t('groups.detail.noRecentActivity')}
                 </Text>
               </View>
             )}
@@ -1033,17 +1283,23 @@ export default function CommunityDetailScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return t('groups.time.justNow' as TranslationKey);
-    if (diffMins < 60) return t('groups.time.minutesAgo' as TranslationKey, { count: diffMins });
-    if (diffHours < 24) return t('groups.time.hoursAgo' as TranslationKey, { count: diffHours });
-    if (diffDays === 1) return t('groups.activityMessages.yesterday' as TranslationKey);
-    if (diffDays < 7) return t('groups.time.daysAgo' as TranslationKey, { count: diffDays });
-    return date.toLocaleDateString(t('common.locale' as TranslationKey), { month: 'short', day: 'numeric' });
+    if (diffMins < 1) return t('groups.time.justNow');
+    if (diffMins < 60) return t('groups.time.minutesAgo', { count: diffMins });
+    if (diffHours < 24) return t('groups.time.hoursAgo', { count: diffHours });
+    if (diffDays === 1) return t('groups.activityMessages.yesterday');
+    if (diffDays < 7) return t('groups.time.daysAgo', { count: diffDays });
+    return date.toLocaleDateString(t('common.locale'), {
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={getSafeAreaEdges(['top'])}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -1053,11 +1309,14 @@ export default function CommunityDetailScreen() {
 
   if (!community) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={getSafeAreaEdges(['top'])}
+      >
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={64} color={colors.textMuted} />
           <Text style={{ color: colors.textSecondary, marginTop: 16 }}>
-            {t('community.detail.notFound' as TranslationKey)}
+            {t('community.detail.notFound')}
           </Text>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: colors.primary }]}
@@ -1065,127 +1324,6 @@ export default function CommunityDetailScreen() {
           >
             <Text style={{ color: '#FFFFFF' }}>{t('common.goBack')}</Text>
           </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Show restricted view for non-members who cannot access full features
-  if (accessInfo && !accessInfo.canAccess && !accessInfo.isMember) {
-    const isPending = accessInfo.membershipStatus === 'pending';
-    const hasNoModerator = !accessInfo.hasActiveModerator;
-    
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-        <View style={styles.restrictedContainer}>
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.restrictedBackButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          {/* Community Header */}
-          {community.cover_image_url ? (
-            <Image
-              source={{ uri: community.cover_image_url }}
-              style={styles.restrictedCoverImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.restrictedHeaderPlaceholder, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
-              <Ionicons name="globe" size={64} color={colors.primary} />
-            </View>
-          )}
-
-          {/* Community Info */}
-          <View style={styles.restrictedInfoCard}>
-            <Text weight="bold" size="xl" style={{ color: colors.text, textAlign: 'center' }}>
-              {community.name}
-            </Text>
-            
-            {community.description && (
-              <Text size="sm" style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 8 }}>
-                {community.description}
-              </Text>
-            )}
-            
-            <Text size="sm" style={{ color: colors.textMuted, marginTop: 12 }}>
-              {t('common.memberCount', { count: community.member_count })}
-            </Text>
-          </View>
-
-          {/* Access Gate Message */}
-          <View style={[styles.accessGateCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-            <Ionicons 
-              name={isPending ? 'time-outline' : hasNoModerator ? 'alert-circle-outline' : 'lock-closed-outline'} 
-              size={48} 
-              color={isPending ? colors.warning : hasNoModerator ? colors.error : colors.textMuted} 
-            />
-            
-            <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
-              {isPending 
-                ? t('community.access.requestPending' as TranslationKey)
-                : hasNoModerator
-                  ? t('community.access.noModerator' as TranslationKey)
-                  : t('community.access.membershipRequired' as TranslationKey)
-              }
-            </Text>
-            
-            <Text size="sm" style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }}>
-              {isPending
-                ? t('community.access.requestPendingDescription' as TranslationKey)
-                : hasNoModerator
-                  ? t('community.access.noModeratorDescription' as TranslationKey)
-                  : t('community.access.membershipRequiredDescription' as TranslationKey)
-              }
-            </Text>
-
-            {/* Join/Request Button (only show if not pending and has moderator) */}
-            {!isPending && !hasNoModerator && playerId && (
-              <TouchableOpacity
-                style={[styles.joinButton, { backgroundColor: colors.primary }]}
-                onPress={async () => {
-                  try {
-                    mediumHaptic();
-                    await requestToJoinMutation.mutateAsync({ communityId, playerId });
-                    Alert.alert(
-                      t('community.joinRequest.sent' as TranslationKey),
-                      t('community.joinRequest.sentDescription' as TranslationKey)
-                    );
-                  } catch (error) {
-                    Alert.alert(
-                      t('common.error'),
-                      error instanceof Error ? error.message : t('community.errors.failedToJoin' as TranslationKey)
-                    );
-                  }
-                }}
-                disabled={requestToJoinMutation.isPending}
-              >
-                {requestToJoinMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
-                    <Text weight="semibold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                      {t('community.actions.requestToJoin' as TranslationKey)}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-
-            {/* Go Back Button */}
-            <TouchableOpacity
-              style={[styles.goBackButton, { borderColor: colors.border }]}
-              onPress={() => navigation.goBack()}
-            >
-              <Text weight="medium" style={{ color: colors.textSecondary }}>
-                {t('common.goBack')}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </SafeAreaView>
     );
@@ -1214,15 +1352,25 @@ export default function CommunityDetailScreen() {
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.headerSection, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
+          <View
+            style={[
+              styles.headerSection,
+              { backgroundColor: isDark ? primary[900] : primary[100] },
+            ]}
+          >
             <View style={[styles.headerIcon, { backgroundColor: colors.cardBackground }]}>
-              <Ionicons name="globe" size={48} color={colors.primary} />
+              <Ionicons name="globe-outline" size={48} color={colors.primary} />
             </View>
           </View>
         )}
 
         {/* Community Info Card */}
-        <View style={[styles.infoCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.titleRow}>
             <Text weight="bold" size="xl" style={{ color: colors.text, flex: 1 }}>
               {community.name}
@@ -1231,14 +1379,19 @@ export default function CommunityDetailScreen() {
               <View style={[styles.visibilityBadge, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="globe-outline" size={14} color="#2E7D32" />
                 <Text size="xs" weight="semibold" style={{ color: '#2E7D32', marginLeft: 4 }}>
-                  {t('community.visibility.public' as TranslationKey)}
+                  {t('community.visibility.public')}
                 </Text>
               </View>
             ) : (
-              <View style={[styles.visibilityBadge, { backgroundColor: isDark ? '#2C2C2E' : '#FFF3E0' }]}>
+              <View
+                style={[
+                  styles.visibilityBadge,
+                  { backgroundColor: isDark ? '#2C2C2E' : '#FFF3E0' },
+                ]}
+              >
                 <Ionicons name="lock-closed-outline" size={14} color="#EF6C00" />
                 <Text size="xs" weight="semibold" style={{ color: '#EF6C00', marginLeft: 4 }}>
-                  {t('community.visibility.private' as TranslationKey)}
+                  {t('community.visibility.private')}
                 </Text>
               </View>
             )}
@@ -1247,7 +1400,21 @@ export default function CommunityDetailScreen() {
           {/* Members Row */}
           <TouchableOpacity
             style={styles.membersRow}
-            onPress={() => setShowMemberListModal(true)}
+            onPress={() =>
+              community &&
+              SheetManager.show('member-list', {
+                payload: {
+                  group: community as unknown as GroupWithMembers,
+                  currentUserId: playerId ?? '',
+                  isModerator: isModerator ?? false,
+                  onMemberRemoved: () => refetch(),
+                  onPlayerPress: (memberId: string) => {
+                    SheetManager.hide('member-list');
+                    navigateToPlayerProfile(memberId);
+                  },
+                },
+              })
+            }
           >
             <Text size="sm" style={{ color: colors.textSecondary }}>
               {t('common.memberCount', { count: community.member_count })}
@@ -1265,9 +1432,9 @@ export default function CommunityDetailScreen() {
                     },
                   ]}
                 >
-                  {getProfilePictureUrl(member.player?.profile?.profile_picture_url) ? (
+                  {member.player?.profile?.profile_picture_url ? (
                     <Image
-                      source={{ uri: getProfilePictureUrl(member.player?.profile?.profile_picture_url)! }}
+                      source={{ uri: member.player.profile.profile_picture_url }}
                       style={styles.memberAvatarImage}
                     />
                   ) : (
@@ -1278,7 +1445,9 @@ export default function CommunityDetailScreen() {
                 </View>
               ))}
               {community.member_count > 5 && (
-                <View style={[styles.memberAvatar, { backgroundColor: colors.primary, marginLeft: -8 }]}>
+                <View
+                  style={[styles.memberAvatar, { backgroundColor: colors.primary, marginLeft: -8 }]}
+                >
                   <Text size="xs" weight="semibold" style={{ color: '#FFFFFF' }}>
                     +{community.member_count - 5}
                   </Text>
@@ -1291,38 +1460,58 @@ export default function CommunityDetailScreen() {
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               style={[styles.addMemberButton, { borderColor: colors.primary, flex: 1 }]}
-              onPress={() => setShowAddMemberModal(true)}
+              onPress={() =>
+                SheetManager.show('add-community-member', {
+                  payload: {
+                    communityId,
+                    currentMemberIds: community?.members.map(m => m.player_id) ?? [],
+                    onSuccess: () => refetch(),
+                  },
+                })
+              }
             >
-              <Ionicons name="person-add" size={18} color={colors.primary} />
+              <Ionicons name="person-add-outline" size={18} color={colors.primary} />
               <Text weight="semibold" style={{ color: colors.primary, marginLeft: 8 }}>
-                {t('community.members.addMember' as TranslationKey)}
+                {t('community.members.addMember')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.menuButton, { borderColor: colors.border }]}
               onPress={handleShowOptions}
             >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.text} />
+              <Ionicons name="ellipsis-horizontal-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tab Bar */}
-        <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-          {TAB_KEYS.map((tabKey) => (
+        <View style={[styles.tabContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
+          {TAB_KEYS.map(tabKey => (
             <TouchableOpacity
               key={tabKey}
               style={[
                 styles.tab,
-                activeTab === tabKey && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+                activeTab === tabKey && [
+                  styles.activeTab,
+                  { backgroundColor: colors.cardBackground },
+                ],
               ]}
               onPress={() => setActiveTab(tabKey)}
             >
+              <Ionicons
+                name={TAB_ICONS[tabKey]}
+                size={18}
+                color={activeTab === tabKey ? colors.primary : colors.textMuted}
+              />
               <Text
-                weight={activeTab === tabKey ? 'semibold' : 'regular'}
-                style={{ color: activeTab === tabKey ? colors.primary : colors.textSecondary }}
+                size="sm"
+                weight={activeTab === tabKey ? 'semibold' : 'medium'}
+                style={{
+                  color: activeTab === tabKey ? colors.primary : colors.textMuted,
+                  marginLeft: 6,
+                }}
               >
-                {t(`community.tabs.${tabKey}` as TranslationKey)}
+                {t(`community.tabs.${tabKey}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1341,7 +1530,7 @@ export default function CommunityDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleAddGame}
         >
-          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.leaderboard.addPlayedGame')}
           </Text>
@@ -1351,70 +1540,12 @@ export default function CommunityDetailScreen() {
           style={[styles.chatButton, { backgroundColor: colors.primary }]}
           onPress={handleOpenChat}
         >
-          <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+          <Ionicons name="chatbubbles-outline" size={20} color="#FFFFFF" />
           <Text weight="semibold" style={styles.chatButtonText}>
             {t('community.chat.chatWithMembers')}
           </Text>
         </TouchableOpacity>
       ) : null}
-
-      {/* Add Member Modal */}
-      <AddCommunityMemberModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        communityId={communityId}
-        currentMemberIds={community.members.map((m) => m.player_id)}
-        onSuccess={() => {
-          setShowAddMemberModal(false);
-          refetch();
-        }}
-      />
-
-      {/* Edit Community Modal */}
-      <EditCommunityModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        community={community}
-        onSuccess={() => {
-          setShowEditModal(false);
-          refetch();
-        }}
-      />
-
-      {/* Member List Modal */}
-      <MemberListModal
-        visible={showMemberListModal}
-        onClose={() => setShowMemberListModal(false)}
-        group={community as unknown as GroupWithMembers}
-        currentUserId={playerId || ''}
-        isModerator={isModerator || false}
-        onMemberRemoved={() => refetch()}
-        onPlayerPress={(memberId) => {
-          setShowMemberListModal(false);
-          navigation.navigate('PlayerProfile', { playerId: memberId });
-        }}
-      />
-
-      {/* Options Modal */}
-      <GroupOptionsModal
-        visible={showOptionsModal}
-        onClose={() => setShowOptionsModal(false)}
-        options={menuOptions}
-        title="Community Options"
-      />
-
-      {/* Invite Link Modal */}
-      {community && (
-        <InviteLinkModal
-          visible={showInviteLinkModal}
-          onClose={() => setShowInviteLinkModal(false)}
-          groupId={communityId}
-          groupName={community.name}
-          currentUserId={playerId || ''}
-          isModerator={isModerator || false}
-          type="community"
-        />
-      )}
 
       {/* Pending Requests Modal */}
       <Modal
@@ -1435,13 +1566,13 @@ export default function CommunityDetailScreen() {
                 Pending Requests
               </Text>
               <TouchableOpacity onPress={() => setShowPendingRequestsModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close-outline" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalBody}>
               {pendingRequests && pendingRequests.length > 0 ? (
-                pendingRequests.map((request) => (
+                pendingRequests.map(request => (
                   <View
                     key={request.id}
                     style={[styles.requestCard, { borderColor: colors.border }]}
@@ -1450,17 +1581,22 @@ export default function CommunityDetailScreen() {
                       style={styles.requestHeader}
                       onPress={() => {
                         setShowPendingRequestsModal(false);
-                        navigation.navigate('PlayerProfile', { playerId: request.player_id });
+                        navigateToPlayerProfile(request.player_id);
                       }}
                     >
-                      <View style={[styles.requestAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+                      <View
+                        style={[
+                          styles.requestAvatar,
+                          { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' },
+                        ]}
+                      >
                         {request.player_profile_picture ? (
                           <Image
                             source={{ uri: request.player_profile_picture }}
                             style={styles.requestAvatarImage}
                           />
                         ) : (
-                          <Ionicons name="person" size={24} color={colors.textMuted} />
+                          <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                         )}
                       </View>
                       <View style={styles.requestInfo}>
@@ -1468,7 +1604,11 @@ export default function CommunityDetailScreen() {
                           {request.player_name || 'Player'}
                         </Text>
                         <Text size="sm" style={{ color: colors.textSecondary }}>
-                          Requested {new Date(request.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          Requested{' '}
+                          {new Date(request.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                           {request.referrer_name && ` · Referred by ${request.referrer_name}`}
                         </Text>
                       </View>
@@ -1480,17 +1620,28 @@ export default function CommunityDetailScreen() {
                           if (!playerId) return;
                           try {
                             mediumHaptic();
-                            await approveMemberMutation.mutateAsync({ communityId, memberId: request.id, approverId: playerId });
+                            await approveMemberMutation.mutateAsync({
+                              communityId,
+                              memberId: request.id,
+                              approverId: playerId,
+                            });
                             refetchPendingRequests();
                             refetch();
                           } catch (error) {
-                            Alert.alert('Error', error instanceof Error ? error.message : 'Failed to approve member');
+                            Alert.alert(
+                              'Error',
+                              error instanceof Error ? error.message : 'Failed to approve member'
+                            );
                           }
                         }}
                         disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
                       >
-                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                        <Text weight="semibold" size="sm" style={{ color: '#FFFFFF', marginLeft: 4 }}>
+                        <Ionicons name="checkmark-outline" size={18} color="#FFFFFF" />
+                        <Text
+                          weight="semibold"
+                          size="sm"
+                          style={{ color: '#FFFFFF', marginLeft: 4 }}
+                        >
                           Approve
                         </Text>
                       </TouchableOpacity>
@@ -1500,16 +1651,27 @@ export default function CommunityDetailScreen() {
                           if (!playerId) return;
                           try {
                             mediumHaptic();
-                            await rejectMemberMutation.mutateAsync({ communityId, memberId: request.id, rejectorId: playerId });
+                            await rejectMemberMutation.mutateAsync({
+                              communityId,
+                              memberId: request.id,
+                              rejectorId: playerId,
+                            });
                             refetchPendingRequests();
                           } catch (error) {
-                            Alert.alert('Error', error instanceof Error ? error.message : 'Failed to reject request');
+                            Alert.alert(
+                              'Error',
+                              error instanceof Error ? error.message : 'Failed to reject request'
+                            );
                           }
                         }}
                         disabled={approveMemberMutation.isPending || rejectMemberMutation.isPending}
                       >
-                        <Ionicons name="close" size={18} color={colors.text} />
-                        <Text weight="semibold" size="sm" style={{ color: colors.text, marginLeft: 4 }}>
+                        <Ionicons name="close-outline" size={18} color={colors.text} />
+                        <Text
+                          weight="semibold"
+                          size="sm"
+                          style={{ color: colors.text, marginLeft: 4 }}
+                        >
                           Decline
                         </Text>
                       </TouchableOpacity>
@@ -1541,32 +1703,12 @@ export default function CommunityDetailScreen() {
         }}
       />
 
-      <MatchTypeModal
-        visible={showMatchTypeModal}
-        onClose={() => setShowMatchTypeModal(false)}
-        onSelect={handleMatchTypeSelect}
-      />
-
       <AddScoreModal
         visible={showAddScoreModal}
         onClose={() => setShowAddScoreModal(false)}
         onSuccess={handleAddScoreSuccess}
         matchType={selectedMatchType}
         networkId={communityId}
-      />
-
-      <RecentGamesModal
-        visible={showRecentGamesModal}
-        onClose={() => setShowRecentGamesModal(false)}
-        matches={allMatches || []}
-        onMatchPress={(match) => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayedMatchDetail', { match });
-        }}
-        onPlayerPress={(playerId) => {
-          setShowRecentGamesModal(false);
-          navigation.navigate('PlayerProfile', { playerId });
-        }}
       />
     </SafeAreaView>
   );
@@ -1678,16 +1820,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabBar: {
+  tabContainer: {
     flexDirection: 'row',
     marginTop: 24,
     marginHorizontal: 16,
-    borderBottomWidth: 1,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabContent: {
     padding: 16,
@@ -2133,59 +2287,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-  },
-  // Restricted Access Styles
-  restrictedContainer: {
-    flex: 1,
-  },
-  restrictedBackButton: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  restrictedCoverImage: {
-    width: '100%',
-    height: 180,
-  },
-  restrictedHeaderPlaceholder: {
-    width: '100%',
-    height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  restrictedInfoCard: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  accessGateCard: {
-    marginHorizontal: 16,
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  joinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 24,
-    width: '100%',
-  },
-  goBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 12,
   },
 });

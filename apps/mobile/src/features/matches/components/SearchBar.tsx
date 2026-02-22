@@ -1,18 +1,17 @@
 /**
  * SearchBar Component
- * A themed search input with clear button and loading indicator.
+ * A themed search input with clear button and optional loading indicator.
+ * Matches the look and feel of the search bars in WhereStep (facility/place search).
  */
 
 import React, { useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStyles } from '../../../hooks';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-  neutral,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels } from '@rallia/design-system';
+
+const SEARCH_ICON_SIZE = 20;
+const CLEAR_ICON_SIZE = 18;
 
 interface SearchBarProps {
   /** Current search value */
@@ -39,7 +38,6 @@ export function SearchBar({
 }: SearchBarProps) {
   const { colors } = useThemeStyles();
   const inputRef = useRef<TextInput>(null);
-  const isDark = colors.background === '#000000' || colors.background === '#0a0a0a';
 
   const handleClear = () => {
     onChangeText('');
@@ -54,25 +52,15 @@ export function SearchBar({
       style={[
         styles.container,
         {
-          backgroundColor: isDark ? neutral[800] : neutral[100],
-          borderColor: isDark ? neutral[700] : neutral[200],
+          borderColor: colors.border,
+          backgroundColor: colors.buttonInactive,
         },
       ]}
     >
-      <Ionicons
-        name="search-outline"
-        size={20}
-        color={colors.textMuted}
-        style={styles.searchIcon}
-      />
+      <Ionicons name="search-outline" size={SEARCH_ICON_SIZE} color={colors.textMuted} />
       <TextInput
         ref={inputRef}
-        style={[
-          styles.input,
-          {
-            color: colors.text,
-          },
-        ]}
+        style={[styles.input, { color: colors.text }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -81,7 +69,7 @@ export function SearchBar({
         autoCorrect={false}
         autoFocus={autoFocus}
         returnKeyType="search"
-        clearButtonMode="never" // We handle clear button ourselves
+        clearButtonMode="never"
       />
       {isLoading && (
         <ActivityIndicator size="small" color={colors.primary} style={styles.loadingIndicator} />
@@ -89,10 +77,9 @@ export function SearchBar({
       {showClearButton && (
         <TouchableOpacity
           onPress={handleClear}
-          style={styles.clearButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+          <Ionicons name="close-circle" size={CLEAR_ICON_SIZE} color={colors.textMuted} />
         </TouchableOpacity>
       )}
     </View>
@@ -103,25 +90,18 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: spacingPixels[3],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    paddingHorizontal: spacingPixels[3],
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: spacingPixels[2],
+    gap: spacingPixels[2],
   },
   input: {
     flex: 1,
-    fontSize: fontSizePixels.base,
-    paddingVertical: 0, // Remove default padding
+    fontSize: 16,
+    paddingVertical: spacingPixels[1],
   },
   loadingIndicator: {
-    marginLeft: spacingPixels[2],
-  },
-  clearButton: {
-    marginLeft: spacingPixels[2],
-    padding: spacingPixels[1],
+    marginLeft: spacingPixels[0],
   },
 });
 

@@ -41,9 +41,12 @@ function EmojiReactionPickerComponent({
 }: EmojiReactionPickerProps) {
   const { colors, isDark } = useThemeStyles();
 
-  const handleSelect = useCallback((emoji: string) => {
-    onSelect(emoji);
-  }, [onSelect]);
+  const handleSelect = useCallback(
+    (emoji: string) => {
+      onSelect(emoji);
+    },
+    [onSelect]
+  );
 
   // Calculate position based on anchor
   const getPositionStyle = () => {
@@ -66,20 +69,12 @@ function EmojiReactionPickerComponent({
       position: 'absolute' as const,
       top: topPosition,
       // Position on the left for own messages, right for others
-      ...(isOwnMessage 
-        ? { right: 16 } 
-        : { left: 16 }
-      ),
+      ...(isOwnMessage ? { right: 16 } : { left: 16 }),
     };
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={[styles.overlay, anchorY === undefined && styles.centered]}>
           <TouchableWithoutFeedback>
@@ -91,7 +86,7 @@ function EmojiReactionPickerComponent({
               ]}
             >
               <View style={styles.emojiRow}>
-                {COMMON_REACTIONS.map((emoji) => (
+                {COMMON_REACTIONS.map(emoji => (
                   <TouchableOpacity
                     key={emoji}
                     style={styles.emojiButton}

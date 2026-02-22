@@ -1,30 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, Heading, Button, useToast } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, useImagePicker } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { 
-  uploadRatingProofFile, 
+import {
+  uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
 } from '../../../services/ratingProofUpload';
 import { Logger, supabase } from '@rallia/shared-services';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
 interface ImageProofOverlayProps {
   visible: boolean;
@@ -33,12 +28,14 @@ interface ImageProofOverlayProps {
   playerRatingScoreId: string;
 }
 
-const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
-  visible,
-  onClose,
-  onSuccess,
-  playerRatingScoreId,
-}) => {
+export function ImageProofActionSheet({ payload }: SheetProps<'image-proof'>) {
+  const onClose = () => {
+    if (isSubmitting) return;
+    resetForm();
+    SheetManager.hide('image-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -54,10 +51,7 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const {
-    pickFromCamera,
-    pickFromGallery,
-  } = useImagePicker();
+  const { pickFromCamera, pickFromGallery } = useImagePicker();
 
   const resetForm = () => {
     setSelectedImage(null);
@@ -66,17 +60,20 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
     setUploadProgress(0);
   };
 
-  const handleClose = () => {
-    if (isSubmitting) return;
-    resetForm();
-    onClose();
-  };
+  // Reset form when sheet closes
+  useEffect(() => {
+    return () => {
+      if (!isSubmitting) {
+        resetForm();
+      }
+    };
+  }, [isSubmitting]);
 
   const handleImageSelected = (
     uri: string,
     fileName: string = 'image.jpg',
     fileSize: number = 0,
-    mimeType: string = 'image/jpeg',
+    mimeType: string = 'image/jpeg'
   ) => {
     // Validate file
     const validation = validateProofFile(fileName, fileSize, 'image');
@@ -98,7 +95,7 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
           result.uri,
           `photo_${Date.now()}.jpg`,
           0, // Size will be determined during upload
-          'image/jpeg',
+          'image/jpeg'
         );
       }
     } catch (error) {
@@ -113,12 +110,7 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
     try {
       const result = await pickFromGallery();
       if (result && result.uri) {
-        handleImageSelected(
-          result.uri,
-          `image_${Date.now()}.jpg`,
-          0,
-          'image/jpeg',
-        );
+        handleImageSelected(result.uri, `image_${Date.now()}.jpg`, 0, 'image/jpeg');
       }
     } catch (error) {
       Logger.error('Failed to select image', error as Error);
@@ -148,7 +140,9 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
 
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -174,8 +168,8 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess();
-        onClose();
+        onSuccess?.();
+        SheetManager.hide('image-proof');
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -190,24 +184,41 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
   const maxSizeMB = Math.round(getMaxFileSizes().image / (1024 * 1024));
 
   return (
-    <Overlay visible={visible} onClose={handleClose} type="bottom">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {t('profile.ratingProofs.proofTypes.image.title')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Content */}
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.container}
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
+          <View style={styles.iconHeaderContainer}>
             <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="image-outline" size={32} color={colors.primary} />
             </View>
-            <Heading level={3} color={colors.text} style={styles.title}>
-              {t('profile.ratingProofs.proofTypes.image.title')}
-            </Heading>
             <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
               {t('profile.ratingProofs.proofTypes.image.description')}
             </Text>
@@ -251,7 +262,10 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
               </TouchableOpacity>
 
               <Text size="xs" color={colors.textMuted} style={styles.maxSizeText}>
-                {t('profile.ratingProofs.proofTypes.image.maxSize').replace('10', String(maxSizeMB))}
+                {t('profile.ratingProofs.proofTypes.image.maxSize').replace(
+                  '10',
+                  String(maxSizeMB)
+                )}
               </Text>
             </View>
           ) : (
@@ -267,7 +281,7 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
                   onPress={handleRemoveImage}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={20} color="#fff" />
+                  <Ionicons name="close-outline" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
               <Text size="sm" color={colors.textMuted} style={styles.fileName}>
@@ -284,7 +298,11 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
             <TextInput
               style={[
                 styles.textInput,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={title}
               onChangeText={setTitle}
@@ -305,7 +323,11 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
               style={[
                 styles.textInput,
                 styles.textArea,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={description}
               onChangeText={setDescription}
@@ -318,7 +340,10 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
               editable={!isSubmitting}
             />
           </View>
+        </ScrollView>
 
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           {/* Upload Progress */}
           {isSubmitting && uploadProgress > 0 && (
             <View style={styles.progressContainer}>
@@ -335,8 +360,6 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
               </Text>
             </View>
           )}
-
-          {/* Submit Button */}
           <Button
             variant="primary"
             onPress={handleSubmit}
@@ -346,7 +369,12 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text size="base" weight="semibold" color={colors.primaryForeground} style={styles.loadingText}>
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color={colors.primaryForeground}
+                  style={styles.loadingText}
+                >
                   {t('profile.ratingProofs.upload.uploading')}
                 </Text>
               </View>
@@ -354,25 +382,82 @@ const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
               t('profile.ratingProofs.form.submit')
             )}
           </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Overlay>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const ImageProofOverlay: React.FC<ImageProofOverlayProps> = ({
+  visible,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('image-proof', {
+        payload: {
+          onSuccess,
+          playerRatingScoreId,
+        },
+      });
+    }
+  }, [visible, onSuccess, playerRatingScoreId]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('image-proof');
+    }
+  }, [visible]);
+
+  return null;
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
+  sheetBackground: {
     flex: 1,
-    maxHeight: '90%',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  scrollView: {
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
     flex: 1,
-  },
-  container: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
+  },
+  iconHeaderContainer: {
     alignItems: 'center',
     marginBottom: spacingPixels[4],
   },
@@ -458,8 +543,12 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 80,
   },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   progressContainer: {
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
   progressBar: {
     height: 4,
@@ -475,7 +564,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[1],
   },
   submitButton: {
-    marginTop: spacingPixels[2],
+    width: '100%',
   },
   loadingContainer: {
     flexDirection: 'row',

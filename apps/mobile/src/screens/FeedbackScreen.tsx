@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, useToast } from '@rallia/shared-components';
 import { useTheme } from '@rallia/shared-hooks';
-import { submitFeedback, FeedbackCategory, Logger } from '@rallia/shared-services';
+import { submitUserFeedback, UserUserFeedbackCategory, Logger } from '@rallia/shared-services';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
 import { useAuth, useTranslation, useImagePicker } from '../hooks';
 import { useAppNavigation } from '../navigation/hooks';
@@ -45,7 +45,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 const MAX_SCREENSHOTS = 3;
 
 interface CategoryOption {
-  value: FeedbackCategory;
+  value: UserFeedbackCategory;
   icon: keyof typeof Ionicons.glyphMap;
 }
 
@@ -66,7 +66,7 @@ const FeedbackScreen: React.FC = () => {
   const { pickFromGallery, pickFromCamera } = useImagePicker();
 
   // Form state
-  const [category, setCategory] = useState<FeedbackCategory>('feature');
+  const [category, setCategory] = useState<UserFeedbackCategory>('feature');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<string[]>([]);
@@ -120,7 +120,7 @@ const FeedbackScreen: React.FC = () => {
     return colors.textMuted;
   }, [colors.textMuted]);
 
-  const handleCategorySelect = (cat: FeedbackCategory) => {
+  const handleCategorySelect = (cat: UserFeedbackCategory) => {
     lightHaptic();
     setCategory(cat);
     // Clear screenshots when switching away from bug report
@@ -197,7 +197,7 @@ const FeedbackScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await submitFeedback({
+      const result = await submitUserFeedback({
         playerId: session?.user?.id,
         category,
         subject: subject.trim(),

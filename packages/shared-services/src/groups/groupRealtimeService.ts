@@ -27,7 +27,7 @@ export function subscribeToGroupMembers(
         table: 'network_member',
         filter: `network_id=eq.${groupId}`,
       },
-      (payload) => {
+      payload => {
         onMemberChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           member: payload.new || payload.old,
@@ -60,7 +60,7 @@ export function subscribeToGroupActivity(
         table: 'group_activity',
         filter: `group_id=eq.${groupId}`,
       },
-      (payload) => {
+      payload => {
         onActivity({
           eventType: 'INSERT',
           activity: payload.new,
@@ -93,7 +93,7 @@ export function subscribeToGroupMatches(
         table: 'match_result',
         filter: `network_id=eq.${groupId}`,
       },
-      (payload) => {
+      payload => {
         onMatchChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           match: payload.new || payload.old,
@@ -126,7 +126,7 @@ export function subscribeToGroupSettings(
         table: 'network',
         filter: `id=eq.${groupId}`,
       },
-      (payload) => {
+      payload => {
         onGroupChange({
           eventType: payload.eventType as 'UPDATE' | 'DELETE',
           group: payload.new || payload.old,
@@ -160,7 +160,7 @@ export function subscribeToPlayerGroups(
         table: 'network_member',
         filter: `player_id=eq.${playerId}`,
       },
-      (payload) => {
+      payload => {
         // Only care about inserts (joined) and deletes (left)
         if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
           onGroupsChange({
@@ -184,7 +184,10 @@ export function subscribeToPlayerGroups(
  */
 export function subscribeToScoreConfirmations(
   playerId: string,
-  onConfirmationChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; confirmation: unknown }) => void
+  onConfirmationChange: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    confirmation: unknown;
+  }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel(`score_confirmations:${playerId}`)
@@ -196,7 +199,7 @@ export function subscribeToScoreConfirmations(
         table: 'match_score_confirmation',
         filter: `player_id=eq.${playerId}`,
       },
-      (payload) => {
+      payload => {
         onConfirmationChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           confirmation: payload.new || payload.old,

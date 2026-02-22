@@ -4,7 +4,7 @@
  * Includes swipe-to-reply with visual feedback
  */
 
-import React, { useCallback, memo, useRef } from 'react';
+import React, { useCallback, memo, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -55,15 +55,14 @@ function MessageBubbleComponent({
 }: MessageBubbleProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  
-  // Animation values for swipe-to-reply
-  const translateX = useRef(new Animated.Value(0)).current;
-  const replyIconOpacity = useRef(new Animated.Value(0)).current;
-  const replyIconScale = useRef(new Animated.Value(0.5)).current;
 
-  const senderName = message.sender?.profile?.display_name ||
-    message.sender?.profile?.first_name ||
-    'Unknown';
+  // Animation values for swipe-to-reply - using useMemo for stable instances
+  const translateX = useMemo(() => new Animated.Value(0), []);
+  const replyIconOpacity = useMemo(() => new Animated.Value(0), []);
+  const replyIconScale = useMemo(() => new Animated.Value(0.5), []);
+
+  const senderName =
+    message.sender?.profile?.display_name || message.sender?.profile?.first_name || 'Unknown';
 
   const senderAvatar = message.sender?.profile?.profile_picture_url;
 
@@ -75,114 +74,120 @@ function MessageBubbleComponent({
   const isEdited = message.is_edited ?? false;
   const isDeleted = message.deleted_at != null;
 
-  // Pan responder for swipe gesture
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only respond to horizontal swipes (right direction for reply)
-        return (
-          Math.abs(gestureState.dx) > 10 &&
-          Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
-          gestureState.dx > 0 && // Only swipe right
-          !isDeleted &&
-          onReplyPress != null
-        );
-      },
-      onPanResponderGrant: () => {
-        // Reset values at start of gesture
-      },
-      onPanResponderMove: (_, gestureState) => {
-        // Limit the swipe distance and only allow right swipe
-        const clampedX = Math.min(Math.max(gestureState.dx, 0), SWIPE_THRESHOLD + 20);
-        translateX.setValue(clampedX);
-        
-        // Calculate opacity and scale based on swipe progress
-        const progress = Math.min(clampedX / SWIPE_THRESHOLD, 1);
-        replyIconOpacity.setValue(progress);
-        replyIconScale.setValue(0.5 + progress * 0.5);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx >= SWIPE_THRESHOLD && onReplyPress) {
-          // Trigger reply
-          onReplyPress();
-        }
-        
-        // Animate back to original position
-        Animated.parallel([
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 10,
-          }),
-          Animated.timing(replyIconOpacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(replyIconScale, {
-            toValue: 0.5,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      },
-      onPanResponderTerminate: () => {
-        // Reset on termination
-        Animated.parallel([
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-          }),
-          Animated.timing(replyIconOpacity, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      },
-    })
-  ).current;
+  // Pan responder for swipe gesture - using useMemo for stable instance
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          // Only respond to horizontal swipes (right direction for reply)
+          return (
+            Math.abs(gestureState.dx) > 10 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+            gestureState.dx > 0 && // Only swipe right
+            !isDeleted &&
+            onReplyPress != null
+          );
+        },
+        onPanResponderGrant: () => {
+          // Reset values at start of gesture
+        },
+        onPanResponderMove: (_, gestureState) => {
+          // Limit the swipe distance and only allow right swipe
+          const clampedX = Math.min(Math.max(gestureState.dx, 0), SWIPE_THRESHOLD + 20);
+          translateX.setValue(clampedX);
+
+          // Calculate opacity and scale based on swipe progress
+          const progress = Math.min(clampedX / SWIPE_THRESHOLD, 1);
+          replyIconOpacity.setValue(progress);
+          replyIconScale.setValue(0.5 + progress * 0.5);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx >= SWIPE_THRESHOLD && onReplyPress) {
+            // Trigger reply
+            onReplyPress();
+          }
+
+          // Animate back to original position
+          Animated.parallel([
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 100,
+              friction: 10,
+            }),
+            Animated.timing(replyIconOpacity, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(replyIconScale, {
+              toValue: 0.5,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        },
+        onPanResponderTerminate: () => {
+          // Reset on termination
+          Animated.parallel([
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+            }),
+            Animated.timing(replyIconOpacity, {
+              toValue: 0,
+              duration: 150,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- PanResponder creation uses initial values intentionally
+    []
+  );
 
   // Helper to render text with search highlighting
-  const renderTextWithHighlight = useCallback((text: string, baseStyle: object, key?: string | number, isLink?: boolean) => {
-    const handlePress = isLink ? () => Linking.openURL(text) : undefined;
-    
-    if (!searchQuery || searchQuery.length < 2) {
+  const renderTextWithHighlight = useCallback(
+    (text: string, baseStyle: object, key?: string | number, isLink?: boolean) => {
+      const handlePress = isLink ? () => Linking.openURL(text) : undefined;
+
+      if (!searchQuery || searchQuery.length < 2) {
+        return (
+          <Text key={key} style={baseStyle} onPress={handlePress}>
+            {text}
+          </Text>
+        );
+      }
+
+      // Case-insensitive search and split
+      const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      const parts = text.split(regex);
+
       return (
         <Text key={key} style={baseStyle} onPress={handlePress}>
-          {text}
+          {parts.map((part, i) => {
+            if (part.toLowerCase() === searchQuery.toLowerCase()) {
+              return (
+                <Text
+                  key={i}
+                  style={[
+                    baseStyle,
+                    styles.highlightedText,
+                    { backgroundColor: status.warning.light },
+                  ]}
+                >
+                  {part}
+                </Text>
+              );
+            }
+            return part;
+          })}
         </Text>
       );
-    }
-
-    // Case-insensitive search and split
-    const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    const parts = text.split(regex);
-
-    return (
-      <Text key={key} style={baseStyle} onPress={handlePress}>
-        {parts.map((part, i) => {
-          if (part.toLowerCase() === searchQuery.toLowerCase()) {
-            return (
-              <Text
-                key={i}
-                style={[
-                  baseStyle,
-                  styles.highlightedText,
-                  { backgroundColor: status.warning.light },
-                ]}
-              >
-                {part}
-              </Text>
-            );
-          }
-          return part;
-        })}
-      </Text>
-    );
-  }, [searchQuery]);
+    },
+    [searchQuery]
+  );
 
   // Parse content for URLs with optional search highlighting
   const renderContent = useCallback(() => {
@@ -196,19 +201,16 @@ function MessageBubbleComponent({
             { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.textMuted },
           ]}
         >
-          {t('chat.message.deleted' as any)}
+          {t('chat.message.deleted')}
         </Text>
       );
     }
 
     const parts = message.content.split(URL_REGEX);
-    
+
     return parts.map((part, index) => {
-      const baseStyle = [
-        styles.messageText,
-        { color: isOwnMessage ? '#FFFFFF' : colors.text },
-      ];
-      
+      const baseStyle = [styles.messageText, { color: isOwnMessage ? '#FFFFFF' : colors.text }];
+
       if (URL_REGEX.test(part)) {
         // URL part - still apply highlighting if needed, and make clickable
         return renderTextWithHighlight(
@@ -218,16 +220,27 @@ function MessageBubbleComponent({
           true // isLink
         );
       }
-      
+
       // Regular text - apply highlighting
       return renderTextWithHighlight(part, baseStyle, index, false);
     });
-  }, [message.content, isOwnMessage, colors.text, colors.textMuted, isDeleted, renderTextWithHighlight]);
+  }, [
+    message.content,
+    isOwnMessage,
+    colors.text,
+    colors.textMuted,
+    isDeleted,
+    renderTextWithHighlight,
+    t,
+  ]);
 
-  const handleLongPress = useCallback((event: { nativeEvent: { pageY: number } }) => {
-    if (isDeleted) return; // Don't allow actions on deleted messages
-    onLongPress?.(event.nativeEvent.pageY);
-  }, [onLongPress, isDeleted]);
+  const handleLongPress = useCallback(
+    (event: { nativeEvent: { pageY: number } }) => {
+      if (isDeleted) return; // Don't allow actions on deleted messages
+      onLongPress?.(event.nativeEvent.pageY);
+    },
+    [onLongPress, isDeleted]
+  );
 
   return (
     <View style={styles.swipeContainer}>
@@ -242,16 +255,13 @@ function MessageBubbleComponent({
         ]}
       >
         <View style={[styles.replyIcon, { backgroundColor: primary[500] }]}>
-          <Ionicons name="arrow-undo" size={18} color="#FFFFFF" />
+          <Ionicons name="arrow-undo-outline" size={18} color="#FFFFFF" />
         </View>
       </Animated.View>
 
       {/* Swipeable message container */}
       <Animated.View
-        style={[
-          styles.animatedContainer,
-          { transform: [{ translateX }] },
-        ]}
+        style={[styles.animatedContainer, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
         <View style={[styles.container, isOwnMessage && styles.containerOwn]}>
@@ -262,7 +272,7 @@ function MessageBubbleComponent({
                 <Image source={{ uri: senderAvatar }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-                  <Ionicons name="person" size={16} color={colors.textMuted} />
+                  <Ionicons name="person-outline" size={16} color={colors.textMuted} />
                 </View>
               )}
             </View>
@@ -274,9 +284,7 @@ function MessageBubbleComponent({
           <View style={[styles.bubbleContainer, isOwnMessage && styles.bubbleContainerOwn]}>
             {/* Sender name */}
             {!isOwnMessage && showSenderInfo && (
-              <Text style={[styles.senderName, { color: primary[500] }]}>
-                {senderName}
-              </Text>
+              <Text style={[styles.senderName, { color: primary[500] }]}>{senderName}</Text>
             )}
 
             {/* Message bubble */}
@@ -295,32 +303,34 @@ function MessageBubbleComponent({
             >
               {/* Reply Preview - Show the message being replied to */}
               {message.reply_to && !isDeleted && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[
                     styles.replyPreview,
-                    { 
+                    {
                       borderLeftColor: primary[400],
-                      backgroundColor: isOwnMessage 
-                        ? 'rgba(255,255,255,0.15)' 
-                        : isDark ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.05)',
-                    }
+                      backgroundColor: isOwnMessage
+                        ? 'rgba(255,255,255,0.15)'
+                        : isDark
+                          ? 'rgba(0,0,0,0.1)'
+                          : 'rgba(0,0,0,0.05)',
+                    },
                   ]}
                   onPress={onReplyPress}
                   activeOpacity={0.7}
                 >
-                  <Text 
+                  <Text
                     style={[
-                      styles.replyName, 
-                      { color: isOwnMessage ? 'rgba(255,255,255,0.9)' : primary[500] }
+                      styles.replyName,
+                      { color: isOwnMessage ? 'rgba(255,255,255,0.9)' : primary[500] },
                     ]}
                     numberOfLines={1}
                   >
                     {message.reply_to.sender_name}
                   </Text>
-                  <Text 
+                  <Text
                     style={[
-                      styles.replyText, 
-                      { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.textMuted }
+                      styles.replyText,
+                      { color: isOwnMessage ? 'rgba(255,255,255,0.7)' : colors.textMuted },
                     ]}
                     numberOfLines={1}
                   >
@@ -329,9 +339,7 @@ function MessageBubbleComponent({
                 </TouchableOpacity>
               )}
 
-              <View style={styles.messageContent}>
-                {renderContent()}
-              </View>
+              <View style={styles.messageContent}>{renderContent()}</View>
 
               {/* Timestamp, edited indicator, and delivery status */}
               <View style={styles.timestampRow}>
@@ -342,7 +350,7 @@ function MessageBubbleComponent({
                       { color: isOwnMessage ? 'rgba(255,255,255,0.6)' : colors.textMuted },
                     ]}
                   >
-                    {t('chat.message.edited' as any)}
+                    {t('chat.message.edited')}
                   </Text>
                 )}
                 <Text
@@ -357,48 +365,44 @@ function MessageBubbleComponent({
                 {isOwnMessage && !isDeleted && (
                   <View style={styles.deliveryStatus}>
                     {message.status === 'failed' ? (
-                      <Ionicons 
-                        name="alert-circle" 
-                        size={14} 
-                        color={status.error.DEFAULT} 
+                      <Ionicons
+                        name="alert-circle-outline"
+                        size={14}
+                        color={status.error.DEFAULT}
                       />
                     ) : message.status === 'read' ? (
                       <View style={styles.doubleCheck}>
-                        <Ionicons 
-                          name="checkmark" 
-                          size={12} 
-                          color="rgba(255,255,255,0.9)" 
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="rgba(255,255,255,0.9)"
                           style={styles.checkFirst}
                         />
-                        <Ionicons 
-                          name="checkmark" 
-                          size={12} 
-                          color="rgba(255,255,255,0.9)" 
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="rgba(255,255,255,0.9)"
                           style={styles.checkSecond}
                         />
                       </View>
                     ) : message.status === 'delivered' ? (
                       <View style={styles.doubleCheck}>
-                        <Ionicons 
-                          name="checkmark" 
-                          size={12} 
-                          color="rgba(255,255,255,0.6)" 
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="rgba(255,255,255,0.6)"
                           style={styles.checkFirst}
                         />
-                        <Ionicons 
-                          name="checkmark" 
-                          size={12} 
-                          color="rgba(255,255,255,0.6)" 
+                        <Ionicons
+                          name="checkmark"
+                          size={12}
+                          color="rgba(255,255,255,0.6)"
                           style={styles.checkSecond}
                         />
                       </View>
                     ) : (
                       // 'sent' status - single check
-                      <Ionicons 
-                        name="checkmark" 
-                        size={14} 
-                        color="rgba(255,255,255,0.6)" 
-                      />
+                      <Ionicons name="checkmark-outline" size={14} color="rgba(255,255,255,0.6)" />
                     )}
                   </View>
                 )}
@@ -407,8 +411,10 @@ function MessageBubbleComponent({
 
             {/* Reactions */}
             {reactions.length > 0 && (
-              <View style={[styles.reactionsContainer, isOwnMessage && styles.reactionsContainerOwn]}>
-                {reactions.map((reaction) => (
+              <View
+                style={[styles.reactionsContainer, isOwnMessage && styles.reactionsContainerOwn]}
+              >
+                {reactions.map(reaction => (
                   <TouchableOpacity
                     key={reaction.emoji}
                     style={[

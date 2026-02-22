@@ -1,32 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { Overlay, Text, Heading, Button, useToast } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { 
-  uploadRatingProofFile, 
+import {
+  uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
   getSupportedDocumentFormats,
 } from '../../../services/ratingProofUpload';
 import { Logger, supabase } from '@rallia/shared-services';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
 interface DocumentProofOverlayProps {
   visible: boolean;
@@ -35,12 +29,14 @@ interface DocumentProofOverlayProps {
   playerRatingScoreId: string;
 }
 
-const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
-  visible,
-  onClose,
-  onSuccess,
-  playerRatingScoreId,
-}) => {
+export function DocumentProofActionSheet({ payload }: SheetProps<'document-proof'>) {
+  const onClose = () => {
+    if (isSubmitting) return;
+    resetForm();
+    SheetManager.hide('document-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -63,11 +59,14 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
     setUploadProgress(0);
   };
 
-  const handleClose = () => {
-    if (isSubmitting) return;
-    resetForm();
-    onClose();
-  };
+  // Reset form when sheet closes
+  useEffect(() => {
+    return () => {
+      if (!isSubmitting) {
+        resetForm();
+      }
+    };
+  }, [isSubmitting]);
 
   const handleSelectDocument = async () => {
     lightHaptic();
@@ -85,7 +84,7 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const doc = result.assets[0];
-        
+
         // Validate file
         const validation = validateProofFile(doc.name, doc.size || 0, 'document');
         if (!validation.valid) {
@@ -128,7 +127,9 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
 
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -157,8 +158,8 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess();
-        onClose();
+        onSuccess?.();
+        SheetManager.hide('document-proof');
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -192,27 +193,43 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
   };
 
   const maxSizeMB = Math.round(getMaxFileSizes().document / (1024 * 1024));
-  const supportedFormats = getSupportedDocumentFormats().map(f => f.toUpperCase().replace('.', '')).join(', ');
 
   return (
-    <Overlay visible={visible} onClose={handleClose} type="bottom">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {t('profile.ratingProofs.proofTypes.document.title')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Content */}
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.container}
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
+          <View style={styles.iconHeaderContainer}>
             <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="document-text-outline" size={32} color={colors.primary} />
             </View>
-            <Heading level={3} color={colors.text} style={styles.title}>
-              {t('profile.ratingProofs.proofTypes.document.title')}
-            </Heading>
             <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
               {t('profile.ratingProofs.proofTypes.document.description')}
             </Text>
@@ -246,12 +263,14 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
                   Supported formats
                 </Text>
                 <View style={styles.formatTags}>
-                  {['PDF', 'DOC', 'DOCX', 'TXT'].map((format) => (
-                    <View 
-                      key={format} 
+                  {['PDF', 'DOC', 'DOCX', 'TXT'].map(format => (
+                    <View
+                      key={format}
                       style={[styles.formatTag, { backgroundColor: colors.border }]}
                     >
-                      <Text size="xs" color={colors.textMuted}>{format}</Text>
+                      <Text size="xs" color={colors.textMuted}>
+                        {format}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -274,17 +293,21 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
             </View>
           ) : (
             <View style={styles.previewContainer}>
-              <View 
+              <View
                 style={[
-                  styles.documentPreview, 
-                  { backgroundColor: colors.cardBackground, borderColor: colors.border }
+                  styles.documentPreview,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
                 ]}
               >
-                <View style={[styles.documentIconWrapper, { backgroundColor: colors.primary + '20' }]}>
-                  <Ionicons 
-                    name={getDocumentIcon(selectedDocument.mimeType) as any} 
-                    size={40} 
-                    color={colors.primary} 
+                <View
+                  style={[styles.documentIconWrapper, { backgroundColor: colors.primary + '20' }]}
+                >
+                  <Ionicons
+                    name={
+                      getDocumentIcon(selectedDocument.mimeType) as keyof typeof Ionicons.glyphMap
+                    }
+                    size={40}
+                    color={colors.primary}
                   />
                 </View>
                 <View style={styles.documentInfo}>
@@ -295,7 +318,9 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
                     <Text size="xs" color={colors.textMuted}>
                       {getDocumentTypeLabel(selectedDocument.mimeType)}
                     </Text>
-                    <Text size="xs" color={colors.textMuted}>•</Text>
+                    <Text size="xs" color={colors.textMuted}>
+                      •
+                    </Text>
                     <Text size="xs" color={colors.textMuted}>
                       {formatFileSize(selectedDocument.fileSize)}
                     </Text>
@@ -306,7 +331,7 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
                   onPress={handleRemoveDocument}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={18} color="#fff" />
+                  <Ionicons name="close-outline" size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
 
@@ -331,7 +356,11 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
             <TextInput
               style={[
                 styles.textInput,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={title}
               onChangeText={setTitle}
@@ -352,7 +381,11 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
               style={[
                 styles.textInput,
                 styles.textArea,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={description}
               onChangeText={setDescription}
@@ -365,7 +398,10 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
               editable={!isSubmitting}
             />
           </View>
+        </ScrollView>
 
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           {/* Upload Progress */}
           {isSubmitting && (
             <View style={styles.progressContainer}>
@@ -378,14 +414,12 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
                 />
               </View>
               <Text size="xs" color={colors.textMuted} style={styles.progressText}>
-                {uploadProgress < 100 
+                {uploadProgress < 100
                   ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
                   : t('profile.ratingProofs.upload.processing')}
               </Text>
             </View>
           )}
-
-          {/* Submit Button */}
           <Button
             variant="primary"
             onPress={handleSubmit}
@@ -395,8 +429,13 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text size="base" weight="semibold" color={colors.primaryForeground} style={styles.loadingText}>
-                  {uploadProgress < 100 
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color={colors.primaryForeground}
+                  style={styles.loadingText}
+                >
+                  {uploadProgress < 100
                     ? t('profile.ratingProofs.upload.uploading')
                     : t('profile.ratingProofs.upload.processing')}
                 </Text>
@@ -405,25 +444,82 @@ const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
               t('profile.ratingProofs.form.submit')
             )}
           </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Overlay>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const DocumentProofOverlay: React.FC<DocumentProofOverlayProps> = ({
+  visible,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('document-proof', {
+        payload: {
+          onSuccess,
+          playerRatingScoreId,
+        },
+      });
+    }
+  }, [visible, onSuccess, playerRatingScoreId]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('document-proof');
+    }
+  }, [visible]);
+
+  return null;
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
+  sheetBackground: {
     flex: 1,
-    maxHeight: '90%',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  scrollView: {
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
     flex: 1,
-  },
-  container: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
+  },
+  iconHeaderContainer: {
     alignItems: 'center',
     marginBottom: spacingPixels[4],
   },
@@ -553,8 +649,12 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 80,
   },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   progressContainer: {
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
   progressBar: {
     height: 6,
@@ -570,7 +670,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   submitButton: {
-    marginTop: spacingPixels[2],
+    width: '100%',
   },
   loadingContainer: {
     flexDirection: 'row',

@@ -2,6 +2,9 @@
 -- This is needed for the player search feature to find other players
 -- who are active in the same sport.
 
+-- Drop existing policy if it exists (idempotent migration)
+DROP POLICY IF EXISTS "Authenticated users can view all player sports" ON "public"."player_sport";
+
 -- Add a new policy that allows authenticated users to SELECT all player_sport records
 CREATE POLICY "Authenticated users can view all player sports"
   ON "public"."player_sport"

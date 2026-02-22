@@ -17,6 +17,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Text } from '@rallia/shared-components';
+import { usePlayerReputation } from '@rallia/shared-hooks';
+import { ReputationBadge } from './ReputationBadge';
 import {
   lightTheme,
   darkTheme,
@@ -74,6 +76,11 @@ export interface RequesterDetailsModalProps {
    * Whether the match is full (disable accept)
    */
   isMatchFull?: boolean;
+
+  /**
+   * Whether the match is in progress (disable accept)
+   */
+  isMatchInProgress?: boolean;
 }
 
 // =============================================================================
@@ -88,11 +95,25 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   onReject,
   isLoading = false,
   isMatchFull = false,
+  isMatchInProgress = false,
 }) => {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const isDark = theme === 'dark';
   const themeColors = isDark ? darkTheme : lightTheme;
+
+  // Get player ID for reputation lookup
+  const playerData = participant
+    ? Array.isArray(participant.player)
+      ? participant.player[0]
+      : participant.player
+    : null;
+  const playerId = playerData?.id;
+
+  // Player reputation data
+  const { display: reputationDisplay } = usePlayerReputation(playerId, {
+    skip: !visible || !playerId,
+  });
 
   // Theme-aware colors
   const colors = {
@@ -107,10 +128,10 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
 
   // Handle accept
   const handleAccept = useCallback(() => {
-    if (isLoading || isMatchFull || !participant?.id) return;
+    if (isLoading || isMatchFull || isMatchInProgress || !participant?.id) return;
     lightHaptic();
     onAccept(participant.id);
-  }, [isLoading, isMatchFull, participant, onAccept]);
+  }, [isLoading, isMatchFull, isMatchInProgress, participant, onAccept]);
 
   // Handle reject
   const handleReject = useCallback(() => {
@@ -126,17 +147,13 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
     onClose();
   }, [isLoading, onClose]);
 
-  // Handle both single object and array formats from Supabase
-  // Note: sportRatingLabel and sportRatingValue are attached to the player object at runtime
-  const playerData = participant
-    ? Array.isArray(participant.player)
-      ? participant.player[0]
-      : participant.player
-    : null;
-
+  // Note: playerData is already extracted above for reputation lookup
   const player = playerData as PlayerWithProfile | null | undefined;
   const profile = player?.profile;
-  const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || profile?.display_name || 'Player';
+  const fullName =
+    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+    profile?.display_name ||
+    'Player';
 
   // Get rating from the player object - check both label and value
   // The rating is attached by matchService at runtime when fetching match data
@@ -169,17 +186,17 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
   // Format gender display
   const genderDisplay =
     gender === 'male'
-      ? t('common.gender.male' as TranslationKey)
+      ? t('common.gender.male')
       : gender === 'female'
-        ? t('common.gender.female' as TranslationKey)
+        ? t('common.gender.female')
         : null;
 
   // Format playing hand display
   const playingHandDisplay =
     playingHand === 'left'
-      ? t('common.playingHand.left' as TranslationKey)
+      ? t('common.playingHand.left')
       : playingHand === 'right'
-        ? t('common.playingHand.right' as TranslationKey)
+        ? t('common.playingHand.right')
         : null;
 
   return (
@@ -197,7 +214,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
               {/* Header */}
               <View style={[styles.header, { borderBottomColor: colors.border }]}>
                 <Text size="lg" weight="semibold" style={{ color: colors.text }}>
-                  {t('matchActions.requesterDetails' as TranslationKey)}
+                  {t('matchActions.requesterDetails')}
                 </Text>
                 <TouchableOpacity
                   onPress={handleClose}
@@ -205,7 +222,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={20} color={colors.text} />
+                  <Ionicons name="close-outline" size={20} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -250,44 +267,59 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <View
                         style={[styles.verifiedBadge, { backgroundColor: status.success.DEFAULT }]}
                       >
-                        <Ionicons name="checkmark-circle" size={16} color={BASE_WHITE} />
+                        <Ionicons name="checkmark-circle-outline" size={16} color={BASE_WHITE} />
                         <Text
                           size="xs"
                           weight="semibold"
                           style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                         >
-                          {t('common.verified' as TranslationKey)}
+                          {t('common.verified')}
                         </Text>
                       </View>
                     )}
                   </View>
                 </View>
 
-                {/* Rating Badge */}
-                {ratingDisplay && (
-                  <View
-                    style={[
-                      styles.ratingBadge,
-                      {
-                        backgroundColor: themeColors.muted,
-                        borderWidth: 1,
-                        borderColor: themeColors.border,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="analytics" size={16} color={themeColors.mutedForeground} />
-                    <Text
-                      size="base"
-                      weight="semibold"
-                      style={{
-                        color: themeColors.foreground,
-                        marginLeft: spacingPixels[2],
-                      }}
+                {/* Reputation and Rating Badges */}
+                <View style={styles.badgesRow}>
+                  {/* Reputation Badge */}
+                  {playerId && (
+                    <ReputationBadge
+                      tier={reputationDisplay.tier}
+                      score={reputationDisplay.score}
+                      isVisible={reputationDisplay.isVisible}
+                      size="md"
+                      showLabel
+                      showScore={reputationDisplay.isVisible}
+                    />
+                  )}
+
+                  {/* Rating Badge */}
+                  {ratingDisplay && (
+                    <View
+                      style={[
+                        styles.ratingBadge,
+                        {
+                          backgroundColor: themeColors.muted,
+                          borderWidth: 1,
+                          borderColor: themeColors.border,
+                        },
+                      ]}
                     >
-                      {ratingDisplay}
-                    </Text>
-                  </View>
-                )}
+                      <Ionicons name="analytics" size={16} color={themeColors.mutedForeground} />
+                      <Text
+                        size="base"
+                        weight="semibold"
+                        style={{
+                          color: themeColors.foreground,
+                          marginLeft: spacingPixels[2],
+                        }}
+                      >
+                        {ratingDisplay}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 {/* Details Grid */}
                 <View style={styles.detailsGrid}>
@@ -301,7 +333,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.gender.label' as TranslationKey)}
+                          {t('common.gender.label')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {genderDisplay}
@@ -316,7 +348,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <Ionicons name="hand-left-outline" size={18} color={colors.textMuted} />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.playingHand.label' as TranslationKey)}
+                          {t('common.playingHand.label')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {playingHandDisplay}
@@ -331,7 +363,7 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                       <Ionicons name="time-outline" size={18} color={colors.textMuted} />
                       <View style={styles.detailContent}>
                         <Text size="xs" style={{ color: colors.textMuted }}>
-                          {t('common.lastActive' as TranslationKey)}
+                          {t('common.lastActive')}
                         </Text>
                         <Text size="sm" weight="medium" style={{ color: colors.text }}>
                           {activityDisplay}
@@ -346,12 +378,31 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   <View
                     style={[styles.warningBox, { backgroundColor: status.info.DEFAULT + '20' }]}
                   >
-                    <Ionicons name="information-circle" size={16} color={status.info.DEFAULT} />
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={status.info.DEFAULT}
+                    />
                     <Text
                       size="sm"
                       style={{ color: status.info.DEFAULT, marginLeft: spacingPixels[2] }}
                     >
-                      {t('matchActions.matchFullCannotAccept' as TranslationKey)}
+                      {t('matchActions.matchFullCannotAccept')}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Match In Progress Warning */}
+                {isMatchInProgress && (
+                  <View
+                    style={[styles.warningBox, { backgroundColor: status.warning.DEFAULT + '20' }]}
+                  >
+                    <Ionicons name="play-circle-outline" size={16} color={status.warning.DEFAULT} />
+                    <Text
+                      size="sm"
+                      style={{ color: status.warning.DEFAULT, marginLeft: spacingPixels[2] }}
+                    >
+                      {t('matchDetail.matchInProgress')}
                     </Text>
                   </View>
                 )}
@@ -371,13 +422,13 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                   disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={18} color={BASE_WHITE} />
+                  <Ionicons name="close-outline" size={18} color={BASE_WHITE} />
                   <Text
                     size="base"
                     weight="medium"
                     style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                   >
-                    {t('matchActions.rejectRequest' as TranslationKey)}
+                    {t('matchActions.rejectRequest')}
                   </Text>
                 </TouchableOpacity>
 
@@ -387,21 +438,22 @@ export const RequesterDetailsModal: React.FC<RequesterDetailsModalProps> = ({
                     styles.button,
                     styles.acceptButton,
                     {
-                      backgroundColor: isMatchFull ? neutral[400] : status.success.DEFAULT,
+                      backgroundColor:
+                        isMatchFull || isMatchInProgress ? neutral[400] : status.success.DEFAULT,
                     },
-                    (isLoading || isMatchFull) && styles.buttonDisabled,
+                    (isLoading || isMatchFull || isMatchInProgress) && styles.buttonDisabled,
                   ]}
                   onPress={handleAccept}
-                  disabled={isLoading || isMatchFull}
+                  disabled={isLoading || isMatchFull || isMatchInProgress}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="checkmark" size={18} color={BASE_WHITE} />
+                  <Ionicons name="checkmark-outline" size={18} color={BASE_WHITE} />
                   <Text
                     size="base"
                     weight="medium"
                     style={{ color: BASE_WHITE, marginLeft: spacingPixels[1] }}
                   >
-                    {t('matchActions.acceptRequest' as TranslationKey)}
+                    {t('matchActions.acceptRequest')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -491,14 +543,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[1],
     borderRadius: radiusPixels.full,
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacingPixels[2],
+    marginBottom: spacingPixels[4],
+    flexWrap: 'wrap',
+  },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[2],
     borderRadius: radiusPixels.full,
-    marginBottom: spacingPixels[4],
   },
   detailsGrid: {
     gap: spacingPixels[3],
@@ -527,7 +585,7 @@ const styles = StyleSheet.create({
     gap: spacingPixels[3],
     paddingHorizontal: spacingPixels[5],
     paddingTop: spacingPixels[3],
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'transparent', // Will be set dynamically
   },

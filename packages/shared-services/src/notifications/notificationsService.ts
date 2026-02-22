@@ -22,6 +22,7 @@ export async function getNotifications(
     .from('notification')
     .select('*')
     .eq('user_id', userId)
+    .is('organization_id', null) // Only player notifications (exclude org notifications)
     .order('created_at', { ascending: false })
     .limit(pageSize + 1); // Fetch one extra to determine if there are more
 
@@ -75,6 +76,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .from('notification')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
+    .is('organization_id', null) // Only player notifications (exclude org notifications)
     .is('read_at', null)
     .or('expires_at.is.null,expires_at.gt.now()');
 

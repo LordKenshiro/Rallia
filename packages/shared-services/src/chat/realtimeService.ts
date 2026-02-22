@@ -29,9 +29,10 @@ export function subscribeToMessages(
   onMessageOrCallbacks: ((message: Message) => void) | MessageEventCallback
 ): RealtimeChannel {
   // Support both legacy single callback and new multi-callback format
-  const callbacks: MessageEventCallback = typeof onMessageOrCallbacks === 'function'
-    ? { onInsert: onMessageOrCallbacks }
-    : onMessageOrCallbacks;
+  const callbacks: MessageEventCallback =
+    typeof onMessageOrCallbacks === 'function'
+      ? { onInsert: onMessageOrCallbacks }
+      : onMessageOrCallbacks;
 
   const channel = supabase
     .channel(`messages:${conversationId}`)
@@ -44,7 +45,7 @@ export function subscribeToMessages(
         table: 'message',
         filter: `conversation_id=eq.${conversationId}`,
       },
-      (payload) => {
+      payload => {
         const msg = payload.new as Message;
         callbacks.onInsert?.({
           ...msg,
@@ -61,7 +62,7 @@ export function subscribeToMessages(
         table: 'message',
         filter: `conversation_id=eq.${conversationId}`,
       },
-      (payload) => {
+      payload => {
         const msg = payload.new as Message;
         callbacks.onUpdate?.({
           ...msg,
@@ -78,7 +79,7 @@ export function subscribeToMessages(
         table: 'message',
         filter: `conversation_id=eq.${conversationId}`,
       },
-      (payload) => {
+      payload => {
         const oldMsg = payload.old as { id: string };
         callbacks.onDelete?.(oldMsg.id);
       }
@@ -93,7 +94,11 @@ export function subscribeToMessages(
  */
 export function subscribeToReactions(
   conversationId: string,
-  onReactionChange: (payload: { eventType: 'INSERT' | 'DELETE'; reaction: unknown; messageId: string }) => void
+  onReactionChange: (payload: {
+    eventType: 'INSERT' | 'DELETE';
+    reaction: unknown;
+    messageId: string;
+  }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel(`reactions:${conversationId}`)
@@ -104,7 +109,7 @@ export function subscribeToReactions(
         schema: 'public',
         table: 'message_reaction',
       },
-      (payload) => {
+      payload => {
         const reaction = (payload.new || payload.old) as { message_id?: string };
         if (reaction.message_id) {
           onReactionChange({
@@ -123,10 +128,7 @@ export function subscribeToReactions(
 /**
  * Subscribe to conversation updates (new messages in any conversation)
  */
-export function subscribeToConversations(
-  playerId: string,
-  onUpdate: () => void
-): RealtimeChannel {
+export function subscribeToConversations(playerId: string, onUpdate: () => void): RealtimeChannel {
   // Subscribe to conversation updates
   const channel = supabase
     .channel(`conversations:${playerId}`)
@@ -171,7 +173,7 @@ export function subscribeToTypingIndicators(
   onTypingChange: (typingUsers: TypingIndicator[]) => void
 ): RealtimeChannel {
   const channelName = `typing:${conversationId}`;
-  
+
   // Clean up existing channel if any
   const existingChannel = typingChannels.get(channelName);
   if (existingChannel) {
@@ -207,7 +209,7 @@ export function subscribeToTypingIndicators(
 
       onTypingChange(typingUsers);
     })
-    .subscribe(async (status) => {
+    .subscribe(async status => {
       if (status === 'SUBSCRIBED') {
         // Track presence with player info
         await channel.track({
@@ -249,7 +251,7 @@ export async function sendTypingIndicator(
 export function unsubscribeFromTypingIndicators(conversationId: string): void {
   const channelName = `typing:${conversationId}`;
   const channel = typingChannels.get(channelName);
-  
+
   if (channel) {
     supabase.removeChannel(channel);
     typingChannels.delete(channelName);

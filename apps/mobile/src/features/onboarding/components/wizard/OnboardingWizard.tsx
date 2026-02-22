@@ -34,20 +34,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
 import { lightHaptic, mediumHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
-import { OnboardingService, SportService, Logger, DatabaseService, supabase } from '@rallia/shared-services';
-import { useProfile, usePlayer } from '@rallia/shared-hooks';
+import {
+  OnboardingService,
+  SportService,
+  Logger,
+  DatabaseService,
+  supabase,
+} from '@rallia/shared-services';
+import { useProfile, usePlayer, usePostalCodeGeocode } from '@rallia/shared-hooks';
 import { replaceImage } from '../../../../services/imageUpload';
 import { useImagePicker } from '../../../../hooks';
-import { useSport } from '../../../../context';
+import { useSport, useUserHomeLocation } from '../../../../context';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type {
   OnboardingPlayerPreferences,
   OnboardingAvailability,
   DayEnum,
   PeriodEnum,
+  GenderEnum,
 } from '@rallia/shared-types';
 
-import { useOnboardingWizard, type OnboardingStepId } from '../../hooks/useOnboardingWizard';
+import {
+  useOnboardingWizard,
+  computeFavoriteSportCounts,
+  type OnboardingStepId,
+} from '../../hooks/useOnboardingWizard';
 import {
   PersonalInfoStep,
   LocationStep,
@@ -133,7 +144,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
     <View style={styles.progressContainer}>
       <View style={styles.progressHeader}>
         <Text size="sm" weight="semibold" color={colors.textMuted}>
-          {t('onboarding.step' as TranslationKey)
+          {t('onboarding.step')
             .replace('{current}', String(currentStep))
             .replace('{total}', String(totalSteps))}
         </Text>
@@ -170,7 +181,7 @@ interface WizardHeaderProps {
 const WizardHeader: React.FC<WizardHeaderProps> = ({
   currentStep,
   onBack,
-  onBackToLanding,
+  onBackToLanding: _onBackToLanding,
   onClose,
   colors,
   t,
@@ -179,20 +190,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
     <View style={[styles.header, { borderBottomColor: colors.border }]}>
       {/* Back button (visible on all steps) */}
       <View style={styles.headerLeft}>
-        {currentStep === 1 ? (
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              lightHaptic();
-              onBackToLanding();
-            }}
-            style={styles.headerButton}
-            accessibilityLabel={t('common.back' as TranslationKey)}
-            accessibilityRole="button"
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
-          </TouchableOpacity>
-        ) : (
+        {currentStep !== 1 && (
           <TouchableOpacity
             onPress={() => {
               Keyboard.dismiss();
@@ -200,10 +198,10 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
               onBack();
             }}
             style={styles.headerButton}
-            accessibilityLabel={t('common.back' as TranslationKey)}
+            accessibilityLabel={t('common.back')}
             accessibilityRole="button"
           >
-            <Ionicons name="chevron-back" size={24} color={colors.buttonActive} />
+            <Ionicons name="chevron-back-outline" size={24} color={colors.buttonActive} />
           </TouchableOpacity>
         )}
       </View>
@@ -220,10 +218,10 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
             onClose();
           }}
           style={styles.headerButton}
-          accessibilityLabel={t('common.close' as TranslationKey)}
+          accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={24} color={colors.textMuted} />
+          <Ionicons name="close-outline" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -235,7 +233,7 @@ const WizardHeader: React.FC<WizardHeaderProps> = ({
 // =============================================================================
 
 const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => string): string => {
-  const keys: Record<OnboardingStepId, string> = {
+  const keys: Record<OnboardingStepId, TranslationKey> = {
     personal: 'onboarding.stepNames.personal',
     location: 'onboarding.stepNames.location',
     sports: 'onboarding.stepNames.sports',
@@ -246,7 +244,7 @@ const getStepName = (stepId: OnboardingStepId, t: (key: TranslationKey) => strin
     availabilities: 'onboarding.stepNames.availability',
     success: 'onboarding.complete',
   };
-  return t(keys[stepId] as TranslationKey) || '';
+  return t(keys[stepId]) || '';
 };
 
 // =============================================================================
@@ -290,8 +288,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Without this refetch, the player stays null until sign out/sign in.
   const { refetch: refetchPlayer } = usePlayer();
 
+  // Home location context to sync postal code to local storage
+  const { setHomeLocation } = useUserHomeLocation();
+  const { geocode } = usePostalCodeGeocode();
+
   // Sport context to refetch player sports when onboarding completes
-  const { refetch: refetchSports, setSelectedSport } = useSport();
+  const { refetch: refetchSports, setSelectedSport, selectedSport } = useSport();
 
   // State to store selected sports for SuccessStep
   const [selectedSportsForSuccess, setSelectedSportsForSuccess] = useState<
@@ -313,7 +315,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     if (formData.savedProfilePictureUrl && !lastUploadedProfileUrl) {
       setLastUploadedProfileUrl(formData.savedProfilePictureUrl);
     }
-  }, [formData.savedProfilePictureUrl, lastUploadedProfileUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.savedProfilePictureUrl]);
 
   // Fetch selected sports when reaching success step
   useEffect(() => {
@@ -367,8 +370,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const isButtonDisabled = useMemo(() => {
     if (isSaving) return true;
     if (currentStepId === 'availabilities' && totalAvailabilitySelections < 5) return true;
+    if (currentStepId === 'favorite-sites') {
+      const bothSports = hasTennis && hasPickleball;
+      if (bothSports) {
+        const counts = computeFavoriteSportCounts(formData);
+        return counts.tennisCount < 2 || counts.pickleballCount < 2;
+      }
+      return formData.favoriteFacilities.length < 3;
+    }
     return false;
-  }, [isSaving, currentStepId, totalAvailabilitySelections]);
+  }, [isSaving, currentStepId, totalAvailabilitySelections, formData, hasTennis, hasPickleball]);
 
   // Animation values
   const translateX = useSharedValue(0);
@@ -388,17 +399,49 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   // Validate and save current step data
   const validateAndSaveStep = useCallback(async (): Promise<boolean> => {
     switch (currentStepId) {
-      case 'personal':
+      case 'personal': {
         // Validate personal info
         if (
           !formData.firstName.trim() ||
           !formData.lastName.trim() ||
           !formData.username.trim() ||
+          formData.username.length < 3 ||
           !formData.dateOfBirth ||
           !formData.gender ||
           !formData.phoneNumber.trim()
         ) {
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.fillRequiredFields' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.fillRequiredFields'));
+          warningHaptic();
+          return false;
+        }
+
+        // Check minimum age (13 years)
+        const minimumDateOfBirth = new Date();
+        minimumDateOfBirth.setFullYear(minimumDateOfBirth.getFullYear() - 13);
+        if (formData.dateOfBirth > minimumDateOfBirth) {
+          Alert.alert(t('alerts.error'), `You must be at least 13 years old`);
+          warningHaptic();
+          return false;
+        }
+
+        // Check username uniqueness (case-insensitive), excluding current user
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser();
+
+        let usernameQuery = supabase
+          .from('profile')
+          .select('display_name')
+          .ilike('display_name', formData.username.trim());
+
+        if (currentUser) {
+          usernameQuery = usernameQuery.neq('id', currentUser.id);
+        }
+
+        const { data: existingUser } = await usernameQuery.maybeSingle();
+
+        if (existingUser) {
+          Alert.alert(t('alerts.error'), 'This username is already taken. Please choose another.');
           warningHaptic();
           return false;
         }
@@ -436,14 +479,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             last_name: formData.lastName,
             display_name: formData.username,
             birth_date: formattedDate,
-            gender: formData.gender as 'M' | 'F' | 'O' | 'prefer_not_to_say',
+            gender: formData.gender as GenderEnum,
             phone: formData.phoneNumber,
             profile_picture_url: uploadedImageUrl,
           });
 
           if (error) {
             Logger.error('Failed to save personal info', error as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveInfo' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveInfo'));
             setIsSaving(false);
             return false;
           }
@@ -452,83 +495,88 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving personal info', error as Error);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
         }
+      }
 
-      case 'location':
-        // City is mandatory
-        if (!formData.city.trim()) {
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.cityRequired' as TranslationKey));
+      case 'location': {
+        // Postal code is required (pre-populated from pre-onboarding)
+        if (!formData.postalCode.trim()) {
+          Alert.alert(t('alerts.error'), t('onboarding.validation.postalCodeRequired'));
           warningHaptic();
           return false;
         }
 
-        // If no address provided, warn user about limited match search
-        if (!formData.address.trim()) {
-          return new Promise<boolean>((resolve) => {
-            Alert.alert(
-              t('onboarding.locationStep.warningTitle' as TranslationKey),
-              t('onboarding.locationStep.warningMessage' as TranslationKey),
-              [
-                {
-                  text: t('common.goBack' as TranslationKey),
-                  style: 'cancel',
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: t('common.continue' as TranslationKey),
-                  onPress: async () => {
-                    const success = await saveLocationData();
-                    resolve(success);
-                  },
-                },
-              ]
-            );
-          });
-        }
-
-        return await saveLocationData();
-
-        async function saveLocationData(): Promise<boolean> {
+        // Helper function to save location data
+        const saveLocationData = async (): Promise<boolean> => {
           setIsSaving(true);
           try {
             const userId = await DatabaseService.Auth.getCurrentUserId();
             if (!userId) {
-              Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
+              Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
               setIsSaving(false);
               return false;
             }
 
+            // Determine coordinates: if a valid address is selected, use its
+            // coordinates (already in formData). Otherwise, always geocode the
+            // postal code so lat/long are guaranteed to be fresh.
+            let { latitude, longitude } = formData;
+            if (!formData.address) {
+              const location = await geocode(formData.postalCode);
+              if (location) {
+                latitude = location.latitude;
+                longitude = location.longitude;
+                updateFormData({ latitude, longitude });
+              }
+            }
+
             const { error } = await OnboardingService.saveLocationInfo({
               address: formData.address || null,
-              city: formData.city,
-              postal_code: formData.postalCode || null,
-              latitude: formData.latitude,
-              longitude: formData.longitude,
+              city: formData.city || null,
+              province: formData.province || null,
+              postal_code: formData.postalCode,
+              latitude,
+              longitude,
             });
 
             if (error) {
               Logger.error('Failed to save location info', error as Error);
-              Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveLocation' as TranslationKey));
+              Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveLocation'));
               setIsSaving(false);
               return false;
+            }
+
+            // Sync updated postal code and coordinates to local device storage
+            if (formData.postalCode && latitude && longitude) {
+              await setHomeLocation({
+                postalCode: formData.postalCode,
+                country: 'CA',
+                formattedAddress: formData.address || formData.postalCode,
+                latitude,
+                longitude,
+              });
             }
 
             setIsSaving(false);
             return true;
           } catch (error) {
             Logger.error('Unexpected error saving location info', error as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
             setIsSaving(false);
             return false;
           }
-        }
+        };
+
+        // Save location data directly - no warning needed since postal code is always present
+        return await saveLocationData();
+      }
 
       case 'sports':
         if (formData.selectedSportIds.length === 0) {
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectAtLeastOneSport' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.selectAtLeastOneSport'));
           warningHaptic();
           return false;
         }
@@ -537,7 +585,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
       case 'tennis-rating':
         if (!formData.tennisRatingId) {
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectTennisRating' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.selectTennisRating'));
           warningHaptic();
           return false;
         }
@@ -547,7 +595,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           // Get current user ID for the rating
           const tennisUserId = await DatabaseService.Auth.getCurrentUserId();
           if (!tennisUserId) {
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
             setIsSaving(false);
             return false;
           }
@@ -561,7 +609,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (tennisRatingError) {
             Logger.error('Failed to save tennis rating', tennisRatingError as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'));
             setIsSaving(false);
             return false;
           }
@@ -570,14 +618,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving tennis rating', error as Error);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
         }
 
       case 'pickleball-rating':
         if (!formData.pickleballRatingId) {
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectPickleballRating' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.selectPickleballRating'));
           warningHaptic();
           return false;
         }
@@ -587,7 +635,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           // Get current user ID for the rating
           const pickleballUserId = await DatabaseService.Auth.getCurrentUserId();
           if (!pickleballUserId) {
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
             setIsSaving(false);
             return false;
           }
@@ -601,7 +649,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (pickleballRatingError) {
             Logger.error('Failed to save pickleball rating', pickleballRatingError as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveRating' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveRating'));
             setIsSaving(false);
             return false;
           }
@@ -610,7 +658,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving pickleball rating', error as Error);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
         }
@@ -662,7 +710,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save preferences', error as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSavePreferences' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSavePreferences'));
             setIsSaving(false);
             return false;
           }
@@ -671,63 +719,74 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving preferences', error as Error);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
         }
 
-      case 'favorite-sites':
-        // Favorite sites is optional - always passes validation
+      case 'favorite-sites': {
+        // Validate per-sport minimums
+        const bothSportsSelected = hasTennis && hasPickleball;
+        if (bothSportsSelected) {
+          const counts = computeFavoriteSportCounts(formData);
+          if (counts.tennisCount < 2 || counts.pickleballCount < 2) {
+            Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimumPerSport'));
+            warningHaptic();
+            return false;
+          }
+        } else if (formData.favoriteFacilities.length < 3) {
+          Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.selectMinimum'));
+          warningHaptic();
+          return false;
+        }
+
         // Save the selected favorites to the database
-        if (formData.favoriteFacilities.length > 0) {
-          setIsSaving(true);
-          try {
-            const userId = await DatabaseService.Auth.getCurrentUserId();
-            if (!userId) {
-              Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.userNotAuthenticated' as TranslationKey));
-              setIsSaving(false);
-              return false;
-            }
-
-            // Delete existing favorites first
-            const { error: deleteError } = await supabase
-              .from('player_favorite_facility')
-              .delete()
-              .eq('player_id', userId);
-
-            if (deleteError) {
-              Logger.warn('Failed to delete existing favorites', { error: deleteError });
-            }
-
-            // Insert new favorites with display order
-            const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
-              player_id: userId,
-              facility_id: facility.id,
-              display_order: index + 1,
-            }));
-
-            const { error: insertError } = await supabase
-              .from('player_favorite_facility')
-              .insert(favoritesToInsert);
-
-            if (insertError) {
-              Logger.error('Failed to save favorite facilities', insertError as Error);
-              Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.favoriteSitesStep.failedToSave' as TranslationKey));
-              setIsSaving(false);
-              return false;
-            }
-
-            setIsSaving(false);
-            return true;
-          } catch (error) {
-            Logger.error('Unexpected error saving favorite facilities', error as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+        setIsSaving(true);
+        try {
+          const userId = await DatabaseService.Auth.getCurrentUserId();
+          if (!userId) {
+            Alert.alert(t('alerts.error'), t('onboarding.validation.userNotAuthenticated'));
             setIsSaving(false);
             return false;
           }
+
+          // Delete existing favorites first
+          const { error: deleteError } = await supabase
+            .from('player_favorite_facility')
+            .delete()
+            .eq('player_id', userId);
+
+          if (deleteError) {
+            Logger.warn('Failed to delete existing favorites', { error: deleteError });
+          }
+
+          // Insert new favorites with display order
+          const favoritesToInsert = formData.favoriteFacilities.map((facility, index) => ({
+            player_id: userId,
+            facility_id: facility.id,
+            display_order: index + 1,
+          }));
+
+          const { error: insertError } = await supabase
+            .from('player_favorite_facility')
+            .insert(favoritesToInsert);
+
+          if (insertError) {
+            Logger.error('Failed to save favorite facilities', insertError as Error);
+            Alert.alert(t('alerts.error'), t('onboarding.favoriteSitesStep.failedToSave'));
+            setIsSaving(false);
+            return false;
+          }
+
+          setIsSaving(false);
+          return true;
+        } catch (error) {
+          Logger.error('Unexpected error saving favorite facilities', error as Error);
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
+          setIsSaving(false);
+          return false;
         }
-        // No favorites selected - that's okay, just continue
-        return true;
+      }
 
       case 'availabilities':
         setIsSaving(true);
@@ -766,7 +825,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           if (error) {
             Logger.error('Failed to save availability', error as Error);
-            Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveAvailability' as TranslationKey));
+            Alert.alert(t('alerts.error'), t('onboarding.validation.failedToSaveAvailability'));
             setIsSaving(false);
             return false;
           }
@@ -791,7 +850,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           return true;
         } catch (error) {
           Logger.error('Unexpected error saving availability', error as Error);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey));
+          Alert.alert(t('alerts.error'), t('onboarding.validation.unexpectedError'));
           setIsSaving(false);
           return false;
         }
@@ -808,6 +867,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     refetchProfile,
     refetchPlayer,
     refetchSports,
+    lastUploadedProfileUrl,
   ]);
 
   // Handle next button press
@@ -918,7 +978,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             colors={colors}
             t={t}
             isDark={isDark}
-            sportId={formData.selectedSportIds[0]}
+            sportIds={formData.selectedSportIds}
+            sportNames={formData.selectedSportNames}
+            hasTennis={hasTennis}
+            hasPickleball={hasPickleball}
             latitude={formData.latitude}
             longitude={formData.longitude}
           />
@@ -941,6 +1004,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             t={t}
             isDark={isDark}
             selectedSports={selectedSportsForSuccess}
+            currentSport={selectedSport}
             onSelectInitialSport={handleSelectInitialSport}
           />
         );
@@ -974,6 +1038,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           t={t}
           isDark={isDark}
           selectedSports={selectedSportsForSuccess}
+          currentSport={selectedSport}
           onSelectInitialSport={handleSelectInitialSport}
         />
       </View>
@@ -1008,7 +1073,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           pointerEvents="box-none"
         >
           {steps.map((stepId, index) => (
-            <View key={stepId} style={[styles.stepWrapper, { width: SCREEN_WIDTH }]} pointerEvents="box-none">
+            <View
+              key={stepId}
+              style={[styles.stepWrapper, { width: SCREEN_WIDTH }]}
+              pointerEvents="box-none"
+            >
               {renderStep(stepId, index)}
             </View>
           ))}
@@ -1025,17 +1094,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             ]}
             onPress={handleNext}
             disabled={isButtonDisabled}
-            accessibilityLabel={t('common.next' as TranslationKey)}
+            accessibilityLabel={t('common.next')}
             accessibilityRole="button"
           >
             {isSaving ? (
               <ActivityIndicator color={colors.buttonTextActive} />
             ) : (
               <>
-                <Text size="lg" weight="semibold" color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}>
-                  {t('common.next' as TranslationKey)}
+                <Text
+                  size="lg"
+                  weight="semibold"
+                  color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}
+                >
+                  {t('common.next')}
                 </Text>
-                <Ionicons name="arrow-forward" size={20} color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={20}
+                  color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}
+                />
               </>
             )}
           </TouchableOpacity>
@@ -1047,17 +1124,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             ]}
             onPress={handleNext}
             disabled={isButtonDisabled}
-            accessibilityLabel={t('onboarding.complete' as TranslationKey)}
+            accessibilityLabel={t('onboarding.complete')}
             accessibilityRole="button"
           >
             {isSaving ? (
               <ActivityIndicator color={colors.buttonTextActive} />
             ) : (
               <>
-                <Text size="lg" weight="semibold" color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}>
-                  {t('onboarding.complete' as TranslationKey)}
+                <Text
+                  size="lg"
+                  weight="semibold"
+                  color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}
+                >
+                  {t('onboarding.complete')}
                 </Text>
-                <Ionicons name="checkmark" size={20} color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive} />
+                <Ionicons
+                  name="checkmark"
+                  size={20}
+                  color={isButtonDisabled ? colors.textMuted : colors.buttonTextActive}
+                />
               </>
             )}
           </TouchableOpacity>
@@ -1132,8 +1217,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   footer: {
-    padding: spacingPixels[4],
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
     borderTopWidth: 1,
+    paddingBottom: spacingPixels[8],
     // Footer is fixed at the bottom
   },
   nextButton: {

@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,9 @@ const SettingsScreen: React.FC = () => {
   const { isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { isAdmin, role: adminRole } = useAdminStatus();
+
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = isAuthenticated && profile?.onboarding_completed;
 
   const [isChangingLocale, setIsChangingLocale] = useState(false);
   const { theme, themePreference, setThemePreference } = useTheme();
@@ -189,29 +193,25 @@ const SettingsScreen: React.FC = () => {
 
   const handleResetTour = () => {
     lightHaptic();
-    Alert.alert(
-      t('tour.settings.restartTour'),
-      t('tour.settings.restartTourDescription'),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
+    Alert.alert(t('tour.settings.restartTour'), t('tour.settings.restartTourDescription'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.confirm'),
+        onPress: async () => {
+          try {
+            await tourService.resetAllTours();
+            toast.success(t('tour.settings.tourReset'));
+            Logger.logUserAction('tour_reset');
+          } catch (error) {
+            Logger.error('Failed to reset tour', error as Error);
+            toast.error(t('errors.unknown'));
+          }
         },
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              await tourService.resetAllTours();
-              toast.success(t('tour.settings.tourReset'));
-              Logger.logUserAction('tour_reset');
-            } catch (error) {
-              Logger.error('Failed to reset tour', error as Error);
-              toast.error(t('errors.unknown'));
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const SettingsItem = ({
@@ -226,7 +226,7 @@ const SettingsScreen: React.FC = () => {
     <TouchableOpacity
       style={[
         styles.settingsItem,
-        { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+        { backgroundColor: colors.background, borderBottomColor: colors.border },
       ]}
       onPress={() => {
         lightHaptic();
@@ -258,13 +258,13 @@ const SettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView
-        style={[styles.scrollContent, { backgroundColor: colors.cardBackground }]}
+        style={[styles.scrollContent, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Edit Profile */}
-        {isAuthenticated && (
-          <View style={[styles.profileGroup, { backgroundColor: colors.cardBackground }]}>
-            <View style={[styles.profileSection, { backgroundColor: colors.cardBackground }]}>
+        {/* Edit Profile - Only show when fully onboarded */}
+        {isOnboarded && (
+          <View style={[styles.profileGroup, { backgroundColor: colors.background }]}>
+            <View style={[styles.profileSection, { backgroundColor: colors.background }]}>
               {profile?.profile_picture_url ? (
                 <Image
                   source={{ uri: getProfilePictureUrl(profile.profile_picture_url) || '' }}
@@ -272,12 +272,14 @@ const SettingsScreen: React.FC = () => {
                 />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person" size={32} color={colors.iconMuted} />
+                  <Ionicons name="person-outline" size={32} color={colors.iconMuted} />
                 </View>
               )}
               <View style={styles.profileInfo}>
                 <Text size="lg" weight="semibold" color={colors.text}>
-                  {profile?.display_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || ''}
+                  {profile?.display_name ||
+                    `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+                    ''}
                 </Text>
                 <Text size="sm" color={colors.textSecondary} style={styles.profileEmail}>
                   {profile?.email || ''}
@@ -287,7 +289,7 @@ const SettingsScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.editProfileButton,
-                { backgroundColor: colors.cardBackground, borderBottomColor: colors.border },
+                { backgroundColor: colors.background, borderBottomColor: colors.border },
               ]}
               onPress={() => {
                 lightHaptic();
@@ -309,19 +311,21 @@ const SettingsScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Settings Items */}
-        {isAuthenticated && (
-          <View style={[styles.settingsGroup, { backgroundColor: colors.cardBackground }]}>
+        {/* Settings Items - Permissions always visible; Notifications and Restart Tour when onboarded */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          {isOnboarded && (
             <SettingsItem
               icon="notifications-outline"
               title={t('settings.notifications')}
               onPress={handleNotificationPreferences}
             />
-            <SettingsItem
-              icon="shield-checkmark-outline"
-              title={t('settings.permissions')}
-              onPress={handlePermissions}
-            />
+          )}
+          <SettingsItem
+            icon="shield-checkmark-outline"
+            title={t('settings.permissions')}
+            onPress={handlePermissions}
+          />
+          {isOnboarded && (
             <SettingsItem
               icon="refresh-outline"
               title={t('tour.settings.restartTour')}
@@ -332,8 +336,8 @@ const SettingsScreen: React.FC = () => {
               title={t('settings.feedback')}
               onPress={handleFeedback}
             />
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Admin Panel - Only visible to admin users */}
         {isAuthenticated && isAdmin && (
@@ -393,7 +397,7 @@ const SettingsScreen: React.FC = () => {
         )}
 
         {/* Preferred Language */}
-        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
           <View style={styles.preferenceTitleRow}>
             <Text size="sm" color={colors.textSecondary}>
               {t('settings.language')}
@@ -433,10 +437,7 @@ const SettingsScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   {isChangingLocale && !isActive ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={isActive ? colors.buttonTextActive : colors.buttonTextInactive}
-                    />
+                    <ActivityIndicator size="small" color={colors.buttonActive} />
                   ) : (
                     <Text
                       size="sm"
@@ -458,7 +459,7 @@ const SettingsScreen: React.FC = () => {
         </View>
 
         {/* Appearance */}
-        <View style={[styles.preferenceSection, { backgroundColor: colors.cardBackground }]}>
+        <View style={[styles.preferenceSection, { backgroundColor: colors.background }]}>
           <Text size="sm" color={colors.textSecondary} style={styles.preferenceSectionTitle}>
             {t('settings.theme')}
           </Text>
@@ -499,9 +500,23 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Legal */}
+        <View style={[styles.settingsGroup, { backgroundColor: colors.background }]}>
+          <SettingsItem
+            icon="document-text-outline"
+            title={t('settings.termsOfService')}
+            onPress={() => Linking.openURL('https://rallia.ca/terms')}
+          />
+          <SettingsItem
+            icon="lock-closed-outline"
+            title={t('settings.privacyPolicy')}
+            onPress={() => Linking.openURL('https://rallia.ca/privacy')}
+          />
+        </View>
+
         {/* Sign Out & Delete Account */}
         {isAuthenticated && (
-          <View style={[styles.actionButtons, { backgroundColor: colors.cardBackground }]}>
+          <View style={[styles.actionButtons, { backgroundColor: colors.background }]}>
             <TouchableOpacity
               style={[styles.signOutButton, { backgroundColor: colors.buttonInactive }]}
               onPress={async () => {

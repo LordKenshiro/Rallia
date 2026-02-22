@@ -5,25 +5,28 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { SheetManager } from 'react-native-actions-sheet';
 import { useAppNavigation } from '../navigation/hooks';
 import { Text, Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
+import { useProfile, usePlayer, usePlayerReputation } from '@rallia/shared-hooks';
 import { replaceImage } from '../services/imageUpload';
-import { useImagePicker, useThemeStyles, useTranslation, useTourSequence, type TranslationKey } from '../hooks';
+import {
+  useImagePicker,
+  useThemeStyles,
+  useTranslation,
+  useTourSequence,
+  type TranslationKey,
+} from '../hooks';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
 import { getProfilePictureUrl } from '@rallia/shared-utils';
 import { formatDate as formatDateUtil, formatDateMonthYear } from '../utils/dateFormatting';
-import PersonalInformationOverlay from '../features/onboarding/components/overlays/PersonalInformationOverlay';
-import PlayerInformationOverlay from '../features/onboarding/components/overlays/PlayerInformationOverlay';
-import PlayerAvailabilitiesOverlay from '../features/onboarding/components/overlays/PlayerAvailabilitiesOverlay';
-import ImagePickerSheet from '../components/ImagePickerSheet';
-import type { Profile, Player, Sport } from '@rallia/shared-types';
+import type { Sport } from '@rallia/shared-types';
 import {
   spacingPixels,
   radiusPixels,
@@ -68,37 +71,42 @@ const UserProfile = () => {
   const { colors, isDark } = useThemeStyles();
   const { t, locale } = useTranslation();
   const toast = useToast();
-  const [loading, setLoading] = useState(true);
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
+  const { player, loading: playerLoading, refetch: refetchPlayer } = usePlayer();
+  const loadingCore = profileLoading || playerLoading;
+
+  // Theme-aware skeleton colors (aligned with FacilitiesDirectory for consistent, sleek loading UI)
+  const skeletonBg = isDark ? '#262626' : '#E1E9EE';
+  const skeletonHighlight = isDark ? '#404040' : '#F2F8FC';
+
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [player, setPlayer] = useState<Player | null>(null);
   const [sports, setSports] = useState<SportWithRating[]>([]);
   const [availabilities, setAvailabilities] = useState<AvailabilityGrid>({});
   const [pendingReferenceRequestsCount, setPendingReferenceRequestsCount] = useState(0);
-  const [showPersonalInfoOverlay, setShowPersonalInfoOverlay] = useState(false);
-  const [showPlayerInfoOverlay, setShowPlayerInfoOverlay] = useState(false);
-  const [showAvailabilitiesOverlay, setShowAvailabilitiesOverlay] = useState(false);
+  const [loadingSports, setLoadingSports] = useState(true);
+  const [loadingAvailabilities, setLoadingAvailabilities] = useState(true);
+  const [loadingReferenceRequests, setLoadingReferenceRequests] = useState(true);
 
   // Profile screen tour - triggers after main navigation tour is completed
-  const { shouldShowTour: _shouldShowProfileTour } = useTourSequence({
+  useTourSequence({
     screenId: 'profile',
-    isReady: !loading,
+    isReady: !loadingCore,
     delay: 800,
     autoStart: true,
   });
 
   // Use custom hook for image picker (for profile picture editing)
-  const {
-    image: newProfileImage,
-    showPicker,
-    openPicker,
-    closePicker,
-    pickFromCamera,
-    pickFromGallery,
-    permissions,
-  } = useImagePicker();
+  const { image: newProfileImage, openPicker } = useImagePicker({
+    title: t('profile.profilePicture'),
+    cameraLabel: t('profile.takePhoto'),
+    galleryLabel: t('profile.chooseFromGallery'),
+  });
 
-  // Check authentication on mount and redirect if not logged in
+  // Player reputation data
+  usePlayerReputation(player?.id);
+
+  // Check authentication on mount and fetch section data once. Profile/player come from
+  // context (fetched by providers). We only refetch after mutations (onSave in sheets, etc.).
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -106,27 +114,15 @@ const UserProfile = () => {
       } = await supabase.auth.getUser();
       if (!user) {
         // User is not authenticated, go back
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         navigation.goBack();
         return;
       }
-      fetchUserProfileData();
+      fetchProfileSections();
     };
     checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Re-fetch data when screen comes into focus (e.g., when navigating back from SportProfile)
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const unsubscribe = (navigation as any).addListener('focus', () => {
-      Logger.debug('user_profile_screen_focused');
-      fetchUserProfileData();
-    });
-
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation]);
 
   // Upload profile picture when a new image is selected
   useEffect(() => {
@@ -145,7 +141,7 @@ const UserProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         return;
       }
 
@@ -171,8 +167,7 @@ const UserProfile = () => {
 
       if (updateResult.error) throw updateResult.error;
 
-      // Update local state
-      setProfile(prev => (prev ? { ...prev, profile_picture_url: url } : null));
+      await refetchProfile();
 
       toast.success(t('profile.changePhoto'));
     } catch (error) {
@@ -183,84 +178,102 @@ const UserProfile = () => {
     }
   };
 
-  const fetchUserProfileData = async () => {
-    try {
-      setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        Alert.alert(t('alerts.error'), t('errors.userNotAuthenticated'));
-        return;
-      }
+  const fetchProfileSections = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-      // Run all queries in parallel for better performance
-      const [
-        profileResult,
-        playerResult,
-        sportsResult,
-        playerSportsResult,
-        ratingsResult,
-        availResult,
-        referenceRequestsResult,
-      ] = await Promise.all([
-        // Fetch profile data
-        withTimeout(
-          (async () => supabase.from('profile').select('*').eq('id', user.id).single())(),
-          15000,
-          'Failed to load profile - connection timeout'
-        ),
+    setLoadingSports(true);
+    setLoadingAvailabilities(true);
+    setLoadingReferenceRequests(true);
 
-        // Fetch player data
-        withTimeout(
-          (async () => supabase.from('player').select('*').eq('id', user.id).single())(),
-          15000,
-          'Failed to load player data - connection timeout'
-        ),
-
-        // Fetch all sports
-        withTimeout(
-          (async () => supabase.from('sport').select('*').eq('is_active', true).order('name'))(),
-          15000,
-          'Failed to load sports - connection timeout'
-        ),
-
-        // Fetch player's selected sports
-        withTimeout(
-          (async () =>
-            supabase
-              .from('player_sport')
-              .select('sport_id, is_primary, is_active')
-              .eq('player_id', user.id))(),
-          15000,
-          'Failed to load player sports - connection timeout'
-        ),
-
-        // Fetch player's ratings with source info
-        withTimeout(
-          (async () =>
-            supabase
-              .from('player_rating_score')
-              .select(
+    // Sports: all sports + player_sport + ratings, then merge
+    const fetchSports = async () => {
+      try {
+        const [sportsResult, playerSportsResult, ratingsResult] = await Promise.all([
+          withTimeout(
+            (async () => supabase.from('sport').select('*').eq('is_active', true).order('name'))(),
+            15000,
+            'Failed to load sports - connection timeout'
+          ),
+          withTimeout(
+            (async () =>
+              supabase
+                .from('player_sport')
+                .select('sport_id, is_primary, is_active')
+                .eq('player_id', user.id))(),
+            15000,
+            'Failed to load player sports - connection timeout'
+          ),
+          withTimeout(
+            (async () =>
+              supabase
+                .from('player_rating_score')
+                .select(
+                  `
+                  *,
+                  rating_score!player_rating_scores_rating_score_id_fkey (
+                    label,
+                    rating_system ( sport_id )
+                  )
                 `
-              *,
-              rating_score!player_rating_scores_rating_score_id_fkey (
-                label,
-                rating_system (
-                  sport_id
                 )
-              )
-            `
-              )
-              .eq('player_id', user.id)
-              .order('is_certified', { ascending: false })
-              .order('created_at', { ascending: false }))(),
-          15000,
-          'Failed to load ratings - connection timeout'
-        ),
+                .eq('player_id', user.id)
+                .order('is_certified', { ascending: false })
+                .order('created_at', { ascending: false }))(),
+            15000,
+            'Failed to load ratings - connection timeout'
+          ),
+        ]);
+        if (sportsResult.error) throw sportsResult.error;
+        if (playerSportsResult.error && playerSportsResult.error.code !== 'PGRST116') {
+          throw playerSportsResult.error;
+        }
+        if (ratingsResult.error && ratingsResult.error.code !== 'PGRST116') {
+          throw ratingsResult.error;
+        }
+        const allSports = sportsResult.data;
+        const playerSports = playerSportsResult.data;
+        const ratingsData = ratingsResult.data;
+        const playerSportsMap = new Map(
+          (playerSports || []).map(ps => [
+            ps.sport_id,
+            { isPrimary: ps.is_primary || false, isActive: ps.is_active || false },
+          ])
+        );
+        const ratingsMap = new Map<string, string>();
+        (ratingsData || []).forEach(rating => {
+          const ratingScore = rating.rating_score as {
+            label?: string;
+            rating_system?: { sport_id?: string };
+          } | null;
+          const sportId = ratingScore?.rating_system?.sport_id;
+          const displayLabel = ratingScore?.label || '';
+          if (sportId && !ratingsMap.has(sportId)) ratingsMap.set(sportId, displayLabel);
+        });
+        const sportsWithStatus: SportWithRating[] = (allSports || []).map(sport => {
+          const sportInfo = playerSportsMap.get(sport.id);
+          return {
+            ...sport,
+            isActive: sportInfo?.isActive || false,
+            isPrimary: sportInfo?.isPrimary || false,
+            ratingLabel: ratingsMap.get(sport.id),
+          };
+        });
+        setSports(sportsWithStatus);
+      } catch (error) {
+        Logger.error('Failed to fetch sports', error as Error);
+        toast.error(getNetworkErrorMessage(error));
+      } finally {
+        setLoadingSports(false);
+      }
+    };
 
-        // Fetch player availabilities
-        withTimeout(
+    // Availabilities
+    const fetchAvailabilities = async () => {
+      try {
+        const availResult = await withTimeout(
           (async () =>
             supabase
               .from('player_availability')
@@ -269,10 +282,40 @@ const UserProfile = () => {
               .eq('is_active', true))(),
           15000,
           'Failed to load availability - connection timeout'
-        ),
+        );
+        if (availResult.error && availResult.error.code !== 'PGRST116') {
+          throw availResult.error;
+        }
+        const availData = availResult.data;
+        const availGrid: AvailabilityGrid = {
+          monday: { morning: false, afternoon: false, evening: false },
+          tuesday: { morning: false, afternoon: false, evening: false },
+          wednesday: { morning: false, afternoon: false, evening: false },
+          thursday: { morning: false, afternoon: false, evening: false },
+          friday: { morning: false, afternoon: false, evening: false },
+          saturday: { morning: false, afternoon: false, evening: false },
+          sunday: { morning: false, afternoon: false, evening: false },
+        };
+        (availData || []).forEach(avail => {
+          const day = avail.day as keyof AvailabilityGrid;
+          const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
+          if (availGrid[day] && period in availGrid[day]) {
+            availGrid[day][period] = true;
+          }
+        });
+        setAvailabilities(availGrid);
+      } catch (error) {
+        Logger.error('Failed to fetch availabilities', error as Error);
+        toast.error(getNetworkErrorMessage(error));
+      } finally {
+        setLoadingAvailabilities(false);
+      }
+    };
 
-        // Fetch pending reference requests count (where user is referee)
-        withTimeout(
+    // Reference requests count
+    const fetchReferenceRequests = async () => {
+      try {
+        const referenceRequestsResult = await withTimeout(
           (async () =>
             supabase
               .from('rating_reference_request')
@@ -281,108 +324,19 @@ const UserProfile = () => {
               .eq('status', 'pending'))(),
           15000,
           'Failed to load reference requests - connection timeout'
-        ),
-      ]);
-
-      // Process profile
-      if (profileResult.error) throw profileResult.error;
-      setProfile(profileResult.data);
-
-      // Process player (PGRST116 = no rows is okay)
-      if (playerResult.error && playerResult.error.code !== 'PGRST116') {
-        throw playerResult.error;
-      }
-      setPlayer(playerResult.data);
-
-      // Process sports
-      if (sportsResult.error) throw sportsResult.error;
-      const allSports = sportsResult.data;
-
-      // Process player sports (PGRST116 = no rows is okay)
-      if (playerSportsResult.error && playerSportsResult.error.code !== 'PGRST116') {
-        throw playerSportsResult.error;
-      }
-      const playerSports = playerSportsResult.data;
-
-      // Process ratings (PGRST116 = no rows is okay)
-      if (ratingsResult.error && ratingsResult.error.code !== 'PGRST116') {
-        throw ratingsResult.error;
-      }
-      const ratingsData = ratingsResult.data;
-
-      // Map sports with active status and ratings
-      const playerSportsMap = new Map(
-        (playerSports || []).map(ps => [
-          ps.sport_id,
-          { isPrimary: ps.is_primary || false, isActive: ps.is_active || false },
-        ])
-      );
-
-      // Map ratings - use the first certified or most recent
-      const ratingsMap = new Map<string, string>();
-      (ratingsData || []).forEach(rating => {
-        const ratingScore = rating.rating_score as {
-          label?: string;
-          rating_system?: { sport_id?: string };
-        } | null;
-        const sportId = ratingScore?.rating_system?.sport_id;
-        const displayLabel = ratingScore?.label || '';
-
-        // Only set if not already set (results are ordered by is_certified desc, created_at desc)
-        if (sportId && !ratingsMap.has(sportId)) {
-          ratingsMap.set(sportId, displayLabel);
+        );
+        if (!referenceRequestsResult.error) {
+          setPendingReferenceRequestsCount(referenceRequestsResult.count || 0);
         }
-      });
-
-      const sportsWithStatus: SportWithRating[] = (allSports || []).map(sport => {
-        const sportInfo = playerSportsMap.get(sport.id);
-        return {
-          ...sport,
-          isActive: sportInfo?.isActive || false,
-          isPrimary: sportInfo?.isPrimary || false,
-          ratingLabel: ratingsMap.get(sport.id),
-        };
-      });
-
-      setSports(sportsWithStatus);
-
-      // Process availabilities (PGRST116 = no rows is okay)
-      if (availResult.error && availResult.error.code !== 'PGRST116') {
-        throw availResult.error;
+      } catch (error) {
+        Logger.error('Failed to fetch reference requests', error as Error);
+        toast.error(getNetworkErrorMessage(error));
+      } finally {
+        setLoadingReferenceRequests(false);
       }
-      const availData = availResult.data;
+    };
 
-      // Convert availability data to grid format
-      const availGrid: AvailabilityGrid = {
-        monday: { morning: false, afternoon: false, evening: false },
-        tuesday: { morning: false, afternoon: false, evening: false },
-        wednesday: { morning: false, afternoon: false, evening: false },
-        thursday: { morning: false, afternoon: false, evening: false },
-        friday: { morning: false, afternoon: false, evening: false },
-        saturday: { morning: false, afternoon: false, evening: false },
-        sunday: { morning: false, afternoon: false, evening: false },
-      };
-
-      (availData || []).forEach(avail => {
-        const day = avail.day as keyof AvailabilityGrid;
-        const period = avail.period as keyof AvailabilityGrid[keyof AvailabilityGrid];
-        if (availGrid[day] && period in availGrid[day]) {
-          availGrid[day][period] = true;
-        }
-      });
-
-      setAvailabilities(availGrid);
-
-      // Process pending reference requests count
-      if (!referenceRequestsResult.error) {
-        setPendingReferenceRequestsCount(referenceRequestsResult.count || 0);
-      }
-    } catch (error) {
-      Logger.error('Failed to fetch user profile data', error as Error);
-      Alert.alert(t('alerts.error'), getNetworkErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([fetchSports(), fetchAvailabilities(), fetchReferenceRequests()]);
   };
 
   // Convert DB format to UI format for the overlay
@@ -434,7 +388,7 @@ const UserProfile = () => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert(t('alerts.error'), t('errors.unauthorized'));
+        toast.error(t('errors.unauthorized'));
         return;
       }
 
@@ -458,7 +412,7 @@ const UserProfile = () => {
       // Get the user's primary sport to save availabilities for
       const primarySport = sports.find(s => s.isPrimary && s.isActive);
       if (!primarySport) {
-        Alert.alert(t('alerts.error'), t('errors.noPrimarySport'));
+        toast.error(t('errors.noPrimarySport'));
         return;
       }
 
@@ -507,11 +461,9 @@ const UserProfile = () => {
         if (insertResult.error) throw insertResult.error;
       }
 
-      // Refresh the data
-      await fetchUserProfileData();
+      await fetchProfileSections();
 
-      // Close the overlay
-      setShowAvailabilitiesOverlay(false);
+      SheetManager.hide('player-availabilities');
 
       toast.success(t('alerts.availabilitiesUpdated'));
     } catch (error) {
@@ -532,13 +484,7 @@ const UserProfile = () => {
 
   const formatGender = (gender: string | null): string => {
     if (!gender) return t('profile.notSet');
-    const genderMap: { [key: string]: string } = {
-      male: t('profile.genderValues.male'),
-      female: t('profile.genderValues.female'),
-      other: t('profile.genderValues.other'),
-      prefer_not_to_say: t('profile.genderValues.preferNotToSay'),
-    };
-    return genderMap[gender] || gender;
+    return t(`profile.genderValues.${gender}` as TranslationKey) || gender;
   };
 
   const formatPlayingHand = (hand: string | null): string => {
@@ -552,100 +498,121 @@ const UserProfile = () => {
   };
 
   const getDayLabel = (day: string): string => {
-    const dayMap: { [key: string]: string } = {
-      monday: 'Mon',
-      tuesday: 'Tue',
-      wednesday: 'Wed',
-      thursday: 'Thu',
-      friday: 'Fri',
-      saturday: 'Sat',
-      sunday: 'Sun',
-    };
-    return dayMap[day] || day;
+    const key = `onboarding.availabilityStep.days.${day}` as TranslationKey;
+    const translated = t(key);
+    return translated !== key ? translated : day;
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-        <View style={styles.loadingContainer}>
-          {/* Profile Header Skeleton */}
-          <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <SkeletonAvatar size={120} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-            <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
-            </View>
-          </View>
-          {/* Profile Details Skeleton */}
-          <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
-              <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <View style={{ marginTop: 12, gap: 12 }}>
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                <Skeleton width="100%" height={44} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              </View>
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const getPeriodLabel = (period: PeriodKey): string => {
+    const keyMap = {
+      morning: 'onboarding.availabilityStep.am',
+      afternoon: 'onboarding.availabilityStep.pm',
+      evening: 'onboarding.availabilityStep.eve',
+    } as const;
+    return t(keyMap[period]);
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Picture with Edit Overlay - Wrapped with CopilotStep for tour */}
         <CopilotStep
-          text={t('tour.profileScreen.picture.description' as TranslationKey)}
+          text={t('tour.profileScreen.picture.description')}
           order={20}
           name="profile_picture"
         >
           <WalkthroughableView style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-            <TouchableOpacity
-              style={[
-                styles.profilePicContainer,
-                { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-              ]}
-              activeOpacity={0.8}
-              onPress={openPicker}
-              disabled={uploadingImage}
-            >
-              {profile?.profile_picture_url || newProfileImage ? (
-                <Image
-                  source={{
-                    uri: newProfileImage || getProfilePictureUrl(profile?.profile_picture_url) || '',
-                  }}
-                  style={styles.profileImage}
+            {loadingCore ? (
+              <>
+                <SkeletonAvatar
+                  size={120}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
                 />
-              ) : (
-                <Ionicons name="camera" size={32} color={colors.primary} />
-              )}
-              {uploadingImage && (
-                <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="large" color={colors.primaryForeground} />
-                  <Text style={[styles.uploadingText, { color: colors.primaryForeground }]}>
-                    {t('profile.uploading')}
+                <View style={{ marginTop: 16, alignItems: 'center' }}>
+                  <Skeleton
+                    width={150}
+                    height={18}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                  />
+                  <Skeleton
+                    width={100}
+                    height={14}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ marginTop: 8 }}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.profilePicWrapper}>
+                  <TouchableOpacity
+                    style={[
+                      styles.profilePicContainer,
+                      { borderColor: colors.primary, backgroundColor: colors.inputBackground },
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={openPicker}
+                    disabled={uploadingImage}
+                  >
+                    {profile?.profile_picture_url || newProfileImage ? (
+                      <Image
+                        source={{
+                          uri:
+                            newProfileImage ||
+                            getProfilePictureUrl(profile?.profile_picture_url) ||
+                            '',
+                        }}
+                        style={styles.profileImage}
+                      />
+                    ) : (
+                      <Ionicons name="camera-outline" size={32} color={colors.primary} />
+                    )}
+                    {uploadingImage && (
+                      <View style={styles.uploadingOverlay}>
+                        <ActivityIndicator size="large" color={colors.primaryForeground} />
+                        <Text style={[styles.uploadingText, { color: colors.primaryForeground }]}>
+                          {t('profile.uploading')}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {!uploadingImage && (
+                    <View
+                      style={[
+                        styles.profilePicEditBadge,
+                        { backgroundColor: colors.primary, borderColor: colors.card },
+                      ]}
+                    >
+                      <Ionicons name="camera-outline" size={14} color={colors.primaryForeground} />
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.profilePicHint, { color: colors.textMuted }]}>
+                  {t('profile.tapToChangePhoto')}
+                </Text>
+
+                {/* First and last name first, then username */}
+                <Text style={[styles.profileName, { color: colors.text }]}>
+                  {`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() ||
+                    profile?.display_name ||
+                    t('profile.user')}
+                </Text>
+                <Text style={[styles.username, { color: colors.textMuted }]}>
+                  @{profile?.display_name?.replace(/\s/g, '') || t('profile.username')}
+                </Text>
+
+                {/* Joined Date */}
+                <View style={styles.joinedContainer}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                  <Text style={[styles.joinedText, { color: colors.textMuted }]}>
+                    {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
                   </Text>
                 </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Name and Username */}
-            <Text style={[styles.profileName, { color: colors.text }]}>
-              {profile?.display_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || t('profile.user')}
-            </Text>
-            <Text style={[styles.username, { color: colors.textMuted }]}>
-              @{profile?.display_name?.toLowerCase().replace(/\s/g, '') || t('profile.username')}
-            </Text>
-
-            {/* Joined Date */}
-            <View style={styles.joinedContainer}>
-              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-              <Text style={[styles.joinedText, { color: colors.textMuted }]}>
-                {t('profile.joined')} {formatJoinedDate(player?.created_at || null)}
-              </Text>
-            </View>
+              </>
+            )}
           </WalkthroughableView>
         </CopilotStep>
 
@@ -655,63 +622,127 @@ const UserProfile = () => {
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
               {t('profile.sections.personalInformation')}
             </Text>
-            <TouchableOpacity
-              style={styles.editIconButton}
-              onPress={() => setShowPersonalInfoOverlay(true)}
-            >
-              <Ionicons name="create-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            {!loadingCore && (
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => {
+                  SheetManager.show('personal-information', {
+                    payload: {
+                      mode: 'edit',
+                      initialData: {
+                        firstName: profile?.first_name || '',
+                        lastName: profile?.last_name || '',
+                        username: profile?.display_name || '',
+                        email: profile?.email || '',
+                        dateOfBirth: profile?.birth_date || '',
+                        gender: player?.gender || '',
+                        phoneNumber: profile?.phone || '',
+                        profilePictureUrl: profile?.profile_picture_url || undefined,
+                      },
+                      onSave: () => {
+                        refetchProfile();
+                        refetchPlayer();
+                      },
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.firstName')}
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                {profile?.first_name || '-'}
-              </Text>
+          {loadingCore ? (
+            <View
+              style={[
+                styles.card,
+                styles.skeletonCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Skeleton
+                width={120}
+                height={18}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <View style={{ marginTop: 12, gap: 12 }}>
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <Skeleton
+                  width="100%"
+                  height={44}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+              </View>
             </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.lastName')}
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                {profile?.last_name || '-'}
-              </Text>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.fields.firstName')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {profile?.first_name || '-'}
+                </Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.fields.lastName')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {profile?.last_name || '-'}
+                </Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.fields.email')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>{profile?.email || '-'}</Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.fields.phoneNumber')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>{profile?.phone || '-'}</Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.fields.dateOfBirth')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {formatDate(profile?.birth_date || null)}
+                </Text>
+              </View>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.compactRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>
+                  {t('profile.gender')}
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {formatGender(player?.gender || null)}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.email')}
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>{profile?.email || '-'}</Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.phoneNumber')}
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>{profile?.phone || '-'}</Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>
-                {t('profile.fields.dateOfBirth')}
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                {formatDate(profile?.birth_date || null)}
-              </Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.compactRow}>
-              <Text style={[styles.label, { color: colors.textMuted }]}>{t('profile.gender')}</Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                {formatGender(player?.gender || null)}
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* My Player Information with Edit Icon */}
@@ -720,50 +751,228 @@ const UserProfile = () => {
             <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
               {t('profile.sections.playerInformation')}
             </Text>
-            <TouchableOpacity
-              style={styles.editIconButton}
-              onPress={() => setShowPlayerInfoOverlay(true)}
+            {!loadingCore && (
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => {
+                  SheetManager.show('player-information', {
+                    payload: {
+                      initialData: {
+                        username: profile?.display_name || '',
+                        bio: profile?.bio || '',
+                        preferredPlayingHand: player?.playing_hand || '',
+                        maximumTravelDistance: player?.max_travel_distance || 5,
+                      },
+                      onSave: () => {
+                        refetchProfile();
+                        refetchPlayer();
+                      },
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loadingCore ? (
+            <View
+              style={[
+                styles.card,
+                styles.skeletonCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
             >
-              <Ionicons name="create-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.card, { backgroundColor: colors.card }]}>
-            {/* Bio - Vertical Layout */}
-            <View style={styles.verticalField}>
-              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
-                {t('profile.bio')}
-              </Text>
-              <Text style={[styles.fieldValue, { color: colors.text }]}>
-                {profile?.bio || t('profile.status.noBio')}
-              </Text>
+              <Skeleton
+                width={80}
+                height={14}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <View style={{ marginTop: 8, gap: 8 }}>
+                <Skeleton
+                  width="100%"
+                  height={48}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <View style={styles.horizontalFieldsContainer}>
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
             </View>
-
-            {/* Playing Hand and Max Travel Distance - Side by Side */}
-            <View style={styles.horizontalFieldsContainer}>
-              <View style={styles.halfField}>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              {/* Bio - Vertical Layout */}
+              <View style={styles.verticalField}>
                 <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.playingHand')}
+                  {t('profile.bio')}
                 </Text>
                 <Text style={[styles.fieldValue, { color: colors.text }]}>
-                  {formatPlayingHand(player?.playing_hand || null)}
+                  {profile?.bio || t('profile.status.noBio')}
                 </Text>
               </View>
-              <View style={styles.halfField}>
-                <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
-                  {t('profile.fields.maxTravelDistance')}
-                </Text>
-                <Text style={[styles.fieldValue, { color: colors.text }]}>
-                  {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
-                </Text>
+
+              {/* Playing Hand and Max Travel Distance - Side by Side */}
+              <View style={styles.horizontalFieldsContainer}>
+                <View style={styles.halfField}>
+                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
+                    {t('profile.fields.playingHand')}
+                  </Text>
+                  <Text style={[styles.fieldValue, { color: colors.text }]}>
+                    {formatPlayingHand(player?.playing_hand || null)}
+                  </Text>
+                </View>
+                <View style={styles.halfField}>
+                  <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>
+                    {t('profile.fields.maxTravelDistance')}
+                  </Text>
+                  <Text style={[styles.fieldValue, { color: colors.text }]}>
+                    {player?.max_travel_distance ? `${player.max_travel_distance} km` : '-'}
+                  </Text>
+                </View>
               </View>
             </View>
+          )}
+        </View>
+
+        {/* My Location */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+              {t('profile.sections.location')}
+            </Text>
+            {!loadingCore && (
+              <TouchableOpacity
+                style={styles.editIconButton}
+                onPress={() => {
+                  SheetManager.show('player-location', {
+                    payload: {
+                      initialData: {
+                        postalCode: player?.postal_code || '',
+                        address: player?.address || '',
+                        city: player?.city || '',
+                        province: player?.province || '',
+                        latitude: player?.latitude,
+                        longitude: player?.longitude,
+                      },
+                      onSave: () => {
+                        refetchPlayer();
+                      },
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
+
+          {loadingCore ? (
+            <View
+              style={[
+                styles.card,
+                styles.skeletonCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Skeleton
+                width={80}
+                height={14}
+                backgroundColor={skeletonBg}
+                highlightColor={skeletonHighlight}
+              />
+              <View style={{ marginTop: 8, gap: 8 }}>
+                <Skeleton
+                  width="100%"
+                  height={40}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <Skeleton
+                  width="100%"
+                  height={40}
+                  borderRadius={8}
+                  backgroundColor={skeletonBg}
+                  highlightColor={skeletonHighlight}
+                />
+                <View style={styles.horizontalFieldsContainer}>
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                  <Skeleton
+                    width="100%"
+                    height={40}
+                    borderRadius={8}
+                    backgroundColor={skeletonBg}
+                    highlightColor={skeletonHighlight}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: colors.card }]}>
+              {player?.address ? (
+                <View style={styles.compactRow}>
+                  <Text style={[styles.label, { color: colors.textMuted }]}>
+                    {t('profile.fields.address')}
+                  </Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
+                      {[player.address.split(',')[0].trim(), player?.city]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </Text>
+                    {(player?.province || player?.postal_code) && (
+                      <Text style={[styles.value, { color: colors.textMuted }]} numberOfLines={1}>
+                        {[player?.province, player?.postal_code, 'Canada']
+                          .filter(Boolean)
+                          .join(', ')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.compactRow}>
+                  <Text style={[styles.label, { color: colors.textMuted }]}>
+                    {t('profile.fields.postalCode')}
+                  </Text>
+                  <Text style={[styles.value, { color: colors.text }]}>
+                    {player?.postal_code || '-'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* My Sports - Horizontal Cards with Chevrons - Wrapped with CopilotStep */}
         <CopilotStep
-          text={t('tour.profileScreen.sports.description' as TranslationKey)}
+          text={t('tour.profileScreen.sports.description')}
           order={21}
           name="profile_sports"
         >
@@ -774,94 +983,127 @@ const UserProfile = () => {
               </Text>
             </View>
 
-            <View style={styles.sportsCardsContainer}>
-              {sports.map(sport => (
-                <TouchableOpacity
-                  key={sport.id}
-                  style={[
-                    styles.sportCard,
-                    {
-                      backgroundColor: sport.isActive ? colors.card : colors.inputBackground,
-                    },
-                    !sport.isActive && styles.sportCardInactive,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    navigation.navigate('SportProfile', {
-                      sportId: sport.id,
-                      sportName: sport.display_name as 'tennis' | 'pickleball',
-                    });
-                  }}
-                >
-                  <View style={styles.sportCardLeft}>
-                    <Text
-                      style={[
-                        styles.sportName,
-                        {
-                          color: sport.isActive ? colors.text : colors.textMuted,
-                        },
+            {loadingSports ? (
+              <View style={styles.sportsCardsContainer}>
+                {[1, 2, 3].map(i => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.sportCard,
+                      styles.skeletonCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
                     ]}
                   >
-                    {sport.display_name}
+                    <Skeleton
+                      width={80}
+                      height={18}
+                      backgroundColor={skeletonBg}
+                      highlightColor={skeletonHighlight}
+                    />
+                    <Skeleton
+                      width={60}
+                      height={20}
+                      borderRadius={radiusPixels.xl}
+                      backgroundColor={skeletonBg}
+                      highlightColor={skeletonHighlight}
+                      style={{ marginTop: 8 }}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.sportsCardsContainer}>
+                {sports.map(sport => (
+                  <TouchableOpacity
+                    key={sport.id}
+                    style={[
+                      styles.sportCard,
+                      {
+                        backgroundColor: sport.isActive ? colors.card : colors.inputBackground,
+                      },
+                      !sport.isActive && styles.sportCardInactive,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      navigation.navigate('SportProfile', {
+                        sportId: sport.id,
+                        sportName: sport.display_name as 'tennis' | 'pickleball',
+                      });
+                    }}
+                  >
+                    <View style={styles.sportCardLeft}>
+                      <Text
+                        style={[
+                          styles.sportName,
+                          {
+                            color: sport.isActive ? colors.text : colors.textMuted,
+                          },
+                        ]}
+                      >
+                        {sport.display_name}
+                      </Text>
+                      {sport.isActive ? (
+                        <View
+                          style={[
+                            styles.activeBadge,
+                            { backgroundColor: isDark ? primary[900] : primary[100] },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.activeBadgeText,
+                              { color: isDark ? primary[100] : primary[600] },
+                            ]}
+                          >
+                            {t('profile.status.active')}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.inactiveBadge,
+                            { backgroundColor: colors.inputBackground },
+                          ]}
+                        >
+                          <Text style={[styles.inactiveBadgeText, { color: colors.textMuted }]}>
+                            {t('profile.status.inactive')}
+                          </Text>
+                        </View>
+                      )}
+                      {sport.isActive && sport.ratingLabel && (
+                        <View
+                          style={[
+                            styles.ratingBadge,
+                            { backgroundColor: isDark ? primary[900] : primary[100] },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.ratingBadgeText,
+                              { color: isDark ? primary[100] : primary[600] },
+                            ]}
+                          >
+                            {sport.ratingLabel}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
+                {sports.length === 0 && (
+                  <Text style={[styles.noDataText, { color: colors.textMuted }]}>
+                    {t('profile.status.noSports')}
                   </Text>
-                  {sport.isActive ? (
-                    <View
-                      style={[
-                        styles.activeBadge,
-                        { backgroundColor: isDark ? primary[900] : primary[100] },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.activeBadgeText,
-                          { color: isDark ? primary[100] : primary[600] },
-                        ]}
-                      >
-                        {t('profile.status.active')}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View
-                      style={[styles.inactiveBadge, { backgroundColor: colors.inputBackground }]}
-                    >
-                      <Text style={[styles.inactiveBadgeText, { color: colors.textMuted }]}>
-                        {t('profile.status.inactive')}
-                      </Text>
-                    </View>
-                  )}
-                  {sport.isActive && sport.ratingLabel && (
-                    <View
-                      style={[
-                        styles.ratingBadge,
-                        { backgroundColor: isDark ? primary[900] : primary[100] },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.ratingBadgeText,
-                          { color: isDark ? primary[100] : primary[600] },
-                        ]}
-                      >
-                        {sport.ratingLabel}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            ))}
-            {sports.length === 0 && (
-              <Text style={[styles.noDataText, { color: colors.textMuted }]}>
-                {t('profile.status.noSports')}
-              </Text>
+                )}
+              </View>
             )}
-            </View>
           </WalkthroughableView>
         </CopilotStep>
 
         {/* My Availabilities with Edit Icon - Wrapped with CopilotStep */}
         <CopilotStep
-          text={t('tour.profileScreen.availability.description' as TranslationKey)}
+          text={t('tour.profileScreen.availability.description')}
           order={22}
           name="profile_availability"
         >
@@ -870,74 +1112,118 @@ const UserProfile = () => {
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
                 {t('profile.sections.availabilities')}
               </Text>
-              <TouchableOpacity
-                style={styles.editIconButton}
-                onPress={() => setShowAvailabilitiesOverlay(true)}
-              >
-                <Ionicons name="create-outline" size={20} color={colors.primary} />
-              </TouchableOpacity>
+              {!loadingAvailabilities && (
+                <TouchableOpacity
+                  style={styles.editIconButton}
+                  onPress={() => {
+                    SheetManager.show('player-availabilities', {
+                      payload: {
+                        mode: 'edit',
+                        initialData: convertToUIFormat(availabilities),
+                        onSave: handleSaveAvailabilities,
+                      },
+                    });
+                  }}
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              )}
             </View>
 
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
-              {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
-              <View style={styles.gridContainer}>
-              {/* Header Row */}
-              <View style={styles.gridRow}>
-                <View style={styles.dayCell} />
-                {['AM', 'PM', 'EVE'].map(slot => (
-                  <View key={slot} style={styles.headerCell}>
-                    <Text size="xs" weight="semibold" color={colors.textMuted}>
-                      {slot}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Day Rows */}
-              {Object.keys(availabilities).map(day => (
-                <View key={day} style={styles.gridRow}>
-                  <View style={styles.dayCell}>
-                    <Text size="sm" weight="medium" color={colors.text}>
-                      {getDayLabel(day)}
-                    </Text>
-                  </View>
-                  {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
-                    <View key={period} style={styles.timeSlotWrapper}>
-                      <View
-                        style={[
-                          styles.timeSlotCell,
-                          {
-                            backgroundColor: colors.inputBackground,
-                          },
-                          availabilities[day]?.[period] && [
-                            styles.timeSlotCellSelected,
-                            { backgroundColor: colors.primary, borderColor: colors.primary },
-                          ],
-                        ]}
-                      >
-                        <Text
-                          size="xs"
-                          weight="semibold"
-                          color={
-                            availabilities[day]?.[period]
-                              ? colors.primaryForeground
-                              : colors.textMuted
-                          }
-                        >
-                          {period === 'morning' ? 'AM' : period === 'afternoon' ? 'PM' : 'EVE'}
-                        </Text>
-                      </View>
+            {loadingAvailabilities ? (
+              <View
+                style={[
+                  styles.card,
+                  styles.skeletonCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.gridContainer}>
+                  {[1, 2, 3, 4, 5, 6, 7].map(row => (
+                    <View key={row} style={styles.gridRow}>
+                      <Skeleton
+                        width={40}
+                        height={14}
+                        backgroundColor={skeletonBg}
+                        highlightColor={skeletonHighlight}
+                      />
+                      {[1, 2, 3].map(cell => (
+                        <View key={cell} style={styles.timeSlotWrapper}>
+                          <Skeleton
+                            width="100%"
+                            height={36}
+                            borderRadius={radiusPixels.lg}
+                            backgroundColor={skeletonBg}
+                            highlightColor={skeletonHighlight}
+                          />
+                        </View>
+                      ))}
                     </View>
                   ))}
                 </View>
-              ))}
               </View>
-            </View>
+            ) : (
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
+                {/* Availability Grid - Same as PlayerAvailabilitiesOverlay */}
+                <View style={styles.gridContainer}>
+                  {/* Header Row */}
+                  <View style={styles.gridRow}>
+                    <View style={styles.dayCell} />
+                    {['AM', 'PM', 'EVE'].map(slot => (
+                      <View key={slot} style={styles.headerCell}>
+                        <Text size="xs" weight="semibold" color={colors.textMuted}>
+                          {slot}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Day Rows */}
+                  {Object.keys(availabilities).map(day => (
+                    <View key={day} style={styles.gridRow}>
+                      <View style={styles.dayCell}>
+                        <Text size="sm" weight="medium" color={colors.text}>
+                          {getDayLabel(day)}
+                        </Text>
+                      </View>
+                      {(['morning', 'afternoon', 'evening'] as PeriodKey[]).map(period => (
+                        <View key={period} style={styles.timeSlotWrapper}>
+                          <View
+                            style={[
+                              styles.timeSlotCell,
+                              {
+                                backgroundColor: colors.inputBackground,
+                              },
+                              availabilities[day]?.[period] && [
+                                styles.timeSlotCellSelected,
+                                { backgroundColor: colors.primary, borderColor: colors.primary },
+                              ],
+                            ]}
+                          >
+                            <Text
+                              size="xs"
+                              weight="semibold"
+                              color={
+                                availabilities[day]?.[period]
+                                  ? colors.primaryForeground
+                                  : colors.textMuted
+                              }
+                            >
+                              {getPeriodLabel(period)}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </WalkthroughableView>
         </CopilotStep>
 
-        {/* Reference Requests Section - Only show if there are pending requests */}
-        {pendingReferenceRequestsCount > 0 && (
+        {/* Reference Requests Section - Only show when loaded; show card if count > 0 */}
+        {!loadingReferenceRequests && pendingReferenceRequestsCount > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
@@ -974,13 +1260,13 @@ const UserProfile = () => {
                   </View>
                 </View>
                 <View style={styles.referenceRequestRight}>
-                  <View
-                    style={[
-                      styles.referenceRequestBadge,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  >
-                    <Text style={[styles.referenceRequestBadgeText, { color: colors.primaryForeground }]}>
+                  <View style={[styles.referenceRequestBadge, { backgroundColor: colors.primary }]}>
+                    <Text
+                      style={[
+                        styles.referenceRequestBadgeText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
                       {pendingReferenceRequestsCount}
                     </Text>
                   </View>
@@ -994,66 +1280,6 @@ const UserProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Personal Information Edit Overlay */}
-      <PersonalInformationOverlay
-        visible={showPersonalInfoOverlay}
-        onClose={() => setShowPersonalInfoOverlay(false)}
-        onSave={() => {
-          // Only refresh data when save is successful
-          fetchUserProfileData();
-        }}
-        mode="edit"
-        initialData={{
-          firstName: profile?.first_name || '',
-          lastName: profile?.last_name || '',
-          username: profile?.display_name || '',
-          email: profile?.email || '',
-          dateOfBirth: profile?.birth_date || '',
-          gender: player?.gender || '',
-          phoneNumber: profile?.phone || '',
-          profilePictureUrl: profile?.profile_picture_url || undefined,
-        }}
-      />
-
-      {/* Player Information Edit Overlay */}
-      <PlayerInformationOverlay
-        visible={showPlayerInfoOverlay}
-        onClose={() => setShowPlayerInfoOverlay(false)}
-        onSave={() => {
-          // Only refresh data when save is successful
-          fetchUserProfileData();
-        }}
-        initialData={{
-          username: profile?.display_name || '',
-          bio: profile?.bio || '',
-          preferredPlayingHand: player?.playing_hand || '',
-          maximumTravelDistance: player?.max_travel_distance || 5,
-        }}
-      />
-
-      {/* Player Availabilities Edit Overlay */}
-      <PlayerAvailabilitiesOverlay
-        visible={showAvailabilitiesOverlay}
-        onClose={() => setShowAvailabilitiesOverlay(false)}
-        mode="edit"
-        initialData={convertToUIFormat(availabilities)}
-        onSave={handleSaveAvailabilities}
-      />
-
-      {/* Image Picker Sheet */}
-      <ImagePickerSheet
-        visible={showPicker}
-        onClose={closePicker}
-        onTakePhoto={pickFromCamera}
-        onChooseFromGallery={pickFromGallery}
-        title={t('profile.profilePicture')}
-        cameraLabel={t('profile.takePhoto')}
-        galleryLabel={t('profile.chooseFromGallery')}
-        cancelLabel={t('common.cancel')}
-        cameraDisabled={!permissions.camera}
-        galleryDisabled={!permissions.library}
-      />
     </SafeAreaView>
   );
 };
@@ -1093,14 +1319,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacingPixels[6],
     paddingHorizontal: spacingPixels[4],
   },
+  profilePicWrapper: {
+    position: 'relative',
+    marginBottom: spacingPixels[1],
+  },
   profilePicContainer: {
     width: spacingPixels[20],
     height: spacingPixels[20],
     borderRadius: radiusPixels.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacingPixels[3],
     borderWidth: 2,
+  },
+  profilePicEditBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  profilePicHint: {
+    fontSize: fontSizePixels.xs,
+    marginBottom: spacingPixels[3],
   },
   profileImage: {
     width: spacingPixels[20],
@@ -1115,6 +1360,10 @@ const styles = StyleSheet.create({
   username: {
     fontSize: fontSizePixels.sm,
     marginBottom: spacingPixels[2],
+  },
+  reputationContainer: {
+    marginTop: spacingPixels[2],
+    marginBottom: spacingPixels[1],
   },
   joinedContainer: {
     flexDirection: 'row',
@@ -1149,6 +1398,9 @@ const styles = StyleSheet.create({
     padding: spacingPixels[4],
     ...shadowsNative.sm,
   },
+  skeletonCard: {
+    borderWidth: 1,
+  },
   compactRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1157,13 +1409,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: fontSizePixels.sm,
-    flex: 1,
+    flexShrink: 0,
+    marginRight: spacingPixels[3],
   },
   value: {
     fontSize: fontSizePixels.sm,
     fontWeight: fontWeightNumeric.medium,
     flex: 1,
     textAlign: 'right',
+    minWidth: 0,
   },
   bioText: {
     textAlign: 'right',

@@ -9,17 +9,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-} from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { useTour } from '../context/TourContext';
 import { tourService } from '@rallia/shared-services';
@@ -149,16 +141,12 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
 
           {/* Title */}
           <Text style={styles.title}>
-            {isReturningUser
-              ? t('tour.welcome.returnUser.title')
-              : t('tour.welcome.title')}
+            {isReturningUser ? t('tour.welcome.returnUser.title') : t('tour.welcome.title')}
           </Text>
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            {isReturningUser
-              ? t('tour.welcome.returnUser.subtitle')
-              : t('tour.welcome.subtitle')}
+            {isReturningUser ? t('tour.welcome.returnUser.subtitle') : t('tour.welcome.subtitle')}
           </Text>
 
           {/* Feature highlights */}
@@ -167,14 +155,8 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
               icon="game-controller-outline"
               text={t('tour.mainNavigation.matches.title')}
             />
-            <FeatureItem
-              icon="chatbubbles-outline"
-              text={t('tour.mainNavigation.chat.title')}
-            />
-            <FeatureItem
-              icon="person-outline"
-              text={t('tour.mainNavigation.profile.title')}
-            />
+            <FeatureItem icon="chatbubbles-outline" text={t('tour.mainNavigation.chat.title')} />
+            <FeatureItem icon="person-outline" text={t('tour.mainNavigation.profile.title')} />
           </View>
 
           {/* Buttons */}
@@ -200,9 +182,7 @@ export const WelcomeTourModal: React.FC<WelcomeTourModalProps> = ({
               style={styles.secondaryButton}
               onPress={handleSkipTour}
               accessibilityLabel={
-                isReturningUser
-                  ? t('tour.welcome.returnUser.noThanks')
-                  : t('tour.welcome.skipTour')
+                isReturningUser ? t('tour.welcome.returnUser.noThanks') : t('tour.welcome.skipTour')
               }
               accessibilityRole="button"
             >

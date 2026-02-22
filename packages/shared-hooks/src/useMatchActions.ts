@@ -15,7 +15,9 @@ import {
   kickParticipant,
   cancelInvitation,
   resendInvitation,
+  checkInToMatch,
   type JoinMatchResult,
+  type CheckInResult,
 } from '@rallia/shared-services';
 import type { Match, MatchParticipant } from '@rallia/shared-types';
 import { matchKeys } from './useCreateMatch';
@@ -113,6 +115,16 @@ export interface UseMatchActionsOptions {
    * Callback when resend invitation fails
    */
   onResendInviteError?: (error: Error) => void;
+
+  /**
+   * Callback when check-in succeeds
+   */
+  onCheckInSuccess?: (result: CheckInResult) => void;
+
+  /**
+   * Callback when check-in fails
+   */
+  onCheckInError?: (result: CheckInResult) => void;
 }
 
 /**
@@ -171,25 +183,31 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     onCancelInviteError,
     onResendInviteSuccess,
     onResendInviteError,
+    onCheckInSuccess,
+    onCheckInError,
   } = options;
 
   const queryClient = useQueryClient();
 
   /**
-   * Invalidate and refetch all relevant match queries after an action
+   * Invalidate and refetch all relevant match queries after an action.
+   * Uses invalidateQueries (not resetQueries) to keep showing cached data
+   * while refetching in the background - this prevents UI flash to loading state.
    */
   const invalidateMatchQueries = async () => {
     // Invalidate the specific match detail
     if (matchId) {
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: matchKeys.detail(matchId),
+        refetchType: 'all',
       });
     }
 
-    // Reset all match list queries - this clears pagination state for infinite queries
-    // and triggers a fresh fetch from the first page
-    await queryClient.resetQueries({
+    // Invalidate all match list queries - marks them as stale and triggers refetch
+    // while keeping cached data visible (no loading flash)
+    await queryClient.invalidateQueries({
       queryKey: matchKeys.lists(),
+      refetchType: 'all',
     });
   };
 
@@ -357,6 +375,33 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     },
   });
 
+  // Check-In Mutation - for participants checking in at match location
+  const checkInMutation = useMutation<
+    CheckInResult,
+    Error,
+    { playerId: string; latitude: number; longitude: number }
+  >({
+    mutationFn: async ({ playerId, latitude, longitude }) => {
+      if (!matchId) throw new Error('Match ID is required');
+      return checkInToMatch(matchId, playerId, latitude, longitude);
+    },
+    onSuccess: async result => {
+      if (result.success) {
+        // Wait for cache invalidation before calling success callback
+        await invalidateMatchQueries();
+        onCheckInSuccess?.(result);
+      } else {
+        // Check-in failed due to distance or other reason
+        onCheckInError?.(result);
+      }
+    },
+    onError: error => {
+      // Unexpected error during check-in
+      onCheckInError?.({ success: false, error: 'unknown' });
+      console.error('[useMatchActions] Check-in error:', error);
+    },
+  });
+
   return {
     // Join actions
     /**
@@ -453,6 +498,20 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
     isResendingInvite: resendInviteMutation.isPending,
     resendInviteError: resendInviteMutation.error,
 
+    // Check-in actions (participant only)
+    /**
+     * Check in to a match (participant only)
+     * Verifies player is within 100m of match location
+     * @param params.playerId - The player's ID
+     * @param params.latitude - Current latitude
+     * @param params.longitude - Current longitude
+     */
+    checkIn: checkInMutation.mutate,
+    checkInAsync: checkInMutation.mutateAsync,
+    isCheckingIn: checkInMutation.isPending,
+    checkInResult: checkInMutation.data,
+    checkInError: checkInMutation.error,
+
     // Combined loading state
     /**
      * Whether any action is in progress
@@ -466,7 +525,8 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       cancelRequestMutation.isPending ||
       kickMutation.isPending ||
       cancelInviteMutation.isPending ||
-      resendInviteMutation.isPending,
+      resendInviteMutation.isPending ||
+      checkInMutation.isPending,
 
     // Reset all mutations
     /**
@@ -482,6 +542,7 @@ export function useMatchActions(matchId: string | undefined, options: UseMatchAc
       kickMutation.reset();
       cancelInviteMutation.reset();
       resendInviteMutation.reset();
+      checkInMutation.reset();
     },
   };
 }

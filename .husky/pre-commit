@@ -1,1 +1,17 @@
+# Run lint-staged for formatting/linting
 npm run lint-staged
+
+# Quick validation checks (only if relevant files are staged)
+STAGED_FILES=$(git diff --cached --name-only)
+
+# Check translations if i18n files were modified
+if echo "$STAGED_FILES" | grep -q "shared-translations"; then
+  echo "🌐 Validating translations..."
+  npm run validate-i18n --silent || exit 1
+fi
+
+# Check dependencies if package.json was modified
+if echo "$STAGED_FILES" | grep -q "package.json"; then
+  echo "📦 Checking dependencies..."
+  npm run check-deps --silent || exit 1
+fi

@@ -1,13 +1,13 @@
 /**
  * RespondToReferenceOverlay Component
- * 
+ *
  * Overlay for responding to a reference request.
  * Allows users to:
  * - View the requester's profile info
  * - See the claimed rating they're asked to validate
  * - Approve (support) or decline the rating
  * - Add an optional message
- * 
+ *
  * UX Design:
  * - Clear visual hierarchy showing who's asking and what they claim
  * - Easy approve/decline buttons with haptic feedback
@@ -80,7 +80,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
-  
+
   const [responseMessage, setResponseMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState<'approve' | 'decline' | null>(null);
@@ -93,7 +93,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
     if (visible) {
       setSelectedResponse(null);
       setResponseMessage('');
-      
+
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -200,19 +200,23 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
           <View style={[styles.requesterCard, { backgroundColor: colors.inputBackground }]}>
             <View style={styles.requesterHeader}>
               {request.requester.profile_picture_url ? (
-                <Image 
-                  source={{ uri: request.requester.profile_picture_url }} 
-                  style={styles.avatar} 
+                <Image
+                  source={{ uri: request.requester.profile_picture_url }}
+                  style={styles.avatar}
                 />
               ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.card }]}>
-                  <Ionicons name="person" size={24} color={colors.textMuted} />
+                <View
+                  style={[
+                    styles.avatar,
+                    styles.avatarPlaceholder,
+                    { backgroundColor: colors.card },
+                  ]}
+                >
+                  <Ionicons name="person-outline" size={24} color={colors.textMuted} />
                 </View>
               )}
               <View style={styles.requesterInfo}>
-                <Text style={[styles.requesterName, { color: colors.text }]}>
-                  {requesterName}
-                </Text>
+                <Text style={[styles.requesterName, { color: colors.text }]}>{requesterName}</Text>
                 <Text style={[styles.sportLabel, { color: colors.textSecondary }]}>
                   {request.rating_info.sport_display_name}
                 </Text>
@@ -269,20 +273,27 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
               onPress={() => handleSelectResponse('approve')}
               activeOpacity={0.7}
             >
-              <View style={[
-                styles.responseIcon,
-                { backgroundColor: selectedResponse === 'approve' ? status.success.DEFAULT : colors.card },
-              ]}>
-                <Ionicons 
-                  name="checkmark" 
-                  size={24} 
-                  color={selectedResponse === 'approve' ? '#fff' : colors.textMuted} 
+              <View
+                style={[
+                  styles.responseIcon,
+                  {
+                    backgroundColor:
+                      selectedResponse === 'approve' ? status.success.DEFAULT : colors.card,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark"
+                  size={24}
+                  color={selectedResponse === 'approve' ? '#fff' : colors.textMuted}
                 />
               </View>
-              <Text style={[
-                styles.responseLabel, 
-                { color: selectedResponse === 'approve' ? status.success.DEFAULT : colors.text }
-              ]}>
+              <Text
+                style={[
+                  styles.responseLabel,
+                  { color: selectedResponse === 'approve' ? status.success.DEFAULT : colors.text },
+                ]}
+              >
                 {t('referenceRequest.yesApprove')}
               </Text>
               <Text style={[styles.responseDescription, { color: colors.textMuted }]}>
@@ -302,20 +313,27 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
               onPress={() => handleSelectResponse('decline')}
               activeOpacity={0.7}
             >
-              <View style={[
-                styles.responseIcon,
-                { backgroundColor: selectedResponse === 'decline' ? status.error.DEFAULT : colors.card },
-              ]}>
-                <Ionicons 
-                  name="close" 
-                  size={24} 
-                  color={selectedResponse === 'decline' ? '#fff' : colors.textMuted} 
+              <View
+                style={[
+                  styles.responseIcon,
+                  {
+                    backgroundColor:
+                      selectedResponse === 'decline' ? status.error.DEFAULT : colors.card,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color={selectedResponse === 'decline' ? '#fff' : colors.textMuted}
                 />
               </View>
-              <Text style={[
-                styles.responseLabel, 
-                { color: selectedResponse === 'decline' ? status.error.DEFAULT : colors.text }
-              ]}>
+              <Text
+                style={[
+                  styles.responseLabel,
+                  { color: selectedResponse === 'decline' ? status.error.DEFAULT : colors.text },
+                ]}
+              >
                 {t('referenceRequest.noDecline')}
               </Text>
               <Text style={[styles.responseDescription, { color: colors.textMuted }]}>
@@ -332,7 +350,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
             <TextInput
               style={[
                 styles.messageInput,
-                { 
+                {
                   backgroundColor: colors.inputBackground,
                   color: colors.text,
                   borderColor: colors.border,
@@ -355,7 +373,7 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
           <TouchableOpacity
             style={[
               styles.submitButton,
-              { 
+              {
                 backgroundColor: selectedResponse ? colors.primary : colors.border,
               },
             ]}
@@ -369,15 +387,17 @@ export const RespondToReferenceOverlay: React.FC<RespondToReferenceOverlayProps>
               </Text>
             ) : (
               <>
-                <Ionicons 
-                  name="send" 
-                  size={18} 
-                  color={selectedResponse ? colors.primaryForeground : colors.textMuted} 
+                <Ionicons
+                  name="send"
+                  size={18}
+                  color={selectedResponse ? colors.primaryForeground : colors.textMuted}
                 />
-                <Text style={[
-                  styles.submitButtonText, 
-                  { color: selectedResponse ? colors.primaryForeground : colors.textMuted }
-                ]}>
+                <Text
+                  style={[
+                    styles.submitButtonText,
+                    { color: selectedResponse ? colors.primaryForeground : colors.textMuted },
+                  ]}
+                >
                   {t('referenceRequest.submitResponse')}
                 </Text>
               </>

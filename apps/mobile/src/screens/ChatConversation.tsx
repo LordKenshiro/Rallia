@@ -4,20 +4,21 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert, Keyboard } from 'react-native';
 import { Skeleton, SkeletonAvatar, useToast } from '@rallia/shared-components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
-import { useThemeStyles, useAuth, useProfile, useTranslation, type TranslationKey } from '../hooks';
+import {
+  useThemeStyles,
+  useAuth,
+  useProfile,
+  useTranslation,
+  useNavigateToPlayerProfile,
+  type TranslationKey,
+} from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useConversation,
@@ -35,31 +36,27 @@ import {
   useBlockedStatus,
   useFavoriteStatus,
 } from '@rallia/shared-hooks';
-import { 
-  getMessagesReactions, 
-  getNetworkByConversationId, 
+import {
+  getMessagesReactions,
+  getNetworkByConversationId,
   deleteMessage,
   type ReactionSummary,
   type MessageWithSender,
 } from '@rallia/shared-services';
-import { 
-  ChatHeader, 
-  MessageList, 
-  MessageInput, 
-  ChatAgreementModal,
+import {
+  ChatHeader,
+  MessageList,
+  MessageInput,
   TypingIndicator,
-  MessageActionsSheet,
-  EditMessageModal,
   ChatSearchBar,
   BlockedUserModal,
-  ReportUserModal,
 } from '../features/chat';
+import { SheetManager } from 'react-native-actions-sheet';
 import type { MessageListRef } from '../features/chat';
-import type { RootStackParamList, ChatStackParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-// Support both Root Stack 'Chat' and Chat Stack 'ChatScreen' routes
-type ChatRouteProp = RouteProp<RootStackParamList, 'Chat'> | RouteProp<ChatStackParamList, 'ChatScreen'>;
+type ChatRouteProp = RouteProp<RootStackParamList, 'ChatConversation'>;
 
 interface NetworkInfo {
   id: string;
@@ -80,60 +77,51 @@ export default function ChatConversationScreen() {
   const { t } = useTranslation();
   const playerId = session?.user?.id;
   // Get player name for typing indicator - use type assertion since DB types may not include first_name directly
-  const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user' as TranslationKey);
+  const playerName = (profile as { first_name?: string } | null)?.first_name || t('common.user');
   const insets = useSafeAreaInsets();
 
   const [reactions, setReactions] = useState<Map<string, ReactionSummary[]>>(new Map());
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null);
-  
+
   // Reply state
   const [replyToMessage, setReplyToMessage] = useState<MessageWithSender | null>(null);
-  
-  // Message actions sheet state
-  const [selectedMessage, setSelectedMessage] = useState<MessageWithSender | null>(null);
-  const [selectedMessageY, setSelectedMessageY] = useState<number | undefined>(undefined);
-  const [showMessageActions, setShowMessageActions] = useState(false);
-  
-  // Edit message modal state
-  const [editingMessage, setEditingMessage] = useState<MessageWithSender | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   // Search bar state
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedMessageIds, setHighlightedMessageIds] = useState<string[]>([]);
   const [currentHighlightedId, setCurrentHighlightedId] = useState<string | undefined>();
-  
-  // Report modal state
-  const [showReportModal, setShowReportModal] = useState(false);
-  
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
   // Ref for MessageList to scroll to messages
   const messageListRef = React.useRef<MessageListRef>(null);
 
   // Check if user has agreed to chat rules
   const { data: hasAgreed, isLoading: isLoadingAgreement } = useChatAgreement(playerId);
   const agreeToChatRulesMutation = useAgreeToChatRules();
-  const [showAgreementModal, setShowAgreementModal] = useState(false);
-  
+
   // Mute mutation
   const { mutate: toggleMuteMutation } = useToggleMuteConversation();
+
+  // Handle agreeing to chat rules
+  const handleAgreeToRules = useCallback(() => {
+    if (!playerId) return;
+    agreeToChatRulesMutation.mutate(playerId);
+  }, [playerId, agreeToChatRulesMutation]);
 
   // Show agreement modal if user hasn't agreed yet
   useEffect(() => {
     if (!isLoadingAgreement && hasAgreed === false) {
-      setShowAgreementModal(true);
+      SheetManager.show('chat-agreement', {
+        payload: {
+          chatName: routeTitle,
+          chatImageUrl: null,
+          isDirectChat: false,
+          onAgree: handleAgreeToRules,
+        },
+      });
     }
-  }, [hasAgreed, isLoadingAgreement]);
-
-  const handleAgreeToRules = useCallback(() => {
-    if (!playerId) return;
-    
-    agreeToChatRulesMutation.mutate(playerId, {
-      onSuccess: () => {
-        setShowAgreementModal(false);
-      },
-    });
-  }, [playerId, agreeToChatRulesMutation]);
+  }, [hasAgreed, isLoadingAgreement, routeTitle, handleAgreeToRules]);
 
   // Fetch conversation details
   const { data: conversation, isLoading: isLoadingConversation } = useConversation(conversationId);
@@ -141,9 +129,7 @@ export default function ChatConversationScreen() {
   // Get current participant's mute status (needed early for haptic feedback)
   const isMuted = useMemo(() => {
     if (!conversation?.participants || !playerId) return false;
-    const currentParticipant = conversation.participants.find(
-      (p) => p.player_id === playerId
-    );
+    const currentParticipant = conversation.participants.find(p => p.player_id === playerId);
     return currentParticipant?.is_muted ?? false;
   }, [conversation, playerId]);
 
@@ -158,10 +144,7 @@ export default function ChatConversationScreen() {
   } = useMessages(conversationId);
 
   // Flatten pages into a single array
-  const messages = useMemo(
-    () => messagesData?.pages.flat() || [],
-    [messagesData]
-  );
+  const messages = useMemo(() => messagesData?.pages.flat() || [], [messagesData]);
 
   // Mutations
   const sendMessageMutation = useSendMessage();
@@ -173,14 +156,17 @@ export default function ChatConversationScreen() {
   const { typingUsers, sendTyping } = useTypingIndicators(conversationId, playerId, playerName);
 
   // Handle typing change from input
-  const handleTypingChange = useCallback((isTyping: boolean) => {
-    sendTyping(isTyping);
-  }, [sendTyping]);
+  const handleTypingChange = useCallback(
+    (isTyping: boolean) => {
+      sendTyping(isTyping);
+    },
+    [sendTyping]
+  );
 
   // Real-time subscriptions for messages (including edits and deletes)
   // Includes haptic feedback for incoming messages (respecting mute status)
   useChatRealtime(conversationId, playerId, {
-    onNewMessage: (message) => {
+    onNewMessage: message => {
       // Only trigger haptic for messages from other users, and only if not muted
       if (message.sender_id !== playerId && !isMuted) {
         lightHaptic();
@@ -191,7 +177,7 @@ export default function ChatConversationScreen() {
       }
     },
   });
-  
+
   // Real-time subscription for reactions
   useReactionsRealtime(conversationId);
 
@@ -202,6 +188,22 @@ export default function ChatConversationScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, playerId]);
+
+  // Avoid bottom safe area spacer when keyboard is open (removes gap between input and keyboard)
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Fetch network info for group chats (for cover image)
   useEffect(() => {
@@ -225,15 +227,13 @@ export default function ChatConversationScreen() {
   // Fetch reactions for visible messages
   const fetchReactions = useCallback(async () => {
     if (messages.length === 0 || !playerId) return;
-    
+
     try {
       // Filter out temp IDs from optimistic messages (they start with "temp-")
-      const messageIds = messages
-        .map((m) => m.id)
-        .filter((id) => !id.startsWith('temp-'));
-      
+      const messageIds = messages.map(m => m.id).filter(id => !id.startsWith('temp-'));
+
       if (messageIds.length === 0) return;
-      
+
       const reactionsMap = await getMessagesReactions(messageIds, playerId);
       setReactions(reactionsMap);
     } catch (error) {
@@ -249,30 +249,30 @@ export default function ChatConversationScreen() {
   const headerTitle = useMemo(() => {
     if (routeTitle) return routeTitle;
     if (conversation?.title) return conversation.title;
-    
+
     // For direct conversations, show the other participant's name
     if (conversation?.conversation_type === 'direct' && conversation.participants) {
-      const otherParticipant = conversation.participants.find(
-        (p) => p.player_id !== playerId
-      );
+      const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
       if (otherParticipant?.player?.profile) {
         const { first_name, last_name } = otherParticipant.player.profile;
         return last_name ? `${first_name} ${last_name}` : first_name;
       }
     }
-    
-    return t('chat.title' as TranslationKey);
+
+    return t('chat.title');
   }, [routeTitle, conversation, playerId, t]);
 
   const headerSubtitle = useMemo(() => {
     if (!conversation) return undefined;
-    
-    if (conversation.conversation_type === 'group' || 
-        conversation.conversation_type === 'announcement') {
+
+    if (
+      conversation.conversation_type === 'group' ||
+      conversation.conversation_type === 'announcement'
+    ) {
       const count = networkInfo?.member_count || conversation.participants?.length || 0;
       return `${count} participant${count !== 1 ? 's' : ''}`;
     }
-    
+
     return undefined;
   }, [conversation, networkInfo]);
 
@@ -282,7 +282,7 @@ export default function ChatConversationScreen() {
     if (conversation?.conversation_type === 'group' && networkInfo?.cover_image_url) {
       return networkInfo.cover_image_url;
     }
-    
+
     // For simple group chats (no network), use conversation picture_url
     if (conversation?.conversation_type === 'group' && conversation.picture_url) {
       return conversation.picture_url;
@@ -290,12 +290,10 @@ export default function ChatConversationScreen() {
 
     // For direct messages, show the other participant's avatar
     if (conversation?.conversation_type === 'direct' && conversation.participants) {
-      const otherParticipant = conversation.participants.find(
-        (p) => p.player_id !== playerId
-      );
+      const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
       return otherParticipant?.player?.profile?.profile_picture_url || null;
     }
-    
+
     return null;
   }, [conversation, playerId, networkInfo]);
 
@@ -307,23 +305,19 @@ export default function ChatConversationScreen() {
   // Get the other user's ID for direct chats (used for blocking)
   const otherUserId = useMemo(() => {
     if (!isDirectChat || !conversation?.participants || !playerId) return undefined;
-    const otherParticipant = conversation.participants.find(
-      (p) => p.player_id !== playerId
-    );
+    const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
     return otherParticipant?.player_id;
   }, [isDirectChat, conversation, playerId]);
 
   // Get the other user's name for the blocked modal
   const otherUserName = useMemo(() => {
-    if (!isDirectChat || !conversation?.participants || !playerId) return t('chat.thisUser' as TranslationKey);
-    const otherParticipant = conversation.participants.find(
-      (p) => p.player_id !== playerId
-    );
+    if (!isDirectChat || !conversation?.participants || !playerId) return t('chat.thisUser');
+    const otherParticipant = conversation.participants.find(p => p.player_id !== playerId);
     if (otherParticipant?.player?.profile) {
       const { first_name, last_name } = otherParticipant.player.profile;
-      return last_name ? `${first_name} ${last_name}` : (first_name || t('chat.thisUser' as TranslationKey));
+      return last_name ? `${first_name} ${last_name}` : first_name || t('chat.thisUser');
     }
-    return t('chat.thisUser' as TranslationKey);
+    return t('chat.thisUser');
   }, [isDirectChat, conversation, playerId, t]);
 
   // Block status for direct chats
@@ -335,23 +329,28 @@ export default function ChatConversationScreen() {
   } = useBlockedStatus(playerId, otherUserId);
 
   // Favorite status for direct chats
-  const {
-    isFavorite,
-    toggleFavorite,
-  } = useFavoriteStatus(playerId, otherUserId);
+  const { isFavorite, toggleFavorite } = useFavoriteStatus(playerId, otherUserId);
 
   const handleBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   // Navigate to player profile (direct chat) or group info (group chat) when tapping header
   const handleTitlePress = useCallback(() => {
     if (isDirectChat && otherUserId) {
-      navigation.navigate('PlayerProfile', { playerId: otherUserId });
+      navigateToPlayerProfile(otherUserId);
     } else if (conversation?.conversation_type === 'group') {
       navigation.navigate('GroupChatInfo', { conversationId });
     }
-  }, [isDirectChat, otherUserId, conversation, conversationId, navigation]);
+  }, [
+    isDirectChat,
+    otherUserId,
+    conversation,
+    conversationId,
+    navigation,
+    navigateToPlayerProfile,
+  ]);
 
   // Header menu handlers
   const handleSearchPress = useCallback(() => {
@@ -396,38 +395,41 @@ export default function ChatConversationScreen() {
   }, [unblockUser]);
 
   const handleReport = useCallback(() => {
-    if (!isDirectChat || !otherUserId) {
-      Alert.alert(t('chat.alerts.cannotReport' as TranslationKey), t('chat.alerts.cannotReportMessage' as TranslationKey));
+    if (!isDirectChat || !otherUserId || !playerId) {
+      Alert.alert(t('chat.alerts.cannotReport'), t('chat.alerts.cannotReportMessage'));
       return;
     }
-    setShowReportModal(true);
-  }, [isDirectChat, otherUserId, t]);
+    SheetManager.show('report-user', {
+      payload: {
+        reporterId: playerId,
+        reportedId: otherUserId,
+        reportedName: headerTitle,
+        conversationId,
+      },
+    });
+  }, [isDirectChat, otherUserId, playerId, t, headerTitle, conversationId]);
 
   const handleClearChat = useCallback(() => {
     if (!playerId) return;
-    
-    Alert.alert(
-      t('chat.alerts.clearYourMessages' as TranslationKey),
-      t('chat.alerts.clearYourMessagesConfirm' as TranslationKey),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('chat.alerts.clear' as TranslationKey),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { clearChatForUser } = await import('@rallia/shared-services');
-              const deletedCount = await clearChatForUser(conversationId, playerId);
-              refetchMessages();
-              toast.success(t('chat.alerts.messagesDeleted' as TranslationKey, { count: deletedCount }));
-            } catch (error) {
-              console.error('Failed to clear chat:', error);
-              toast.error(t('chat.alerts.failedToClear' as TranslationKey));
-            }
-          },
+
+    Alert.alert(t('chat.alerts.clearYourMessages'), t('chat.alerts.clearYourMessagesConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('chat.alerts.clear'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { clearChatForUser } = await import('@rallia/shared-services');
+            const deletedCount = await clearChatForUser(conversationId, playerId);
+            refetchMessages();
+            toast.success(t('chat.alerts.messagesDeleted', { count: deletedCount }));
+          } catch (error) {
+            console.error('Failed to clear chat:', error);
+            toast.error(t('chat.alerts.failedToClear'));
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [conversationId, playerId, refetchMessages, toast, t]);
 
   const handleCloseSearch = useCallback(() => {
@@ -465,7 +467,7 @@ export default function ChatConversationScreen() {
         content,
         reply_to_message_id: replyToMessageId,
       });
-      
+
       // Clear reply state after sending
       setReplyToMessage(null);
     },
@@ -505,68 +507,77 @@ export default function ChatConversationScreen() {
   }, []);
 
   // Handle long press on message (show actions sheet)
-  const handleLongPressMessage = useCallback((message: MessageWithSender, pageY?: number) => {
-    setSelectedMessage(message);
-    setSelectedMessageY(pageY);
-    setShowMessageActions(true);
-  }, []);
+  const handleLongPressMessage = useCallback(
+    (message: MessageWithSender, pageY?: number) => {
+      const handleReply = () => {
+        setReplyToMessage(message);
+      };
 
-  // Handle message actions sheet close
-  const handleCloseMessageActions = useCallback(() => {
-    setShowMessageActions(false);
-    setSelectedMessage(null);
-    setSelectedMessageY(undefined);
-  }, []);
+      const handleEdit = () => {
+        // Show edit message sheet after a brief delay
+        setTimeout(() => {
+          SheetManager.show('edit-message', {
+            payload: {
+              message,
+              onSave: async (newContent: string) => {
+                if (!playerId || !conversationId) return;
+                try {
+                  await editMessageMutation.mutateAsync({
+                    messageId: message.id,
+                    senderId: playerId,
+                    newContent,
+                    conversationId,
+                  });
+                  refetchMessages();
+                } catch (error) {
+                  console.error('Error editing message:', error);
+                }
+              },
+              isSaving: editMessageMutation.isPending,
+            },
+          });
+        }, 350);
+      };
 
-  // Handle edit message - open edit modal
-  const handleEditMessage = useCallback(() => {
-    if (selectedMessage) {
-      setEditingMessage(selectedMessage);
-      setShowEditModal(true);
-    }
-    setShowMessageActions(false);
-  }, [selectedMessage]);
+      const handleDelete = async () => {
+        if (!playerId) return;
+        try {
+          await deleteMessage(message.id, playerId);
+          refetchMessages();
+        } catch (error) {
+          console.error('Error deleting message:', error);
+        }
+      };
 
-  // Handle save edited message
-  const handleSaveEditedMessage = useCallback(async (newContent: string) => {
-    if (!editingMessage || !playerId || !conversationId) return;
-    
-    try {
-      await editMessageMutation.mutateAsync({
-        messageId: editingMessage.id,
-        senderId: playerId,
-        newContent: newContent,
-        conversationId: conversationId,
+      const handleReact = (emoji: string) => {
+        if (!playerId) return;
+        toggleReactionMutation.mutate(
+          { messageId: message.id, playerId, emoji, conversationId },
+          { onSuccess: () => fetchReactions() }
+        );
+      };
+
+      SheetManager.show('message-actions', {
+        payload: {
+          message,
+          isOwnMessage: message.sender_id === playerId,
+          messageY: pageY,
+          onReply: handleReply,
+          onEdit: handleEdit,
+          onDelete: handleDelete,
+          onReact: handleReact,
+        },
       });
-      refetchMessages();
-    } catch (error) {
-      console.error('Error editing message:', error);
-    }
-    
-    setShowEditModal(false);
-    setEditingMessage(null);
-  }, [editingMessage, playerId, conversationId, editMessageMutation, refetchMessages]);
-
-  // Handle close edit modal
-  const handleCloseEditModal = useCallback(() => {
-    setShowEditModal(false);
-    setEditingMessage(null);
-  }, []);
-
-  // Handle delete message
-  const handleDeleteMessage = useCallback(async () => {
-    if (!selectedMessage || !playerId) return;
-    
-    try {
-      await deleteMessage(selectedMessage.id, playerId);
-      refetchMessages();
-    } catch (error) {
-      console.error('Error deleting message:', error);
-    }
-    
-    setShowMessageActions(false);
-    setSelectedMessage(null);
-  }, [selectedMessage, playerId, refetchMessages]);
+    },
+    [
+      playerId,
+      conversationId,
+      editMessageMutation,
+      refetchMessages,
+      toggleReactionMutation,
+      fetchReactions,
+    ]
+  );
 
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -601,27 +612,27 @@ export default function ChatConversationScreen() {
           {[...Array(6)].map((_, index) => {
             const isMe = index % 3 === 0;
             return (
-              <View 
-                key={index} 
+              <View
+                key={index}
                 style={[
-                  styles.messageSkeletonRow, 
-                  isMe ? styles.messageSkeletonRowRight : styles.messageSkeletonRowLeft
+                  styles.messageSkeletonRow,
+                  isMe ? styles.messageSkeletonRowRight : styles.messageSkeletonRowLeft,
                 ]}
               >
                 {!isMe && (
-                  <SkeletonAvatar 
-                    size={32} 
-                    backgroundColor={colors.cardBackground} 
-                    highlightColor={colors.border} 
+                  <SkeletonAvatar
+                    size={32}
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
                   />
                 )}
                 <View style={[styles.messageSkeleton, isMe && styles.messageSkeletonRight]}>
-                  <Skeleton 
-                    width={isMe ? 150 : 200} 
-                    height={50} 
+                  <Skeleton
+                    width={isMe ? 150 : 200}
+                    height={50}
                     borderRadius={16}
-                    backgroundColor={colors.cardBackground} 
-                    highlightColor={colors.border} 
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
                   />
                 </View>
               </View>
@@ -636,7 +647,7 @@ export default function ChatConversationScreen() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={0}
     >
       <ChatHeader
         title={headerTitle}
@@ -684,9 +695,7 @@ export default function ChatConversationScreen() {
       />
 
       {/* Typing indicators */}
-      {typingUsers.length > 0 && (
-        <TypingIndicator typingUsers={typingUsers} />
-      )}
+      {typingUsers.length > 0 && <TypingIndicator typingUsers={typingUsers} />}
 
       {/* Show blocked modal if user has blocked the other user */}
       {isDirectChat && isBlocked ? (
@@ -705,63 +714,16 @@ export default function ChatConversationScreen() {
           replyToMessage={replyToMessage}
           onCancelReply={handleCancelReply}
           onTypingChange={handleTypingChange}
+          keyboardVisible={isKeyboardVisible}
         />
       )}
 
-      {/* Bottom safe area spacer for devices with home indicator */}
-      <View style={{ height: insets.bottom }} />
-
-      {/* Chat Agreement Modal - only shows once for first-time users */}
-      <ChatAgreementModal
-        visible={showAgreementModal}
-        onAgree={handleAgreeToRules}
-        chatName={headerTitle}
-        chatImageUrl={headerImage}
-        isDirectChat={isDirectChat}
-      />
-
-      {/* Message Actions Sheet */}
-      <MessageActionsSheet
-        visible={showMessageActions}
-        message={selectedMessage}
-        isOwnMessage={selectedMessage?.sender_id === playerId}
-        onClose={handleCloseMessageActions}
-        onReply={() => {
-          if (selectedMessage) {
-            handleReplyToMessage(selectedMessage);
-          }
-          handleCloseMessageActions();
+      {/* Bottom safe area spacer when keyboard is closed (skip when keyboard open to avoid gap above keyboard) */}
+      <View
+        style={{
+          height: isKeyboardVisible ? 0 : Platform.OS === 'ios' ? 0 : insets.bottom,
         }}
-        onEdit={handleEditMessage}
-        onDelete={handleDeleteMessage}
-        onReact={(emoji) => {
-          if (selectedMessage) {
-            handleReact(selectedMessage.id, emoji);
-          }
-        }}
-        messageY={selectedMessageY}
       />
-
-      {/* Edit Message Modal */}
-      <EditMessageModal
-        visible={showEditModal}
-        message={editingMessage}
-        onClose={handleCloseEditModal}
-        onSave={handleSaveEditedMessage}
-        isSaving={editMessageMutation.isPending}
-      />
-
-      {/* Report User Modal */}
-      {isDirectChat && otherUserId && playerId && (
-        <ReportUserModal
-          visible={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          reporterId={playerId}
-          reportedId={otherUserId}
-          reportedName={headerTitle}
-          conversationId={conversationId}
-        />
-      )}
     </KeyboardAvoidingView>
   );
 }

@@ -4,12 +4,7 @@
  */
 
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
@@ -24,6 +19,8 @@ interface MessageInputProps {
   replyToMessage?: MessageWithSender | null;
   onCancelReply?: () => void;
   onTypingChange?: (isTyping: boolean) => void;
+  /** When true, bottom padding is reduced to avoid gap above keyboard (safe area already accounted for by system). */
+  keyboardVisible?: boolean;
 }
 
 function MessageInputComponent({
@@ -33,6 +30,7 @@ function MessageInputComponent({
   replyToMessage,
   onCancelReply,
   onTypingChange,
+  keyboardVisible = false,
 }: MessageInputProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
@@ -42,36 +40,39 @@ function MessageInputComponent({
   const wasTypingRef = useRef(false);
 
   // Handle text change and typing indicator
-  const handleTextChange = useCallback((text: string) => {
-    setMessage(text);
-    
-    // Notify typing status
-    if (onTypingChange) {
-      const isTyping = text.length > 0;
-      
-      // Only send typing indicator when status changes or periodically
-      if (isTyping && !wasTypingRef.current) {
-        onTypingChange(true);
-        wasTypingRef.current = true;
-      }
-      
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      // Stop typing after 2 seconds of inactivity
-      if (isTyping) {
-        typingTimeoutRef.current = setTimeout(() => {
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setMessage(text);
+
+      // Notify typing status
+      if (onTypingChange) {
+        const isTyping = text.length > 0;
+
+        // Only send typing indicator when status changes or periodically
+        if (isTyping && !wasTypingRef.current) {
+          onTypingChange(true);
+          wasTypingRef.current = true;
+        }
+
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Stop typing after 2 seconds of inactivity
+        if (isTyping) {
+          typingTimeoutRef.current = setTimeout(() => {
+            onTypingChange(false);
+            wasTypingRef.current = false;
+          }, 2000);
+        } else {
           onTypingChange(false);
           wasTypingRef.current = false;
-        }, 2000);
-      } else {
-        onTypingChange(false);
-        wasTypingRef.current = false;
+        }
       }
-    }
-  }, [onTypingChange]);
+    },
+    [onTypingChange]
+  );
 
   // Cleanup typing timeout on unmount
   useEffect(() => {
@@ -97,7 +98,7 @@ function MessageInputComponent({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-      
+
       onSend(trimmedMessage, replyToMessage?.id);
       setMessage('');
       onCancelReply?.();
@@ -117,36 +118,34 @@ function MessageInputComponent({
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? colors.background : '#FFFFFF', borderTopColor: colors.border },
+        {
+          backgroundColor: isDark ? colors.background : '#FFFFFF',
+          borderTopColor: colors.border,
+          paddingBottom: keyboardVisible ? spacingPixels[2] : spacingPixels[4],
+        },
       ]}
     >
       {/* Reply Banner */}
       {replyToMessage && (
-        <View style={[styles.replyBanner, { backgroundColor: isDark ? colors.card : neutral[100] }]}>
+        <View
+          style={[styles.replyBanner, { backgroundColor: isDark ? colors.card : neutral[100] }]}
+        >
           <View style={[styles.replyIndicator, { backgroundColor: primary[500] }]} />
           <View style={styles.replyContent}>
             <Text style={[styles.replySenderName, { color: primary[500] }]}>
-              {t('chat.input.replyingTo' as any, { name: replySenderName })}
+              {t('chat.input.replyingTo', { name: replySenderName })}
             </Text>
-            <Text 
-              style={[styles.replyPreview, { color: colors.textMuted }]} 
-              numberOfLines={1}
-            >
+            <Text style={[styles.replyPreview, { color: colors.textMuted }]} numberOfLines={1}>
               {replyToMessage.content}
             </Text>
           </View>
           <TouchableOpacity onPress={onCancelReply} style={styles.cancelReplyButton}>
-            <Ionicons name="close" size={20} color={colors.textMuted} />
+            <Ionicons name="close-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
       )}
 
-      <View
-        style={[
-          styles.inputContainer,
-          { backgroundColor: isDark ? colors.card : '#F0F0F0' },
-        ]}
-      >
+      <View style={[styles.inputContainer, { backgroundColor: isDark ? colors.card : '#F0F0F0' }]}>
         {/* Emoji button - opens native emoji keyboard */}
         <TouchableOpacity
           style={styles.iconButton}
@@ -175,18 +174,11 @@ function MessageInputComponent({
 
         {/* Send button */}
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            canSend && { backgroundColor: primary[500] },
-          ]}
+          style={[styles.sendButton, canSend && { backgroundColor: primary[500] }]}
           onPress={handleSend}
           disabled={!canSend}
         >
-          <Ionicons
-            name="send"
-            size={20}
-            color={canSend ? '#FFFFFF' : colors.textMuted}
-          />
+          <Ionicons name="send" size={20} color={canSend ? '#FFFFFF' : colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -198,7 +190,8 @@ export const MessageInput = memo(MessageInputComponent);
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacingPixels[4],
-    paddingVertical: spacingPixels[2],
+    paddingTop: spacingPixels[2],
+    paddingBottom: spacingPixels[6],
     borderTopWidth: 1,
   },
   replyBanner: {

@@ -40,6 +40,23 @@ interface AvailabilitiesStepProps {
 const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TIME_SLOTS: TimeSlot[] = ['AM', 'PM', 'EVE'];
 
+// Map short day labels to translation key suffixes (same as UserProfile / profile availability)
+const DAY_TO_I18N_KEY: Record<DayOfWeek, string> = {
+  Mon: 'monday',
+  Tue: 'tuesday',
+  Wed: 'wednesday',
+  Thu: 'thursday',
+  Fri: 'friday',
+  Sat: 'saturday',
+  Sun: 'sunday',
+};
+
+const SLOT_TO_I18N_KEY: Record<TimeSlot, TranslationKey> = {
+  AM: 'onboarding.availabilityStep.am',
+  PM: 'onboarding.availabilityStep.pm',
+  EVE: 'onboarding.availabilityStep.eve',
+};
+
 export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
   formData,
   onUpdateFormData,
@@ -82,41 +99,31 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
     >
-      {/* Title */}
+      {/* Title - aligned with profile availability wording */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.availabilityStep.title' as TranslationKey)}
+        {t('onboarding.availability')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.availabilityStep.subtitle' as TranslationKey)}
+        {t('onboarding.availabilitySubtitle')}
       </Text>
 
       {/* Selection Counter */}
       <View style={styles.counterContainer}>
-        <Text 
-          size="sm" 
-          weight="semibold" 
+        <Text
+          size="sm"
+          weight="semibold"
           color={hasMinimum ? colors.buttonActive : colors.textMuted}
         >
-          {t('onboarding.availabilityStep.minimumSelected' as TranslationKey)
-            .replace('{count}', String(totalSelections))
-            .replace('{minimum}', String(MIN_SELECTIONS))}
+          {totalSelections > MIN_SELECTIONS
+            ? t('onboarding.availabilityStep.selected').replace('{count}', String(totalSelections))
+            : t('onboarding.availabilityStep.minimumSelected')
+                .replace('{count}', String(totalSelections))
+                .replace('{minimum}', String(MIN_SELECTIONS))}
         </Text>
       </View>
 
       {/* Availability Grid */}
       <View style={styles.gridContainer}>
-        {/* Header Row */}
-        <View style={styles.row}>
-          <View style={styles.dayCell} />
-          {TIME_SLOTS.map(slot => (
-            <View key={slot} style={styles.headerCell}>
-              <Text size="xs" weight="semibold" color={colors.textSecondary}>
-                {slot}
-              </Text>
-            </View>
-          ))}
-        </View>
-
         {/* Day Rows */}
         {DAYS.map(day => {
           const dayAvailability = formData.availabilities[day] || {
@@ -129,7 +136,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
             <View key={day} style={styles.row}>
               <View style={styles.dayCell}>
                 <Text size="sm" weight="medium" color={colors.text}>
-                  {day}
+                  {t(`onboarding.availabilityStep.days.${DAY_TO_I18N_KEY[day]}` as TranslationKey)}
                 </Text>
               </View>
               {TIME_SLOTS.map(slot => {
@@ -152,7 +159,7 @@ export const AvailabilitiesStep: React.FC<AvailabilitiesStepProps> = ({
                       weight="semibold"
                       color={isSelected ? colors.buttonTextActive : colors.textSecondary}
                     >
-                      {slot}
+                      {t(SLOT_TO_I18N_KEY[slot])}
                     </Text>
                   </TouchableOpacity>
                 );

@@ -13,9 +13,9 @@ import {
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
@@ -65,22 +65,20 @@ function AddScoreContent({
   // Check if there are unsaved changes (any progress beyond initial state)
   const hasUnsavedChanges = useCallback(() => {
     // Has data if any opponents selected, or any scores filled
-    return (formData.opponents && formData.opponents.length > 0) ||
-           (formData.sets && formData.sets.some(s => s.team1Score !== null || s.team2Score !== null)) ||
-           currentStepIndex > 0;
+    return (
+      (formData.opponents && formData.opponents.length > 0) ||
+      (formData.sets && formData.sets.some(s => s.team1Score !== null || s.team2Score !== null)) ||
+      currentStepIndex > 0
+    );
   }, [formData.opponents, formData.sets, currentStepIndex]);
 
   // Handle close with discard confirmation
   const handleClose = useCallback(() => {
     if (hasUnsavedChanges()) {
-      Alert.alert(
-        t('addScore.discardChanges' as TranslationKey),
-        t('addScore.discardChangesMessage' as TranslationKey),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('common.discard' as TranslationKey), style: 'destructive', onPress: onClose },
-        ]
-      );
+      Alert.alert(t('addScore.discardChanges'), t('addScore.discardChangesMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.discard'), style: 'destructive', onPress: onClose },
+      ]);
     } else {
       onClose();
     }
@@ -95,77 +93,73 @@ function AddScoreContent({
   }, [canGoBack, goToPreviousStep, handleClose]);
 
   // winnerId and sets are passed directly to avoid React state async issues
-  const handleSubmit = useCallback(async (
-    winnerId: 'team1' | 'team2',
-    sets: Array<{ team1Score: number | null; team2Score: number | null }>
-  ) => {
-    if (!user?.id) {
-      Alert.alert(t('common.error'), t('errors.mustBeLoggedIn'));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Get sport ID from name
-      const sportName = formData.sport || 'tennis';
-      const sportId = await getSportIdByName(sportName);
-      
-      if (!sportId) {
-        Alert.alert(t('common.error'), t('addScore.sportNotFound' as TranslationKey, { sport: sportName }));
-        setIsSubmitting(false);
+  const handleSubmit = useCallback(
+    async (
+      winnerId: 'team1' | 'team2',
+      sets: Array<{ team1Score: number | null; team2Score: number | null }>
+    ) => {
+      if (!user?.id) {
+        Alert.alert(t('common.error'), t('errors.mustBeLoggedIn'));
         return;
       }
 
-      // Get opponent IDs
-      // Filter out current user from opponents (safety check)
-      const validOpponents = (formData.opponents || []).filter((p) => p.id !== user.id);
-      const opponentIds = validOpponents.map((p) => p.id);
-      
-      // Build team player IDs based on singles vs doubles
-      let team1PlayerIds: string[];
-      let team2PlayerIds: string[];
-      
-      if (formData.matchType === 'double' && formData.partner) {
-        // Doubles: Team 1 = current user + partner, Team 2 = remaining 2 opponents
-        // Ensure partner is not the current user (safety check)
-        const validPartner = formData.partner.id !== user.id ? formData.partner : null;
-        team1PlayerIds = validPartner ? [user.id, validPartner.id] : [user.id];
-        team2PlayerIds = validOpponents
-          .filter((p) => p.id !== formData.partner?.id)
-          .map((p) => p.id);
-      } else {
-        // Singles: Team 1 = current user, Team 2 = opponent
-        team1PlayerIds = [user.id];
-        team2PlayerIds = opponentIds;
-      }
+      setIsSubmitting(true);
+      try {
+        // Get sport ID from name
+        const sportName = formData.sport || 'tennis';
+        const sportId = await getSportIdByName(sportName);
 
-      // Transform formData to CreatePlayedMatchInput
-      // winnerId and sets are used directly from parameters (not formData) to avoid async state issues
-      const matchInput: CreatePlayedMatchInput = {
-        sportId,
-        createdBy: user.id,
-        matchDate: formData.matchDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-        format: formData.matchType === 'double' ? 'doubles' : 'singles',
-        expectation: formData.expectation || 'competitive',
-        team1PlayerIds,
-        team2PlayerIds,
-        winnerId,
-        sets: sets
-          .filter((s) => s.team1Score !== null && s.team2Score !== null)
-          .map((s) => ({
-            team1Score: s.team1Score || 0,
-            team2Score: s.team2Score || 0,
-          })),
-        locationName: formData.location,
-        networkId: formData.networkId,
-      };
+        if (!sportId) {
+          Alert.alert(t('common.error'), t('addScore.sportNotFound', { sport: sportName }));
+          setIsSubmitting(false);
+          return;
+        }
 
-      const result = await createPlayedMatchMutation.mutateAsync(matchInput);
+        // Get opponent IDs
+        const opponentIds = (formData.opponents || []).map(p => p.id);
 
-      Alert.alert(
-        t('addScore.scoreSubmitted' as TranslationKey),
-        t('addScore.scoreSubmittedMessage' as TranslationKey),
-        [
+        // Build team player IDs based on singles vs doubles
+        let team1PlayerIds: string[];
+        let team2PlayerIds: string[];
+
+        if (formData.matchType === 'double' && formData.partner) {
+          // Doubles: Team 1 = current user + partner, Team 2 = remaining 2 opponents
+          team1PlayerIds = [user.id, formData.partner.id];
+          team2PlayerIds = (formData.opponents || [])
+            .filter(p => p.id !== formData.partner?.id)
+            .map(p => p.id);
+        } else {
+          // Singles: Team 1 = current user, Team 2 = opponent
+          team1PlayerIds = [user.id];
+          team2PlayerIds = opponentIds;
+        }
+
+        // Transform formData to CreatePlayedMatchInput
+        // winnerId and sets are used directly from parameters (not formData) to avoid async state issues
+        const matchInput: CreatePlayedMatchInput = {
+          sportId,
+          createdBy: user.id,
+          matchDate:
+            formData.matchDate?.toISOString().split('T')[0] ||
+            new Date().toISOString().split('T')[0],
+          format: formData.matchType === 'double' ? 'doubles' : 'singles',
+          expectation: formData.expectation || 'competitive',
+          team1PlayerIds,
+          team2PlayerIds,
+          winnerId,
+          sets: sets
+            .filter(s => s.team1Score !== null && s.team2Score !== null)
+            .map(s => ({
+              team1Score: s.team1Score || 0,
+              team2Score: s.team2Score || 0,
+            })),
+          locationName: formData.location,
+          networkId: formData.networkId,
+        };
+
+        const result = await createPlayedMatchMutation.mutateAsync(matchInput);
+
+        Alert.alert(t('addScore.scoreSubmitted'), t('addScore.scoreSubmittedMessage'), [
           {
             text: t('common.ok'),
             onPress: () => {
@@ -173,15 +167,16 @@ function AddScoreContent({
               onClose();
             },
           },
-        ]
-      );
-    } catch (error) {
-      console.error('Error submitting score:', error);
-      Alert.alert(t('common.error'), t('addScore.failedToSubmit' as TranslationKey));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [formData, user, onSuccess, onClose, createPlayedMatchMutation, t]);
+        ]);
+      } catch (error) {
+        console.error('Error submitting score:', error);
+        Alert.alert(t('common.error'), t('addScore.failedToSubmit'));
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [formData, user, onSuccess, onClose, createPlayedMatchMutation, t]
+  );
 
   const renderStep = () => {
     switch (currentStep) {
@@ -200,7 +195,7 @@ function AddScoreContent({
     }
   };
 
-  const stepTitle = t('addScore.title' as TranslationKey);
+  const stepTitle = t('addScore.title');
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -211,11 +206,7 @@ function AddScoreContent({
           onPress={handleBack}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons
-            name={canGoBack ? 'arrow-back' : 'close'}
-            size={24}
-            color={colors.text}
-          />
+          <Ionicons name={canGoBack ? 'arrow-back' : 'close'} size={24} color={colors.text} />
         </TouchableOpacity>
 
         <Text weight="semibold" size="base" style={{ color: colors.text }}>
@@ -227,7 +218,7 @@ function AddScoreContent({
           onPress={handleClose}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -239,8 +230,7 @@ function AddScoreContent({
             style={[
               styles.progressDot,
               {
-                backgroundColor:
-                  index <= currentStepIndex ? colors.primary : colors.border,
+                backgroundColor: index <= currentStepIndex ? colors.primary : colors.border,
               },
             ]}
           />

@@ -57,7 +57,7 @@ schema_paths = []
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
-enabled = true
+enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]
@@ -109,12 +109,15 @@ file_size_limit = "50MiB"
 # [storage.image_transformation]
 # enabled = true
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+[storage.buckets.profile-pictures]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]
+
+[storage.buckets.facility-images]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"]
 
 [auth]
 enabled = true
@@ -122,7 +125,12 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Include /api/auth/callback for web OAuth; add your ngrok web URL when using tunnel (see scripts/supabase/README-tunnel.md).
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://localhost:3000/api/auth/callback",
+  "http://127.0.0.1:3000/api/auth/callback"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -195,7 +203,16 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
+# Auth email templates (version-controlled)
+[auth.email.template.magic_link]
+subject = "Your Rallia verification code"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Welcome to Rallia - Verify your email"
+content_path = "./supabase/templates/confirmation.html"
+
+# Uncomment to customize invite email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
@@ -271,11 +288,19 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `slack`, `spotify`, `workos`, `zoom`.
-[auth.external.apple]
-enabled = false
-client_id = ""
+[auth.external.google]
+enabled = true
+client_id = "438904367358-4eca6erur8fip6dgplqmvb8h4rkt51r9.apps.googleusercontent.com,438904367358-9a8l1o2u2a5ap608fq88m912fppdsveq.apps.googleusercontent.com"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# If enabled, the nonce check will be skipped. Required for native mobile Google Sign-In.
+skip_nonce_check = true
+
+[auth.external.apple]
+enabled = true
+client_id = "env(APPLE_CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(APPLE_SECRET)"
 # Overrides the default auth redirectUrl.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
@@ -285,6 +310,12 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+[auth.external.facebook]
+enabled = true
+client_id = "env(FACEBOOK_APP_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(FACEBOOK_APP_SECRET)"
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
@@ -336,6 +367,25 @@ deno_version = 2
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+
+# Edge Function configurations
+# Disable JWT verification for functions called by pg_net (cron jobs, triggers)
+# These functions use x-service-key custom header for authentication instead
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.close-matches]
+verify_jwt = false
+
+[functions.send-feedback-reminders]
+verify_jwt = false
+
+[functions.process-program-payments]
+verify_jwt = false
 
 [analytics]
 enabled = true

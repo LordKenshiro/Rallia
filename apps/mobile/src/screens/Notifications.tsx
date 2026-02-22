@@ -6,32 +6,51 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Text as RNText,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
-import { useTheme } from '@rallia/shared-hooks';
-import { useAuth } from '../hooks';
+import { useTheme, useMatch } from '@rallia/shared-hooks';
+import { useAuth, useRequireOnboarding } from '../hooks';
 import { useTranslation, type TranslationOptions } from '../hooks/useTranslation';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useActionsSheet } from '../context';
+import { useActionsSheet, useMatchDetailSheet } from '../context';
+import SignInPrompt from '../components/SignInPrompt';
 import {
   Notification,
   NOTIFICATION_TYPE_ICONS,
   NOTIFICATION_TYPE_COLORS,
+  ExtendedNotificationTypeEnum,
 } from '@rallia/shared-types';
 import { useNotificationsWithActions } from '@rallia/shared-hooks';
+import { Logger } from '@rallia/shared-services';
 import {
   lightTheme,
   darkTheme,
   spacingPixels,
   fontSizePixels,
-  fontWeightNumeric,
   radiusPixels,
   primary,
   neutral,
 } from '@rallia/design-system';
+
+/**
+ * Match-related notification types that should open match detail sheet
+ */
+const MATCH_NOTIFICATION_TYPES: ExtendedNotificationTypeEnum[] = [
+  'match_invitation',
+  'match_join_request',
+  'match_join_accepted',
+  'match_join_rejected',
+  'match_player_joined',
+  'match_cancelled',
+  'match_updated',
+  'match_starting_soon',
+  'match_completed',
+  'match_new_available',
+  'player_kicked',
+  'player_left',
+];
 
 const BASE_WHITE = '#ffffff';
 import { lightHaptic, successHaptic, warningHaptic } from '@rallia/shared-utils';
@@ -118,6 +137,38 @@ function groupNotificationsByDate(
     .map(key => ({ title: key, data: groups[key] }));
 }
 
+// Helper function to get notification title with fallback to translations
+function getNotificationTitle(
+  notification: Notification,
+  t: (key: TranslationKey, options?: TranslationOptions) => string
+): string {
+  // If title exists and is not empty, use it
+  if (notification.title && notification.title.trim().length > 0) {
+    return notification.title;
+  }
+
+  // Fallback to translation key for message title
+  const messageTitleKey = `notifications.messages.${notification.type}.title` as TranslationKey;
+  const messageTitle = t(messageTitleKey, notification.payload as Record<string, string | number>);
+
+  // If translation was found (not the same as key), use it
+  if (messageTitle !== messageTitleKey && messageTitle.trim().length > 0) {
+    return messageTitle;
+  }
+
+  // Final fallback to type label
+  const typeLabelKey = `notifications.types.${notification.type}` as TranslationKey;
+  const typeLabel = t(typeLabelKey);
+
+  // If type label was found, use it; otherwise return a default
+  if (typeLabel !== typeLabelKey && typeLabel.trim().length > 0) {
+    return typeLabel;
+  }
+
+  // Ultimate fallback
+  return notification.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
 // Notification card component
 interface NotificationCardProps {
   notification: Notification;
@@ -140,6 +191,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
   const notificationType = notification.type;
   const iconName = NOTIFICATION_TYPE_ICONS[notificationType] ?? 'notifications-outline';
   const iconColor = NOTIFICATION_TYPE_COLORS[notificationType] ?? primary[500];
+  const notificationTitle = getNotificationTitle(notification, t);
 
   const themeColors = isDark ? darkTheme : lightTheme;
   const cardColors = {
@@ -196,7 +248,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
               color={isUnread ? cardColors.text : cardColors.textSecondary}
               numberOfLines={1}
             >
-              {notification.title}
+              {notificationTitle}
             </Text>
           </View>
           {notification.body && (
@@ -235,7 +287,28 @@ const Notifications: React.FC = () => {
   const { theme } = useTheme();
   const { t, locale } = useTranslation();
   const { openSheet } = useActionsSheet();
+  const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { isReady: isOnboarded } = useRequireOnboarding();
   const isDark = theme === 'dark';
+
+  // State for handling match detail opening
+  const [selectedMatchId, setSelectedMatchId] = React.useState<string | null>(null);
+
+  // Fetch match data when a match notification is tapped
+  const { match: selectedMatch, isLoading: isLoadingMatch } = useMatch(
+    selectedMatchId ?? undefined,
+    { enabled: !!selectedMatchId }
+  );
+
+  // Open match detail sheet when match data is loaded
+  React.useEffect(() => {
+    if (selectedMatch && !isLoadingMatch && selectedMatchId) {
+      Logger.logUserAction('notification_match_opened', { matchId: selectedMatchId });
+      openMatchDetail(selectedMatch);
+      // Clear the selected match ID after opening
+      setSelectedMatchId(null);
+    }
+  }, [selectedMatch, isLoadingMatch, selectedMatchId, openMatchDetail]);
 
   // Theme-aware colors from design system
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -284,8 +357,22 @@ const Notifications: React.FC = () => {
       }
 
       // Navigate to target based on notification type and target_id
-      if (notification.target_id) {
-        // TODO: Navigate to specific entity based on notification.type
+      if (notification.target_id && notification.type) {
+        const isMatchNotification = MATCH_NOTIFICATION_TYPES.includes(
+          notification.type as ExtendedNotificationTypeEnum
+        );
+
+        if (isMatchNotification) {
+          // Set the selected match ID to trigger match detail fetch and sheet opening
+          Logger.logUserAction('notification_match_tapped', {
+            notificationId: notification.id,
+            matchId: notification.target_id,
+            type: notification.type,
+          });
+          setSelectedMatchId(notification.target_id);
+        }
+
+        // TODO: Handle other notification types (messages, friend requests, etc.)
       }
     },
     [markAsRead]
@@ -334,27 +421,6 @@ const Notifications: React.FC = () => {
     </View>
   );
 
-  const renderSignInPrompt = () => (
-    <View style={[styles.emptyContainer, { backgroundColor: colors.cardBackground }]}>
-      <Ionicons name="lock-closed-outline" size={64} color={colors.iconMuted} />
-      <RNText style={[styles.signInTitle, { color: colors.textSecondary }]}>
-        {t('notifications.signInRequired')}
-      </RNText>
-      <RNText style={[styles.signInDescription, { color: colors.textMuted }]}>
-        {t('notifications.signInPrompt')}
-      </RNText>
-      <TouchableOpacity
-        onPress={openSheet}
-        style={[styles.signInButton, { backgroundColor: colors.buttonActive }]}
-      >
-        <Ionicons name="log-in-outline" size={18} color={colors.buttonTextActive} />
-        <RNText style={[styles.signInButtonText, { color: colors.buttonTextActive }]}>
-          {t('auth.signIn')}
-        </RNText>
-      </TouchableOpacity>
-    </View>
-  );
-
   const renderFooter = () => {
     if (!isFetchingNextPage) return null;
     return (
@@ -394,14 +460,39 @@ const Notifications: React.FC = () => {
     );
   };
 
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated && !isLoadingAuth) {
+    return (
+      <SignInPrompt
+        variant="notifications"
+        title={t('notifications.signInRequired')}
+        description={t('notifications.signInPrompt')}
+        buttonText={t('auth.signIn')}
+        onSignIn={openSheet}
+      />
+    );
+  }
+
+  // Show onboarding prompt if authenticated but not onboarded
+  if (!isOnboarded && !isLoadingAuth) {
+    return (
+      <SignInPrompt
+        variant="notifications"
+        title={t('notifications.onboardingRequired')}
+        description={t('notifications.onboardingPrompt')}
+        buttonText={t('notifications.completeOnboarding')}
+        onSignIn={openSheet}
+        icon="person-add"
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {isLoadingAuth ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
         </View>
-      ) : !isAuthenticated ? (
-        renderSignInPrompt()
       ) : isLoadingNotifications ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.buttonActive} />
@@ -537,31 +628,6 @@ const styles = StyleSheet.create({
   footerLoader: {
     alignItems: 'center',
     paddingVertical: spacingPixels[4],
-  },
-  signInTitle: {
-    fontSize: fontSizePixels.lg,
-    fontWeight: fontWeightNumeric.semibold,
-    marginTop: spacingPixels[4],
-    marginBottom: spacingPixels[2],
-  },
-  signInDescription: {
-    fontSize: fontSizePixels.sm,
-    textAlign: 'center',
-    lineHeight: fontSizePixels.sm * 1.5,
-  },
-  signInButton: {
-    marginTop: spacingPixels[6],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacingPixels[3.5],
-    paddingHorizontal: spacingPixels[8],
-    borderRadius: radiusPixels.lg,
-    gap: spacingPixels[2],
-  },
-  signInButtonText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: fontWeightNumeric.medium,
   },
 });
 

@@ -14,8 +14,29 @@ import { useDebounce } from './useDebounce';
 export const playerKeys = {
   all: ['players'] as const,
   search: () => [...playerKeys.all, 'search'] as const,
-  searchWithParams: (sportId: string, currentUserId: string, query: string, filters: PlayerFilters, favoritePlayerIds: string[], blockedPlayerIds: string[]) =>
-    [...playerKeys.search(), sportId, currentUserId, query, JSON.stringify(filters), JSON.stringify(favoritePlayerIds), JSON.stringify(blockedPlayerIds)] as const,
+  searchWithParams: (
+    sportId: string,
+    currentUserId: string,
+    query: string,
+    filters: PlayerFilters,
+    favoritePlayerIds: string[],
+    blockedPlayerIds: string[],
+    excludePlayerIds: string[],
+    latitude?: number,
+    longitude?: number
+  ) =>
+    [
+      ...playerKeys.search(),
+      sportId,
+      currentUserId,
+      query,
+      JSON.stringify(filters),
+      JSON.stringify(favoritePlayerIds),
+      JSON.stringify(blockedPlayerIds),
+      JSON.stringify(excludePlayerIds),
+      latitude ?? null,
+      longitude ?? null,
+    ] as const,
 };
 
 /** Default number of players to load per page */
@@ -42,6 +63,10 @@ interface UsePlayerSearchOptions {
   debounceMs?: number;
   /** Enable/disable the query */
   enabled?: boolean;
+  /** User's current latitude (for distance calculation) */
+  latitude?: number;
+  /** User's current longitude (for distance calculation) */
+  longitude?: number;
 }
 
 interface UsePlayerSearchReturn {
@@ -94,24 +119,36 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
     pageSize = DEFAULT_PAGE_SIZE,
     debounceMs = 300,
     enabled = true,
+    latitude,
+    longitude,
   } = options;
 
   // Debounce the search query
   const debouncedQuery = useDebounce(searchQuery, debounceMs);
 
-  // Check if we have all required params
-  const hasRequiredParams = !!sportId && !!currentUserId;
+  // Check if we have all required params (only sportId is required)
+  const hasRequiredParams = !!sportId;
 
   const query = useInfiniteQuery<PlayersPage, Error>({
-    queryKey: playerKeys.searchWithParams(sportId ?? '', currentUserId ?? '', debouncedQuery, filters, favoritePlayerIds, blockedPlayerIds),
+    queryKey: playerKeys.searchWithParams(
+      sportId ?? '',
+      currentUserId ?? '',
+      debouncedQuery,
+      filters,
+      favoritePlayerIds,
+      blockedPlayerIds,
+      excludePlayerIds,
+      latitude,
+      longitude
+    ),
     queryFn: async ({ pageParam }) => {
-      if (!sportId || !currentUserId) {
+      if (!sportId) {
         return { players: [], hasMore: false, nextOffset: null };
       }
 
       return searchPlayersForSport({
         sportId,
-        currentUserId,
+        currentUserId: currentUserId || undefined,
         searchQuery: debouncedQuery || undefined,
         offset: (pageParam as number) ?? 0,
         limit: pageSize,
@@ -119,6 +156,8 @@ export function usePlayerSearch(options: UsePlayerSearchOptions): UsePlayerSearc
         filters,
         favoritePlayerIds,
         blockedPlayerIds,
+        latitude,
+        longitude,
       });
     },
     getNextPageParam: lastPage => lastPage.nextOffset,

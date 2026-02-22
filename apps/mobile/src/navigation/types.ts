@@ -24,6 +24,9 @@ import type {
 // =============================================================================
 
 export type RootStackParamList = {
+  // First-time pre-onboarding wizard (shown before Main for new users)
+  PreOnboarding: undefined;
+
   // App entry point
   Main: NavigatorScreenParams<BottomTabParamList>;
 
@@ -42,8 +45,10 @@ export type RootStackParamList = {
   GroupDetail: { groupId: string; groupName?: string }; // Group detail view
   CommunityDetail: { communityId: string; communityName?: string }; // Community detail view
   GroupChatInfo: { conversationId: string }; // Group chat info/settings view
-  Chat: { conversationId: string; title?: string }; // Direct chat navigation
+  ChatConversation: { conversationId: string; title?: string }; // Direct chat navigation
   PlayedMatchDetail: { match: unknown }; // Played match detail view
+  MyBookings: undefined; // My Bookings screen (court bookings management)
+  BookingDetail: { bookingId: string }; // Booking detail screen (deep link / notification target)
 
   // Admin screens - accessible only to users with admin role
   AdminPanel: undefined; // Admin dashboard entry point
@@ -111,7 +116,6 @@ export type CommunityStackParamList = {
  */
 export type ChatStackParamList = {
   Conversations: undefined;
-  ChatScreen: { conversationId: string; title?: string };
   ArchivedChats: undefined;
 };
 

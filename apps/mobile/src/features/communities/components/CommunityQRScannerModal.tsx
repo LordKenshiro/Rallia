@@ -50,8 +50,10 @@ export function CommunityQRScannerModal({
   const joinCommunityMutation = useRequestToJoinCommunityByInviteCode();
 
   // Reset scanned state when modal opens
+  // This effect resets modal state when it becomes visible - standard modal reset pattern
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on open
       setScanned(false);
       setIsProcessing(false);
       setTorchEnabled(false);
@@ -77,49 +79,70 @@ export function CommunityQRScannerModal({
     return null;
   }, []);
 
-  const handleBarCodeScanned = useCallback(async ({ data }: { data: string }) => {
-    if (scanned || isProcessing) return;
+  const handleBarCodeScanned = useCallback(
+    async ({ data }: { data: string }) => {
+      if (scanned || isProcessing) return;
 
-    setScanned(true);
-    setIsProcessing(true);
+      setScanned(true);
+      setIsProcessing(true);
 
-    const inviteCode = extractInviteCode(data);
+      const inviteCode = extractInviteCode(data);
 
-    if (!inviteCode) {
-      Alert.alert(
-        t('community.qrScanner.invalidCode'),
-        t('community.qrScanner.invalidCodeMessage'),
-        [
-          {
-            text: t('common.tryAgain'),
-            onPress: () => {
-              setScanned(false);
-              setIsProcessing(false);
-            },
-          },
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-            onPress: onClose,
-          },
-        ]
-      );
-      return;
-    }
-
-    try {
-      const result = await joinCommunityMutation.mutateAsync({
-        inviteCode,
-        playerId,
-      });
-
-      if (result.success && result.communityId && result.communityName) {
-        onClose();
-        onRequestSent(result.communityId, result.communityName);
-      } else {
+      if (!inviteCode) {
         Alert.alert(
-          t('community.qrScanner.requestFailed'),
-          result.error || t('community.qrScanner.requestFailedMessage'),
+          t('community.qrScanner.invalidCode'),
+          t('community.qrScanner.invalidCodeMessage'),
+          [
+            {
+              text: t('common.tryAgain'),
+              onPress: () => {
+                setScanned(false);
+                setIsProcessing(false);
+              },
+            },
+            {
+              text: t('common.cancel'),
+              style: 'cancel',
+              onPress: onClose,
+            },
+          ]
+        );
+        return;
+      }
+
+      try {
+        const result = await joinCommunityMutation.mutateAsync({
+          inviteCode,
+          playerId,
+        });
+
+        if (result.success && result.communityId && result.communityName) {
+          onClose();
+          onRequestSent(result.communityId, result.communityName);
+        } else {
+          Alert.alert(
+            t('community.qrScanner.requestFailed'),
+            result.error || t('community.qrScanner.requestFailedMessage'),
+            [
+              {
+                text: t('common.tryAgain'),
+                onPress: () => {
+                  setScanned(false);
+                  setIsProcessing(false);
+                },
+              },
+              {
+                text: t('common.cancel'),
+                style: 'cancel',
+                onPress: onClose,
+              },
+            ]
+          );
+        }
+      } catch (error) {
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : t('community.qrScanner.requestFailedMessage'),
           [
             {
               text: t('common.tryAgain'),
@@ -136,27 +159,18 @@ export function CommunityQRScannerModal({
           ]
         );
       }
-    } catch (error) {
-      Alert.alert(
-        t('common.error'),
-        error instanceof Error ? error.message : t('community.qrScanner.requestFailedMessage'),
-        [
-          {
-            text: t('common.tryAgain'),
-            onPress: () => {
-              setScanned(false);
-              setIsProcessing(false);
-            },
-          },
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-            onPress: onClose,
-          },
-        ]
-      );
-    }
-  }, [scanned, isProcessing, extractInviteCode, joinCommunityMutation, playerId, onClose, onRequestSent, t]);
+    },
+    [
+      scanned,
+      isProcessing,
+      extractInviteCode,
+      joinCommunityMutation,
+      playerId,
+      onClose,
+      onRequestSent,
+      t,
+    ]
+  );
 
   // Handle manual code submission
   const handleManualSubmit = useCallback(() => {
@@ -170,7 +184,7 @@ export function CommunityQRScannerModal({
 
   // Toggle flashlight
   const toggleTorch = useCallback(() => {
-    setTorchEnabled((prev) => !prev);
+    setTorchEnabled(prev => !prev);
   }, []);
 
   const handleRequestPermission = useCallback(async () => {
@@ -191,10 +205,21 @@ export function CommunityQRScannerModal({
   const renderPermissionRequest = () => (
     <View style={styles.permissionContainer}>
       <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
-      <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
+      <Text
+        weight="semibold"
+        size="lg"
+        style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+      >
         {t('community.qrScanner.cameraAccessRequired')}
       </Text>
-      <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>
+      <Text
+        style={{
+          color: colors.textSecondary,
+          marginTop: 8,
+          textAlign: 'center',
+          paddingHorizontal: 32,
+        }}
+      >
         {t('community.qrScanner.cameraAccessMessage')}
       </Text>
       <TouchableOpacity
@@ -216,41 +241,48 @@ export function CommunityQRScannerModal({
     >
       <View style={styles.manualEntryContent}>
         <Ionicons name="keypad-outline" size={48} color={colors.textMuted} />
-        <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
+        <Text
+          weight="semibold"
+          size="lg"
+          style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+        >
           {t('community.qrScanner.enterCodeTitle')}
         </Text>
         <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
           {t('community.qrScanner.enterCodeDescription')}
         </Text>
-        
+
         <TextInput
-          style={[styles.manualInput, { 
-            backgroundColor: colors.inputBackground, 
-            color: colors.text,
-            borderColor: colors.border,
-          }]}
+          style={[
+            styles.manualInput,
+            {
+              backgroundColor: colors.inputBackground,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
           placeholder="ABC12345"
           placeholderTextColor={colors.textMuted}
           value={manualCode}
-          onChangeText={(text) => setManualCode(text.toUpperCase())}
+          onChangeText={text => setManualCode(text.toUpperCase())}
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={8}
           returnKeyType="done"
           onSubmitEditing={handleManualSubmit}
         />
-        
+
         <View style={styles.manualEntryButtons}>
           <TouchableOpacity
             style={[styles.manualEntryButton, { backgroundColor: colors.border }]}
             onPress={() => setShowManualEntry(false)}
           >
-            <Ionicons name="camera" size={20} color={colors.text} />
+            <Ionicons name="camera-outline" size={20} color={colors.text} />
             <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
               {t('community.qrScanner.scanQR')}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.manualEntryButton, { backgroundColor: colors.primary }]}
             onPress={handleManualSubmit}
@@ -290,11 +322,11 @@ export function CommunityQRScannerModal({
       <View style={styles.overlay}>
         {/* Top dark area */}
         <View style={styles.overlayTop} />
-        
+
         {/* Middle row with scan frame */}
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
-          
+
           {/* Scan frame */}
           <View style={styles.scanFrame}>
             {/* Corner markers */}
@@ -303,10 +335,10 @@ export function CommunityQRScannerModal({
             <View style={[styles.corner, styles.cornerBottomLeft]} />
             <View style={[styles.corner, styles.cornerBottomRight]} />
           </View>
-          
+
           <View style={styles.overlaySide} />
         </View>
-        
+
         {/* Bottom dark area with instructions and controls */}
         <View style={styles.overlayBottom}>
           <Text weight="medium" style={styles.instructionText}>
@@ -315,7 +347,7 @@ export function CommunityQRScannerModal({
           {isProcessing && (
             <ActivityIndicator size="small" color="#FFFFFF" style={{ marginTop: 12 }} />
           )}
-          
+
           {/* Scanner controls */}
           {!isProcessing && (
             <View style={styles.scannerControls}>
@@ -324,16 +356,18 @@ export function CommunityQRScannerModal({
                 style={[styles.controlButton, torchEnabled && styles.controlButtonActive]}
                 onPress={toggleTorch}
               >
-                <Ionicons 
-                  name={torchEnabled ? 'flash' : 'flash-outline'} 
-                  size={24} 
-                  color="#FFFFFF" 
+                <Ionicons
+                  name={torchEnabled ? 'flash' : 'flash-outline'}
+                  size={24}
+                  color="#FFFFFF"
                 />
                 <Text size="xs" style={styles.controlButtonText}>
-                  {torchEnabled ? t('community.qrScanner.lightOn') : t('community.qrScanner.lightOff')}
+                  {torchEnabled
+                    ? t('community.qrScanner.lightOn')
+                    : t('community.qrScanner.lightOff')}
                 </Text>
               </TouchableOpacity>
-              
+
               {/* Manual entry */}
               <TouchableOpacity
                 style={styles.controlButton}
@@ -361,20 +395,20 @@ export function CommunityQRScannerModal({
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
           <Text weight="semibold" size="lg" style={styles.headerTitle}>
             {t('community.qrScanner.title')}
           </Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
-        {!permission?.granted 
-          ? renderPermissionRequest() 
-          : showManualEntry 
-            ? renderManualEntry() 
+        {!permission?.granted
+          ? renderPermissionRequest()
+          : showManualEntry
+            ? renderManualEntry()
             : renderScanner()}
       </View>
     </Modal>

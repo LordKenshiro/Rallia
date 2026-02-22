@@ -23,6 +23,31 @@ interface PlayerMatchesPage {
 }
 
 /**
+ * Status filter values for upcoming matches
+ */
+export type UpcomingStatusFilter =
+  | 'all'
+  | 'hosting'
+  | 'confirmed'
+  | 'pending'
+  | 'requested'
+  | 'waitlisted'
+  | 'needs_players'
+  | 'ready_to_play';
+
+/**
+ * Status filter values for past matches
+ */
+export type PastStatusFilter =
+  | 'all'
+  | 'feedback_needed'
+  | 'played'
+  | 'hosted'
+  | 'as_participant'
+  | 'expired'
+  | 'cancelled';
+
+/**
  * Options for the usePlayerMatches hook
  */
 export interface UsePlayerMatchesOptions {
@@ -32,6 +57,8 @@ export interface UsePlayerMatchesOptions {
   timeFilter: 'upcoming' | 'past';
   /** Optional sport ID to filter matches by */
   sportId?: string;
+  /** Optional status filter for filtering by participant status, role, or match state */
+  statusFilter?: UpcomingStatusFilter | PastStatusFilter;
   /** Maximum number of matches to fetch per page */
   limit?: number;
   /** Enable/disable the query */
@@ -62,14 +89,21 @@ export interface UsePlayerMatchesOptions {
  * ```
  */
 export function usePlayerMatches(options: UsePlayerMatchesOptions) {
-  const { userId, timeFilter, sportId, limit = DEFAULT_PAGE_SIZE, enabled = true } = options;
+  const {
+    userId,
+    timeFilter,
+    sportId,
+    statusFilter = 'all',
+    limit = DEFAULT_PAGE_SIZE,
+    enabled = true,
+  } = options;
 
   // Only enable query when we have userId
   const hasRequiredParams = userId !== undefined;
 
   const query = useInfiniteQuery<PlayerMatchesPage, Error>({
-    // Include timeFilter and sportId in query key to refetch when they change
-    queryKey: matchKeys.list('player', { userId, timeFilter, sportId, limit }),
+    // Include timeFilter, sportId, and statusFilter in query key to refetch when they change
+    queryKey: matchKeys.list('player', { userId, timeFilter, sportId, statusFilter, limit }),
     queryFn: async ({ pageParam = 0 }) => {
       if (!hasRequiredParams) {
         return { matches: [], nextOffset: null, hasMore: false };
@@ -79,6 +113,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
         userId: userId!,
         timeFilter,
         sportId,
+        statusFilter,
         limit,
         offset: pageParam as number,
       });
@@ -92,7 +127,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
     getNextPageParam: lastPage => lastPage.nextOffset,
     initialPageParam: 0,
     enabled: enabled && hasRequiredParams,
-    staleTime: 1000 * 60 * 2, // 2 minutes - data stays fresh for 2 minutes
+    staleTime: 0, // Always refetch in background when query is accessed
     refetchOnWindowFocus: false, // Don't refetch on navigation back (use pull-to-refresh instead)
     refetchOnReconnect: true,
   });
@@ -101,7 +136,7 @@ export function usePlayerMatches(options: UsePlayerMatchesOptions) {
   const matches = useMemo(() => {
     if (!query.data?.pages) return [];
     return query.data.pages.flatMap(page => page.matches);
-  }, [query.data?.pages]);
+  }, [query.data]);
 
   // Stable refetch callback for pull-to-refresh
   const refresh = useCallback(async () => {

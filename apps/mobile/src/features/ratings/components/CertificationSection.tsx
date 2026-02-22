@@ -1,6 +1,6 @@
 /**
  * CertificationSection Component
- * 
+ *
  * Displays the full certification status of a player's rating including:
  * - Color-coded badge (yellow/green/red)
  * - References count
@@ -14,11 +14,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Card } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 import { CertificationBadge, type BadgeStatus } from './CertificationBadge';
 
 export interface CertificationSectionProps {
@@ -26,69 +22,69 @@ export interface CertificationSectionProps {
    * The certification status
    */
   badgeStatus: BadgeStatus;
-  
+
   /**
    * Number of references received
    */
   referencesCount: number;
-  
+
   /**
    * Number of approved proofs
    */
   approvedProofsCount: number;
-  
+
   /**
    * Required number of references for certification
    * @default 3
    */
   requiredReferences?: number;
-  
+
   /**
    * Required number of proofs for certification
    * @default 2
    */
   requiredProofs?: number;
-  
+
   /**
    * Peer evaluation average (if any evaluations exist)
    */
   peerEvaluationAverage?: number;
-  
+
   /**
    * Number of peer evaluations
    */
   peerEvaluationCount?: number;
-  
+
   /**
    * The rating system name (e.g., "NTRP", "DUPR")
    */
   ratingSystemName?: string;
-  
+
   /**
    * Whether this is the current user's profile (show action buttons)
    */
   isOwnProfile?: boolean;
-  
+
   /**
    * Callback when "Request Reference" is pressed
    */
   onRequestReference?: () => void;
-  
+
   /**
    * Callback when "Manage Proofs" is pressed
    */
   onManageProofs?: () => void;
-  
+
   /**
    * Whether the player can request references (meets minimum level)
    */
   canRequestReferences?: boolean;
-  
+
   /**
    * Minimum level required for references
    */
   minimumLevel?: number;
-  
+
   /**
    * Player's current level
    */
@@ -138,27 +134,21 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
     <Card style={styles.container} backgroundColor={colors.cardBackground}>
       {/* Header with Badge */}
       <View style={styles.header}>
-        <Text
-          style={[styles.title, { color: colors.text }]}
-        >
+        <Text style={[styles.title, { color: colors.text }]}>
           {t('profile.certification.title')}
         </Text>
         <CertificationBadge status={badgeStatus} size="md" />
       </View>
 
       {/* Status Description */}
-      <Text
-        style={[styles.description, { color: colors.textSecondary }]}
-      >
+      <Text style={[styles.description, { color: colors.textSecondary }]}>
         {getStatusDescription()}
       </Text>
 
       {/* Progress Section (only show if not certified) */}
       {!isCertified && (
         <View style={styles.progressSection}>
-          <Text
-            style={[styles.sectionTitle, { color: colors.text }]}
-          >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('profile.certification.requirements.title')}
           </Text>
 
@@ -251,9 +241,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
       {/* Peer Evaluation Section (if disputed or has evaluations) */}
       {peerEvaluationCount != null && peerEvaluationCount > 0 && (
         <View style={styles.evaluationSection}>
-          <Text
-            style={[styles.sectionTitle, { color: colors.text }]}
-          >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('profile.certification.evaluation.title')}
           </Text>
           <View style={styles.evaluationRow}>
@@ -292,11 +280,7 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
 
           {onManageProofs && (
             <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.secondaryButton,
-                { borderColor: colors.primary },
-              ]}
+              style={[styles.actionButton, styles.secondaryButton, { borderColor: colors.primary }]}
               onPress={onManageProofs}
               activeOpacity={0.7}
             >
@@ -312,31 +296,34 @@ export const CertificationSection: React.FC<CertificationSectionProps> = ({
       {/* Stats Summary */}
       <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {referencesCount}
-          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{referencesCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {t('profile.rating.references', { count: referencesCount }).replace(`${referencesCount} `, '')}
+            {t('profile.rating.references', { count: referencesCount }).replace(
+              `${referencesCount} `,
+              ''
+            )}
           </Text>
         </View>
         <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {approvedProofsCount}
-          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{approvedProofsCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-            {t('profile.rating.ratingProof', { count: approvedProofsCount }).replace(`${approvedProofsCount} `, '')}
+            {t('profile.rating.ratingProof', { count: approvedProofsCount }).replace(
+              `${approvedProofsCount} `,
+              ''
+            )}
           </Text>
         </View>
         {peerEvaluationCount != null && peerEvaluationCount > 0 && (
           <>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>
-                {peerEvaluationCount}
-              </Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{peerEvaluationCount}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                {t('profile.rating.peerRating', { count: peerEvaluationCount }).replace(`${peerEvaluationCount} `, '')}
+                {t('profile.rating.peerRating', { count: peerEvaluationCount }).replace(
+                  `${peerEvaluationCount} `,
+                  ''
+                )}
               </Text>
             </View>
           </>

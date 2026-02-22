@@ -10,17 +10,17 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TextInput,
   FlatList,
   ActivityIndicator,
-  Alert,
   Linking,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
+import { SearchBar } from '../../../../components/SearchBar';
 import type { SelectedPlayer } from './types';
 
 interface DeviceContact {
@@ -107,10 +107,7 @@ export function ContactPickerModal({
       setFilteredContacts(transformedContacts);
     } catch (error) {
       console.error('Failed to load contacts:', error);
-      Alert.alert(
-        t('addScore.contactPicker.error' as TranslationKey), 
-        t('addScore.contactPicker.errorMessage' as TranslationKey)
-      );
+      Alert.alert(t('addScore.contactPicker.error'), t('addScore.contactPicker.errorMessage'));
     } finally {
       setIsLoading(false);
     }
@@ -145,47 +142,53 @@ export function ContactPickerModal({
     }
   }, [searchQuery, contacts]);
 
-  const handleSelectContact = useCallback((contact: DeviceContact) => {
-    const player: SelectedPlayer = {
-      id: `contact-${contact.id}`,
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      displayName: contact.name,
-      isFromContacts: true,
-      phoneNumber: contact.phone || undefined,
-    };
-    onSelectContact(player);
-    onClose();
-  }, [onSelectContact, onClose]);
+  const handleSelectContact = useCallback(
+    (contact: DeviceContact) => {
+      const player: SelectedPlayer = {
+        id: `contact-${contact.id}`,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        displayName: contact.name,
+        isFromContacts: true,
+        phoneNumber: contact.phone || undefined,
+      };
+      onSelectContact(player);
+      onClose();
+    },
+    [onSelectContact, onClose]
+  );
 
   const openSettings = useCallback(() => {
     Linking.openSettings();
   }, []);
 
-  const renderContact = useCallback(({ item }: { item: DeviceContact }) => (
-    <TouchableOpacity
-      style={[styles.contactItem, { borderBottomColor: colors.border }]}
-      onPress={() => handleSelectContact(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-        <Text weight="semibold" style={{ color: colors.primary }}>
-          {item.name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.contactInfo}>
-        <Text weight="medium" style={{ color: colors.text }}>
-          {item.name}
-        </Text>
-        {item.phone && (
-          <Text size="sm" style={{ color: colors.textSecondary }}>
-            {item.phone}
+  const renderContact = useCallback(
+    ({ item }: { item: DeviceContact }) => (
+      <TouchableOpacity
+        style={[styles.contactItem, { borderBottomColor: colors.border }]}
+        onPress={() => handleSelectContact(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+          <Text weight="semibold" style={{ color: colors.primary }}>
+            {item.name.charAt(0).toUpperCase()}
           </Text>
-        )}
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </TouchableOpacity>
-  ), [colors, isDark, handleSelectContact]);
+        </View>
+        <View style={styles.contactInfo}>
+          <Text weight="medium" style={{ color: colors.text }}>
+            {item.name}
+          </Text>
+          {item.phone && (
+            <Text size="sm" style={{ color: colors.textSecondary }}>
+              {item.phone}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+    ),
+    [colors, isDark, handleSelectContact]
+  );
 
   const renderContent = () => {
     if (isLoading) {
@@ -193,7 +196,7 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            {t('addScore.contactPicker.loading' as TranslationKey)}
+            {t('addScore.contactPicker.loading')}
           </Text>
         </View>
       );
@@ -204,13 +207,13 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
           <Text weight="semibold" style={[styles.permissionTitle, { color: colors.text }]}>
-            {t('addScore.contactPicker.accessRequired' as TranslationKey)}
+            {t('addScore.contactPicker.accessRequired')}
           </Text>
           <Text style={[styles.permissionText, { color: colors.textSecondary }]}>
-            {t('addScore.contactPicker.accessRequiredMessage' as TranslationKey)}
+            {t('addScore.contactPicker.accessRequiredMessage')}
           </Text>
           <Button variant="primary" onPress={openSettings} style={styles.settingsButton}>
-            {t('addScore.contactPicker.openSettings' as TranslationKey)}
+            {t('addScore.contactPicker.openSettings')}
           </Button>
         </View>
       );
@@ -221,9 +224,9 @@ export function ContactPickerModal({
         <View style={styles.centerContainer}>
           <Ionicons name="people-outline" size={64} color={colors.textMuted} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            {searchQuery 
-              ? t('addScore.contactPicker.noContactsMatch' as TranslationKey) 
-              : t('addScore.contactPicker.noContactsFound' as TranslationKey)}
+            {searchQuery
+              ? t('addScore.contactPicker.noContactsMatch')
+              : t('addScore.contactPicker.noContactsFound')}
           </Text>
         </View>
       );
@@ -254,32 +257,23 @@ export function ContactPickerModal({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={24} color={colors.text} />
+            <Ionicons name="close-outline" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-            {t('addScore.contactPicker.title' as TranslationKey)}
+            {t('addScore.contactPicker.title')}
           </Text>
           <View style={{ width: 24 }} />
         </View>
 
         {/* Search */}
         {permissionStatus === 'granted' && (
-          <View style={[styles.searchContainer, { backgroundColor: colors.cardBackground }]}>
-            <Ionicons name="search" size={20} color={colors.textMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('addScore.contactPicker.searchPlaceholder' as TranslationKey)}
-              placeholderTextColor={colors.textMuted}
+          <View style={styles.searchContainer}>
+            <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
+              placeholder={t('addScore.contactPicker.searchPlaceholder')}
+              colors={colors}
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
           </View>
         )}
 
@@ -303,17 +297,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
   },
   centerContainer: {
     flex: 1,

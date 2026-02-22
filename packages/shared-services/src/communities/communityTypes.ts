@@ -5,7 +5,13 @@
  * @module communityTypes
  */
 
-import type { Group, GroupMember, GroupActivity, GroupStats, GroupMatch } from '../groups/groupTypes';
+import type {
+  Group,
+  GroupMember,
+  GroupActivity,
+  GroupStats,
+  GroupMatch,
+} from '../groups/groupTypes';
 
 // ============================================================================
 // NETWORK TYPE ENUM

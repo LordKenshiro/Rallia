@@ -1,6 +1,6 @@
 /**
  * ProofGallerySection Component
- * 
+ *
  * A modern, professional gallery section for displaying rating proofs.
  * Shows a grid of proof thumbnails with type indicators.
  * Tapping opens a full-screen viewer for videos, images, documents, or links.
@@ -176,10 +176,7 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
 
     return (
       <TouchableOpacity
-        style={[
-          styles.proofCard,
-          { backgroundColor: colors.card },
-        ]}
+        style={[styles.proofCard, { backgroundColor: colors.card }]}
         onPress={() => handleProofPress(item)}
         activeOpacity={0.8}
       >
@@ -192,10 +189,7 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
         )}
 
         {/* Gradient overlay */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
-          style={styles.gradient}
-        />
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.gradient} />
 
         {/* Type badge */}
         <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
@@ -240,7 +234,9 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="documents-outline" size={18} color={colors.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.ratingProofs.gallery.title')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('profile.ratingProofs.gallery.title')}
+          </Text>
         </View>
         <View style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
           <ActivityIndicator size="small" color={colors.primary} />
@@ -254,7 +250,9 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Ionicons name="documents-outline" size={18} color={colors.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.ratingProofs.gallery.title')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('profile.ratingProofs.gallery.title')}
+          </Text>
         </View>
         {renderEmptyState()}
       </View>
@@ -265,7 +263,9 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Ionicons name="documents-outline" size={18} color={colors.primary} />
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.ratingProofs.gallery.title')}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          {t('profile.ratingProofs.gallery.title')}
+        </Text>
         <View style={[styles.countBadge, { backgroundColor: `${colors.primary}20` }]}>
           <Text style={[styles.countText, { color: colors.primary }]}>{proofs.length}</Text>
         </View>
@@ -275,7 +275,7 @@ const ProofGallerySection: React.FC<ProofGallerySectionProps> = ({
       <FlatList
         data={proofs}
         renderItem={renderProofCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         scrollEnabled={false}
         contentContainerStyle={styles.grid}
@@ -321,8 +321,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizePixels.xs,
     fontWeight: fontWeightNumeric.bold,
   },
-  grid: {
-  },
+  grid: {},
   row: {
     justifyContent: 'space-between',
     marginBottom: spacingPixels[2],

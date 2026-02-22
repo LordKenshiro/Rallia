@@ -224,7 +224,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   disabled={isLoading}
                   activeOpacity={0.7}
                 >
-                  <Text size="base" weight="medium" style={{ color: colors.text }}>
+                  <Text
+                    size="base"
+                    weight="medium"
+                    style={{ color: colors.text, textAlign: 'center' }}
+                  >
                     {cancelLabel}
                   </Text>
                 </TouchableOpacity>
@@ -246,7 +250,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                   {isLoading ? (
                     <ActivityIndicator size="small" color={BASE_WHITE} />
                   ) : (
-                    <Text size="base" weight="medium" style={{ color: BASE_WHITE }}>
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: BASE_WHITE, textAlign: 'center' }}
+                    >
                       {confirmLabel}
                     </Text>
                   )}
@@ -278,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: radiusPixels.xl,
     paddingTop: spacingPixels[6],
     paddingHorizontal: spacingPixels[5],
-    paddingBottom: spacingPixels[5],
+    paddingBottom: spacingPixels[4],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,63 +6,47 @@ import {
   Platform,
   Image,
   Modal,
-  Animated,
-  Alert,
   TextInput,
-  ToastAndroid,
   ActivityIndicator,
+  ScrollView,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Overlay, Select, Button, Heading, Text, PhoneInput } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, useToast } from '@rallia/shared-components';
+import { useTheme } from '@rallia/shared-hooks';
+import { PhoneInput } from '../../../../components/PhoneInput';
 import { useImagePicker, useThemeStyles, useTranslation } from '../../../../hooks';
-import type { TranslationKey } from '@rallia/shared-translations';
-import { COLORS } from '@rallia/shared-constants';
 import {
   validateFullName,
   validateUsername,
   lightHaptic,
   mediumHaptic,
+  selectionHaptic,
 } from '@rallia/shared-utils';
 import { OnboardingService, supabase, Logger } from '@rallia/shared-services';
 import { uploadImage, replaceImage } from '../../../../services/imageUpload';
-import type { GenderEnum, GenderType } from '@rallia/shared-types';
+import { GENDER_VALUES } from '@rallia/shared-types';
+import type { GenderEnum } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
-interface PersonalInformationOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  onBack?: () => void;
-  onContinue?: () => void;
-  onSave?: () => void; // Called only when data is successfully saved (edit mode)
-  currentStep?: number;
-  totalSteps?: number;
-  mode?: 'onboarding' | 'edit'; // New prop to distinguish context
-  initialData?: {
-    firstName?: string;
-    lastName?: string;
-    username?: string;
-    email?: string;
-    dateOfBirth?: string;
-    gender?: string;
-    phoneNumber?: string;
-    profilePictureUrl?: string; // Used in edit mode to delete old image when replacing
-  };
-}
-
-const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
-  visible,
-  onClose,
-  onBack,
-  onContinue,
-  onSave,
-  currentStep = 1,
-  totalSteps = 8,
-  mode = 'onboarding', // Default to onboarding mode
-  initialData,
-}) => {
+export function PersonalInformationActionSheet({ payload }: SheetProps<'personal-information'>) {
+  const mode = payload?.mode || 'onboarding';
+  const onClose = () => SheetManager.hide('personal-information');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _onBack = payload?.onBack;
+  const onContinue = payload?.onContinue;
+  const onSave = payload?.onSave;
+  const currentStep = payload?.currentStep || 1;
+  const totalSteps = payload?.totalSteps || 8;
+  const initialData = payload?.initialData;
   const { colors } = useThemeStyles();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { t } = useTranslation();
+  const toast = useToast();
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
   const [username, setUsername] = useState(initialData?.username || '');
@@ -74,74 +58,11 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
   const [gender, setGender] = useState(initialData?.gender || '');
   const [phoneNumber, setPhoneNumber] = useState(initialData?.phoneNumber || '');
 
-  // Dynamic gender options from database
-  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
-
   // Use custom hook for image picker
   const { image: profileImage, pickImage } = useImagePicker();
 
   // Track saving state
   const [isSaving, setIsSaving] = useState(false);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Fetch gender options from database
-  useEffect(() => {
-    const fetchGenderOptions = async () => {
-      try {
-        const { data, error } = await OnboardingService.getGenderTypes();
-
-        if (error) {
-          Logger.error('Failed to fetch gender types from database', error as Error);
-          // Use fallback if API fails
-          setGenderOptions([
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-          ]);
-        } else if (data) {
-          setGenderOptions(data);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching gender types', error as Error);
-        // Use fallback on error
-        setGenderOptions([
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ]);
-      }
-    };
-
-    if (visible) {
-      fetchGenderOptions();
-    }
-  }, [visible]);
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
 
   // Validation handlers using utility functions
   const handleFirstNameChange = (text: string) => {
@@ -190,14 +111,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     mediumHaptic();
 
     if (!dateOfBirth) {
-      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectDateOfBirth' as TranslationKey));
+      toast.error(t('onboarding.validation.selectDateOfBirth'));
       return;
     }
 
     try {
       // Gender is now stored as the enum value (e.g., 'male', 'female')
       if (!gender) {
-        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.selectGender' as TranslationKey));
+        toast.error(t('onboarding.validation.selectGender'));
         return;
       }
 
@@ -219,26 +140,8 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         if (uploadError) {
           Logger.error('Failed to upload profile picture', uploadError as Error);
           setIsSaving(false);
-          Alert.alert(
-            t('onboarding.validation.uploadError' as TranslationKey),
-            t('onboarding.validation.failedToUploadPicture' as TranslationKey),
-            [
-              {
-                text: t('common.cancel' as TranslationKey),
-                style: 'cancel',
-                onPress: () => {
-                  return;
-                },
-              },
-              {
-                text: t('common.continue' as TranslationKey),
-                onPress: () => {
-                  uploadedImageUrl = null;
-                },
-              },
-            ]
-          );
-          return; // Stop here to let user decide
+          toast.error(t('onboarding.validation.failedToUploadPicture'));
+          return;
         } else {
           uploadedImageUrl = url;
         }
@@ -252,7 +155,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
 
         if (!user) {
           setIsSaving(false);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
+          toast.error(t('onboarding.validation.playerNotFound'));
           return;
         }
 
@@ -286,7 +189,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         if (updateError) {
           Logger.error('Failed to update profile', updateError as Error, { userId: user.id });
           setIsSaving(false);
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateProfile' as TranslationKey));
+          toast.error(t('onboarding.validation.failedToUpdateProfile'));
           return;
         }
 
@@ -294,7 +197,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
         const { error: playerUpdateError } = await supabase
           .from('player')
           .update({
-            gender: gender as GenderType,
+            gender: gender as GenderEnum,
           })
           .eq('id', user.id);
 
@@ -317,20 +220,14 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           // Don't block the save - profile table is already updated
         }
 
-        // Show success toast
-        if (Platform.OS === 'android') {
-          ToastAndroid.show(t('onboarding.successMessages.personalInfoUpdated' as TranslationKey), ToastAndroid.LONG);
-        } else {
-          // For iOS, use a brief Alert that auto-dismisses via timeout
-          Alert.alert(t('alerts.success' as TranslationKey), t('onboarding.successMessages.personalInfoUpdated' as TranslationKey));
-        }
+        toast.success(t('onboarding.successMessages.personalInfoUpdated'));
 
         // Notify parent that data was saved successfully
         onSave?.();
 
         // Close modal automatically after brief delay
         setTimeout(() => {
-          onClose();
+          SheetManager.hide('personal-information');
         }, 500);
       } else {
         // Onboarding mode: Save new personal information
@@ -348,9 +245,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
           Logger.error('Failed to save personal info during onboarding', error as Error, {
             hasProfileImage: !!uploadedImageUrl,
           });
-          Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToSaveInfo' as TranslationKey), [
-            { text: t('common.ok' as TranslationKey) },
-          ]);
+          toast.error(t('onboarding.validation.failedToSaveInfo'));
           return;
         }
 
@@ -387,7 +282,7 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
       }
     } catch (error) {
       Logger.error('Unexpected error saving personal info', error as Error, { mode });
-      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.unexpectedError' as TranslationKey), [{ text: t('common.ok' as TranslationKey) }]);
+      toast.error(t('onboarding.validation.unexpectedError'));
     }
   };
 
@@ -400,332 +295,416 @@ const PersonalInformationOverlay: React.FC<PersonalInformationOverlayProps> = ({
     phoneNumber.trim() !== '';
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      onBack={onBack}
-      type="bottom"
-      showBackButton={false}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Progress Indicator - Only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-        )}
-
-        {/* Title */}
-        <Heading level={2} style={[styles.title, { color: colors.text }]}>
-          {mode === 'onboarding' ? 'Tell us about yourself' : 'Update your personal information'}
-        </Heading>
-
-        {/* Profile Picture Upload - Only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <TouchableOpacity
-            style={[
-              styles.profilePicContainer,
-              { borderColor: colors.primary, backgroundColor: colors.inputBackground },
-            ]}
-            activeOpacity={0.8}
-            onPress={() => {
-              lightHaptic();
-              pickImage();
-            }}
-          >
-            {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
-            ) : (
-              <Ionicons name="camera" size={32} color={colors.primary} />
-            )}
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              {mode === 'onboarding'
+                ? t('onboarding.personalInfoStep.title')
+                : t('profile.editSheets.personalInfoTitle')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
-        )}
-
-        {/* First Name Input */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            First Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <TextInput
-            placeholder="Enter your first name"
-            placeholderTextColor={colors.textMuted}
-            value={firstName}
-            onChangeText={handleFirstNameChange}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
         </View>
 
-        {/* Last Name Input */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Last Name <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <TextInput
-            placeholder="Enter your last name"
-            placeholderTextColor={colors.textMuted}
-            value={lastName}
-            onChangeText={handleLastNameChange}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
-        </View>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Progress Indicator - Only show in onboarding mode */}
+          {mode === 'onboarding' && (
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+          )}
 
-        {/* Email Input - Only show in edit mode, read-only */}
-        {mode === 'edit' && (
-          <View style={styles.customInputContainer}>
-            <Text style={[styles.customInputLabel, { color: colors.text }]}>
-              Email <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
+          {/* Profile Picture Upload - Only show in onboarding mode */}
+          {mode === 'onboarding' && (
+            <TouchableOpacity
+              style={[
+                styles.profilePicContainer,
+                { borderColor: colors.buttonActive, backgroundColor: colors.inputBackground },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                lightHaptic();
+                pickImage();
+              }}
+            >
+              {profileImage ? (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              ) : (
+                <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* First Name Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('profile.fields.firstName')} <Text color={colors.error}>*</Text>
             </Text>
             <TextInput
-              placeholder="Email"
+              placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder')}
               placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={() => {}} // Read-only, no-op
-              editable={false}
+              value={firstName}
+              onChangeText={handleFirstNameChange}
               style={[
-                styles.inputWithIcon,
-                styles.inputField,
-                styles.customInputDisabled,
+                styles.input,
                 {
                   backgroundColor: colors.inputBackground,
-                  borderColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
                   color: colors.text,
                 },
               ]}
             />
-            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
-              This information cannot be modified
-            </Text>
           </View>
-        )}
 
-        {/* Username Input - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Username <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <TextInput
-            placeholder="Choose a username"
-            placeholderTextColor={colors.textMuted}
-            value={username}
-            onChangeText={handleUsernameChange}
-            maxLength={10}
-            style={[
-              styles.inputWithIcon,
-              styles.inputField,
-              {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.inputBackground,
-                color: colors.text,
-              },
-            ]}
-          />
-          <View style={styles.inputFooter}>
-            <Text style={[styles.customHelperText, { color: colors.textMuted }]}>
-              Max 10 characters, no spaces
+          {/* Last Name Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('profile.fields.lastName')} <Text color={colors.error}>*</Text>
             </Text>
-            <Text style={[styles.charCount, { color: colors.textMuted }]}>
-              {username.length}/10
-            </Text>
-          </View>
-        </View>
-
-        {/* Date of Birth Input - Light green background for both modes */}
-        <Text style={[styles.customInputLabel, { color: colors.text }]}>
-          Date of Birth <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-        </Text>
-        {Platform.OS === 'web' ? (
-          <View
-            style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          >
-            <input
-              type="date"
-              style={{
-                flex: 1,
-                fontSize: 16,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                color: colors.text,
-                fontFamily: 'inherit',
-              }}
-              value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
-              onChange={e => {
-                const selectedDate = e.target.value ? new Date(e.target.value) : null;
-                if (selectedDate) {
-                  setDateOfBirth(selectedDate);
-                }
-              }}
-              max={new Date().toISOString().split('T')[0]}
-              min="1900-01-01"
-              placeholder="Date of Birth"
-            />
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={colors.textMuted}
-              style={styles.inputIcon}
+            <TextInput
+              placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={lastName}
+              onChangeText={handleLastNameChange}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
             />
           </View>
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.inputWithIcon,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-            onPress={() => setShowDatePicker(true)}
-            activeOpacity={0.8}
-          >
-            <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-              {dateOfBirth ? formatDate(dateOfBirth) : 'Date of Birth'}
-            </Text>
-            <Ionicons
-              name="calendar-outline"
-              size={20}
-              color={colors.textMuted}
-              style={styles.inputIcon}
-            />
-          </TouchableOpacity>
-        )}
 
-        {/* Date Picker - iOS Modal */}
-        {showDatePicker && Platform.OS === 'ios' && (
-          <Modal
-            transparent
-            animationType="slide"
-            visible={showDatePicker}
-            onRequestClose={() => setShowDatePicker(false)}
-          >
-            <View style={styles.modalOverlay}>
-              <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
-                <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={dateOfBirth || new Date(2000, 0, 1)}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                  minimumDate={new Date(1900, 0, 1)}
-                  style={styles.datePicker}
+          {/* Email Input - Only show in edit mode, read-only */}
+          {mode === 'edit' && (
+            <View style={styles.inputContainer}>
+              <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+                {t('profile.fields.email')} <Text color={colors.error}>*</Text>
+              </Text>
+              <TextInput
+                placeholder={t('profile.fields.email')}
+                placeholderTextColor={colors.textMuted}
+                value={email}
+                onChangeText={() => {}} // Read-only, no-op
+                editable={false}
+                style={[
+                  styles.input,
+                  styles.inputDisabled,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.text,
+                  },
+                ]}
+              />
+              <Text size="xs" color={colors.textSecondary} style={styles.helperText}>
+                {t('profile.editSheets.emailReadOnlyHelp')}
+              </Text>
+            </View>
+          )}
+
+          {/* Username Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('onboarding.personalInfoStep.username')} <Text color={colors.error}>*</Text>
+            </Text>
+            <TextInput
+              placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={username}
+              onChangeText={handleUsernameChange}
+              maxLength={10}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.text,
+                },
+              ]}
+            />
+            <View style={styles.inputFooter}>
+              <Text size="xs" color={colors.textSecondary}>
+                {t('onboarding.personalInfoStep.usernameHelper')}
+              </Text>
+              <Text size="xs" color={colors.textSecondary}>
+                {username.length}/10
+              </Text>
+            </View>
+          </View>
+
+          {/* Date of Birth Input */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('profile.fields.dateOfBirth')} <Text color={colors.error}>*</Text>
+            </Text>
+            {Platform.OS === 'web' ? (
+              <View
+                style={[
+                  styles.input,
+                  styles.dateInput,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+              >
+                <input
+                  type="date"
+                  style={{
+                    flex: 1,
+                    fontSize: 16,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: colors.text,
+                    fontFamily: 'inherit',
+                  }}
+                  value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
+                  onChange={e => {
+                    const selectedDate = e.target.value ? new Date(e.target.value) : null;
+                    if (selectedDate) {
+                      setDateOfBirth(selectedDate);
+                    }
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
+                  placeholder={t('profile.fields.dateOfBirth')}
+                />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.buttonActive}
+                  style={styles.inputIcon}
                 />
               </View>
-            </View>
-          </Modal>
-        )}
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  styles.dateInput,
+                  {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                  },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
+                <Text color={dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
+                  {dateOfBirth ? formatDate(dateOfBirth) : t('profile.fields.dateOfBirth')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {/* Date Picker - Android */}
-        {showDatePicker && Platform.OS === 'android' && (
-          <DateTimePicker
-            value={dateOfBirth || new Date(2000, 0, 1)}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            maximumDate={new Date()}
-            minimumDate={new Date(1900, 0, 1)}
-          />
-        )}
-
-        {/* Gender Picker - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
-          <Text style={[styles.customInputLabel, { color: colors.text }]}>
-            Gender <Text style={[styles.requiredStar, { color: colors.error }]}>*</Text>
-          </Text>
-          <Select
-            placeholder="Select your gender"
-            value={gender}
-            onChange={setGender}
-            options={genderOptions}
-            containerStyle={styles.inlineInputContainer}
-            selectStyle={[
-              styles.genderSelectStyle,
-              { backgroundColor: colors.inputBackground, borderColor: colors.inputBackground },
-            ]}
-          />
-        </View>
-
-        {/* Phone Number Input - Light green background for both modes */}
-        <View style={styles.customInputContainer}>
-          <PhoneInput
-            value={phoneNumber}
-            onChangePhone={handlePhoneNumberChange}
-            label="Phone Number"
-            placeholder="Enter phone number"
-            required
-            maxLength={15}
-            showCharCount
-            colors={{
-              text: colors.text,
-              textMuted: colors.textMuted,
-              textSecondary: colors.textSecondary,
-              background: colors.background,
-              inputBackground: colors.inputBackground,
-              inputBorder: colors.inputBackground,
-              primary: colors.primary,
-              error: colors.error,
-              card: colors.card,
-            }}
-          />
-        </View>
-
-        {/* Continue/Save Button */}
-        <Button
-          variant="primary"
-          onPress={handleContinue}
-          disabled={!isFormValid || isSaving}
-          style={mode === 'edit' ? styles.saveButtonContainer : styles.continueButton}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : mode === 'onboarding' ? (
-            'Continue'
-          ) : (
-            'Save'
+          {/* Date Picker - iOS Modal */}
+          {showDatePicker && Platform.OS === 'ios' && (
+            <Modal
+              transparent
+              animationType="fade"
+              visible={showDatePicker}
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <Pressable
+                style={[
+                  styles.modalOverlay,
+                  { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)' },
+                ]}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <View style={[styles.datePickerContainer, { backgroundColor: colors.card }]}>
+                  <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.pickerHeaderButton}
+                    >
+                      <Text size="base" color={colors.textMuted}>
+                        {t('common.cancel')}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text size="base" weight="semibold" color={colors.text}>
+                      {t('profile.fields.dateOfBirth')}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      style={styles.pickerHeaderButton}
+                    >
+                      <Text size="base" weight="semibold" color={colors.buttonActive}>
+                        {t('common.done')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={dateOfBirth || new Date(2000, 0, 1)}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                    minimumDate={new Date(1900, 0, 1)}
+                    themeVariant={isDark ? 'dark' : 'light'}
+                    style={styles.iosPicker}
+                  />
+                </View>
+              </Pressable>
+            </Modal>
           )}
-        </Button>
-      </Animated.View>
-    </Overlay>
+
+          {/* Date Picker - Android */}
+          {showDatePicker && Platform.OS === 'android' && (
+            <DateTimePicker
+              value={dateOfBirth || new Date(2000, 0, 1)}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              minimumDate={new Date(1900, 0, 1)}
+            />
+          )}
+
+          {/* Gender - Full-width Options */}
+          <View style={styles.inputContainer}>
+            <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
+              {t('profile.gender')} <Text color={colors.error}>*</Text>
+            </Text>
+            <View style={styles.genderRow}>
+              {GENDER_VALUES.map(value => {
+                const isSelected = gender === value;
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.genderOption,
+                      {
+                        backgroundColor: isSelected ? colors.buttonActive : colors.buttonInactive,
+                        borderColor: isSelected ? colors.buttonActive : colors.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      selectionHaptic();
+                      setGender(value);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight={isSelected ? 'semibold' : 'regular'}
+                      color={isSelected ? colors.buttonTextActive : colors.text}
+                    >
+                      {t(`profile.genderValues.${value}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Phone Number Input */}
+          <View style={styles.inputContainer}>
+            <PhoneInput
+              value={phoneNumber}
+              onChangePhone={handlePhoneNumberChange}
+              label={t('profile.fields.phoneNumber')}
+              placeholder={t('profile.editSheets.phonePlaceholder')}
+              required
+              maxLength={15}
+              colors={{
+                text: colors.text,
+                textMuted: colors.textMuted,
+                textSecondary: colors.textSecondary,
+                background: colors.background,
+                inputBackground: colors.inputBackground,
+                inputBorder: colors.inputBorder,
+                primary: colors.primary,
+                error: colors.error,
+                card: colors.card,
+              }}
+            />
+          </View>
+        </ScrollView>
+
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              (!isFormValid || isSaving) && { opacity: 0.6 },
+            ]}
+            onPress={handleContinue}
+            disabled={!isFormValid || isSaving}
+            activeOpacity={0.8}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {mode === 'onboarding' ? t('common.continue') : t('common.save')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export default PersonalInformationActionSheet;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    paddingBottom: 30, // Extra padding at bottom to ensure content is scrollable
+  sheetBackground: {
+    flex: 1,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20, // Reduced from 25 to save space
-    lineHeight: 32,
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
   },
   profilePicContainer: {
     width: 80,
@@ -734,7 +713,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 25,
+    marginBottom: spacingPixels[6],
     borderWidth: 2,
     borderStyle: 'dashed',
     overflow: 'hidden',
@@ -744,96 +723,87 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 40,
   },
-  continueButton: {
-    backgroundColor: COLORS.buttonPrimary,
-    marginTop: 10,
+  footer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    borderTopWidth: 1,
   },
-  saveButtonContainer: {
-    marginTop: 10,
-    backgroundColor: COLORS.accent, // Coral/pink color for Save button in edit mode
+  submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
-  // Custom input styles for edit mode with light green background
-  customInputContainer: {
-    marginBottom: 12, // Reduced from 15 to save vertical space
+  inputContainer: {
+    marginBottom: spacingPixels[3],
   },
-  customInputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+  inputLabel: {
+    marginBottom: spacingPixels[2],
   },
-  requiredStar: {
-    // Color applied inline
+  input: {
+    borderRadius: radiusPixels.lg,
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[3],
+    fontSize: 16,
+    borderWidth: 1,
   },
-  customInputDisabled: {
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[3],
+  },
+  inputDisabled: {
     opacity: 0.6,
   },
-  inlineInputContainer: {
-    marginBottom: 0, // Remove Select's default margin
+  genderRow: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
   },
-  genderSelectStyle: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginBottom: 15,
+  genderOption: {
+    flex: 1,
+    paddingVertical: spacingPixels[3],
+    paddingHorizontal: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    minHeight: 50, // Match other input heights
+    alignItems: 'center',
   },
-  customHelperText: {
-    fontSize: 12,
-    marginTop: 4,
+  helperText: {
+    marginTop: spacingPixels[1],
   },
   inputFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  charCount: {
-    fontSize: 12,
-  },
-  inputWithIcon: {
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-  },
-  inputField: {
-    fontSize: 16,
-  },
-  inputText: {
-    paddingVertical: 0,
-  },
-  placeholderText: {
-    // Unused style - placeholderTextColor is set inline
+    marginTop: spacingPixels[1],
   },
   inputIcon: {
-    marginLeft: 10,
+    marginRight: spacingPixels[3],
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+    paddingBottom: spacingPixels[5],
   },
   datePickerHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
     borderBottomWidth: 1,
   },
-  datePickerButton: {
-    fontSize: 16,
-    fontWeight: '600',
+  pickerHeaderButton: {
+    paddingVertical: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    minWidth: 60,
   },
-  datePicker: {
-    width: '100%',
+  iosPicker: {
     height: 200,
   },
 });
-
-export default PersonalInformationOverlay;

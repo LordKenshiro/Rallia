@@ -15,10 +15,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
  */
 export function subscribeToSharedLists(
   playerId: string,
-  onListChange: (payload: { 
-    eventType: 'INSERT' | 'UPDATE' | 'DELETE'; 
-    list: unknown 
-  }) => void
+  onListChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; list: unknown }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel(`shared_lists:${playerId}`)
@@ -30,7 +27,7 @@ export function subscribeToSharedLists(
         table: 'shared_contact_list',
         filter: `player_id=eq.${playerId}`,
       },
-      (payload) => {
+      payload => {
         onListChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           list: payload.new || payload.old,
@@ -51,9 +48,9 @@ export function subscribeToSharedLists(
  */
 export function subscribeToSharedContacts(
   listId: string,
-  onContactChange: (payload: { 
-    eventType: 'INSERT' | 'UPDATE' | 'DELETE'; 
-    contact: unknown 
+  onContactChange: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    contact: unknown;
   }) => void
 ): RealtimeChannel {
   const channel = supabase
@@ -66,7 +63,7 @@ export function subscribeToSharedContacts(
         table: 'shared_contact',
         filter: `list_id=eq.${listId}`,
       },
-      (payload) => {
+      payload => {
         onContactChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           contact: payload.new || payload.old,

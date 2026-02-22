@@ -2,7 +2,7 @@
  * GroupChatInfo Screen
  * Shows group chat details - profile picture, name, description, members
  * Allows editing group info and managing members
- * 
+ *
  * Refactored to use extracted hooks:
  * - useGroupChatInfo: Data fetching and admin checks
  * - useGroupMemberManagement: Member CRUD operations
@@ -26,19 +26,20 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { Text, Skeleton, SkeletonAvatar } from '@rallia/shared-components';
-import { 
-  useThemeStyles, 
+import { getSafeAreaEdges } from '../utils';
+import {
+  useThemeStyles,
   useAuth,
   useGroupChatInfo,
   useGroupMemberManagement,
   useGroupEditActions,
   useTranslation,
+  useNavigateToPlayerProfile,
   type TranslationKey,
 } from '../hooks';
 import type { RootStackParamList } from '../navigation/types';
 import { spacingPixels, fontSizePixels, primary, status, neutral } from '@rallia/design-system';
-import { AddMembersToGroupModal, ChatMemberOptionsModal } from '../features/chat';
-import { ConfirmationModal } from '../components/ConfirmationModal';
+import { SheetManager } from 'react-native-actions-sheet';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type GroupChatInfoRouteProp = RouteProp<RootStackParamList, 'GroupChatInfo'>;
@@ -97,20 +98,9 @@ export default function GroupChatInfoScreen() {
 
   const {
     isUpdating: isMemberUpdating,
-    showAddMemberModal,
-    setShowAddMemberModal,
-    handleAddMember,
     handleMembersAdded,
-    // New modal-based member management
-    showMemberOptionsModal,
-    selectedMember,
-    closeMemberOptionsModal,
-    showConfirmationModal,
-    confirmationConfig,
-    closeConfirmationModal,
-    handleMemberPress,
-    handleLeaveGroup,
-    getMemberOptions,
+    handleRemoveMember,
+    handleMemberLongPress,
   } = useGroupMemberManagement({
     conversationId,
     playerId,
@@ -155,90 +145,127 @@ export default function GroupChatInfoScreen() {
     // Alert removed - would use Alert.alert here
   }, []);
 
-  // Navigate to member profile from member options modal
-  const handleNavigateToProfile = useCallback(() => {
-    if (selectedMember?.playerId) {
-      closeMemberOptionsModal();
-      navigation.navigate('PlayerProfile', { playerId: selectedMember.playerId });
-    }
-  }, [selectedMember, closeMemberOptionsModal, navigation]);
-
-  // Handle member item tap - show options modal
-  const handleMemberItemPress = useCallback((item: ParticipantInfo) => {
-    const profile = item.player?.profile;
-    const displayName = profile 
-      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
-      : 'Unknown User';
-    
-    handleMemberPress({
-      playerId: item.player_id,
-      name: displayName,
-      profilePictureUrl: profile?.profile_picture_url || null,
-      isAdmin: isParticipantAdmin(item.player_id),
-    });
-  }, [handleMemberPress, isParticipantAdmin]);
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
+  const handleMemberPress = useCallback(
+    (memberId: string) => {
+      navigateToPlayerProfile(memberId);
+    },
+    [navigateToPlayerProfile]
+  );
 
   // Render member item
-  const renderMemberItem = useCallback(({ item }: { item: ParticipantInfo }) => {
-    const profile = item.player?.profile;
-    const isMemberAdmin = isParticipantAdmin(item.player_id);
-    const isCurrentUser = item.player_id === playerId;
-    const displayName = profile 
-      ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
-      : 'Unknown User';
+  const renderMemberItem = useCallback(
+    ({ item }: { item: ParticipantInfo }) => {
+      const profile = item.player?.profile;
+      const isMemberAdmin = isParticipantAdmin(item.player_id);
+      const isCurrentUser = item.player_id === playerId;
+      const displayName = profile
+        ? `${profile.first_name}${profile.last_name ? ` ${profile.last_name}` : ''}`
+        : 'Unknown User';
 
-    return (
-      <TouchableOpacity
-        style={[styles.memberItem, { borderBottomColor: colors.border }]}
-        onPress={() => handleMemberItemPress(item)}
-      >
-        {/* Avatar */}
-        {profile?.profile_picture_url ? (
-          <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
-        ) : (
-          <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
-            <Ionicons name="person" size={20} color={primary[500]} />
-          </View>
-        )}
-
-        {/* Name and role */}
-        <View style={styles.memberInfo}>
-          <Text style={[styles.memberName, { color: colors.text }]}>
-            {displayName}
-            {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
-          </Text>
-          {isMemberAdmin && (
-            <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
-              <Text style={styles.adminBadgeText}>Admin</Text>
+      return (
+        <TouchableOpacity
+          style={[styles.memberItem, { borderBottomColor: colors.border }]}
+          onPress={() => handleMemberPress(item.player_id)}
+          onLongPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
+        >
+          {/* Avatar */}
+          {profile?.profile_picture_url ? (
+            <Image source={{ uri: profile.profile_picture_url }} style={styles.memberAvatar} />
+          ) : (
+            <View style={[styles.memberAvatarPlaceholder, { backgroundColor: primary[100] }]}>
+              <Ionicons name="person-outline" size={20} color={primary[500]} />
             </View>
           )}
-        </View>
 
-        {/* More options icon */}
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-    );
-  }, [colors, playerId, isParticipantAdmin, handleMemberItemPress]);
+          {/* Name and role */}
+          <View style={styles.memberInfo}>
+            <Text style={[styles.memberName, { color: colors.text }]}>
+              {displayName}
+              {isCurrentUser && <Text style={{ color: primary[500] }}> (You)</Text>}
+            </Text>
+            {isMemberAdmin && (
+              <View style={[styles.adminBadge, { backgroundColor: primary[500] }]}>
+                <Text style={styles.adminBadgeText}>Admin</Text>
+              </View>
+            )}
+          </View>
+
+          {/* More options button (for admin to manage members) */}
+          {isAdmin && !isCurrentUser && (
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={() => handleMemberLongPress(item.player_id, isMemberAdmin)}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      );
+    },
+    [colors, playerId, isAdmin, isParticipantAdmin, handleMemberPress, handleMemberLongPress]
+  );
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           {/* Group Chat Info Skeleton */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <SkeletonAvatar size={100} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 16 }} />
-            <Skeleton width={100} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 8 }} />
+            <SkeletonAvatar
+              size={100}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
+            <Skeleton
+              width={150}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 16 }}
+            />
+            <Skeleton
+              width={100}
+              height={14}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 8 }}
+            />
           </View>
           <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-            <Skeleton width={100} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={100}
+              height={16}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, gap: 12 }}>
               {[...Array(4)].map((_, index) => (
                 <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <SkeletonAvatar size={48} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+                  <SkeletonAvatar
+                    size={48}
+                    backgroundColor={colors.cardBackground}
+                    highlightColor={colors.border}
+                  />
                   <View style={{ flex: 1 }}>
-                    <Skeleton width={120} height={16} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-                    <Skeleton width={80} height={14} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 4 }} />
+                    <Skeleton
+                      width={120}
+                      height={16}
+                      borderRadius={4}
+                      backgroundColor={colors.cardBackground}
+                      highlightColor={colors.border}
+                    />
+                    <Skeleton
+                      width={80}
+                      height={14}
+                      borderRadius={4}
+                      backgroundColor={colors.cardBackground}
+                      highlightColor={colors.border}
+                      style={{ marginTop: 4 }}
+                    />
                   </View>
                 </View>
               ))}
@@ -251,7 +278,7 @@ export default function GroupChatInfoScreen() {
 
   if (!conversation) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.loadingContainer}>
           <Text style={{ color: colors.text }}>Conversation not found</Text>
         </View>
@@ -260,7 +287,10 @@ export default function GroupChatInfoScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={getSafeAreaEdges(['top'])}
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -277,11 +307,11 @@ export default function GroupChatInfoScreen() {
             <Image source={{ uri: groupImageUrl }} style={styles.groupImage} />
           ) : (
             <View style={[styles.groupImagePlaceholder, { backgroundColor: primary[100] }]}>
-              <Ionicons name="people" size={60} color={primary[500]} />
+              <Ionicons name="people-outline" size={60} color={primary[500]} />
             </View>
           )}
           <View style={[styles.editImageBadge, { backgroundColor: primary[500] }]}>
-            <Ionicons name="camera" size={16} color="#FFFFFF" />
+            <Ionicons name="camera-outline" size={16} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
 
@@ -292,8 +322,8 @@ export default function GroupChatInfoScreen() {
               <TextInput
                 style={[
                   styles.editInput,
-                  { 
-                    color: colors.text, 
+                  {
+                    color: colors.text,
                     borderColor: primary[500],
                     backgroundColor: isDark ? neutral[800] : neutral[50],
                   },
@@ -304,10 +334,10 @@ export default function GroupChatInfoScreen() {
                 maxLength={50}
               />
               <TouchableOpacity style={styles.saveButton} onPress={handleSaveName}>
-                <Ionicons name="checkmark" size={24} color={primary[500]} />
+                <Ionicons name="checkmark-outline" size={24} color={primary[500]} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEditName}>
-                <Ionicons name="close" size={24} color={status.error.DEFAULT} />
+                <Ionicons name="close-outline" size={24} color={status.error.DEFAULT} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -317,7 +347,7 @@ export default function GroupChatInfoScreen() {
             </TouchableOpacity>
           )}
           <Text style={[styles.memberCount, { color: colors.textMuted }]}>
-            {t('chat.groupChat.groupMemberCount' as TranslationKey, { count: memberCount })}
+            {t('groupChat.groupMemberCount', { count: memberCount })}
           </Text>
         </View>
 
@@ -330,7 +360,7 @@ export default function GroupChatInfoScreen() {
               </View>
               <View style={styles.sectionContent}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>
-                  {networkInfo.description || t('chat.groupChat.addGroupDescription' as TranslationKey)}
+                  {networkInfo.description || t('groupChat.addGroupDescription')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -341,25 +371,40 @@ export default function GroupChatInfoScreen() {
         {/* Actions */}
         <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
           {/* Add Members */}
-          <TouchableOpacity style={styles.sectionRow} onPress={handleAddMember}>
+          <TouchableOpacity
+            style={styles.sectionRow}
+            onPress={() => {
+              SheetManager.show('add-members-to-group', {
+                payload: {
+                  existingMemberIds: participants.map(p => p.player_id),
+                  currentUserId: playerId,
+                  onMembersSelected: handleMembersAdded,
+                },
+              });
+            }}
+          >
             <View style={[styles.sectionIcon, { backgroundColor: primary[100] }]}>
               <Ionicons name="person-add" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.addMembers' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('groupChat.addMembers')}
+              </Text>
             </View>
           </TouchableOpacity>
 
           {/* Invite via QR */}
-          <TouchableOpacity 
-            style={[styles.sectionRow, { borderBottomWidth: 0 }]} 
+          <TouchableOpacity
+            style={[styles.sectionRow, { borderBottomWidth: 0 }]}
             onPress={handleInviteViaQR}
           >
             <View style={[styles.sectionIcon, { backgroundColor: primary[100] }]}>
               <Ionicons name="qr-code" size={20} color={primary[500]} />
             </View>
             <View style={styles.sectionContent}>
-              <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('chat.groupChat.inviteViaLinkOrQR' as TranslationKey)}</Text>
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>
+                {t('groupChat.inviteViaLinkOrQR')}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -370,31 +415,36 @@ export default function GroupChatInfoScreen() {
             {t('common.memberCount', { count: memberCount })}
           </Text>
           <TouchableOpacity>
-            <Ionicons name="search" size={20} color={colors.textMuted} />
+            <Ionicons name="search-outline" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {/* Members List */}
         <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF' }]}>
-          {participants.map((participant) => (
-            <View key={participant.id}>
-              {renderMemberItem({ item: participant })}
-            </View>
+          {participants.map(participant => (
+            <View key={participant.id}>{renderMemberItem({ item: participant })}</View>
           ))}
         </View>
 
         {/* Leave Group */}
         {playerId && (
-          <View style={[styles.section, { backgroundColor: isDark ? colors.card : '#FFFFFF', marginTop: spacingPixels[4] }]}>
-            <TouchableOpacity 
-              style={[styles.sectionRow, { borderBottomWidth: 0 }]} 
-              onPress={handleLeaveGroup}
+          <View
+            style={[
+              styles.section,
+              { backgroundColor: isDark ? colors.card : '#FFFFFF', marginTop: spacingPixels[4] },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.sectionRow, { borderBottomWidth: 0 }]}
+              onPress={() => handleRemoveMember(playerId)}
             >
               <View style={[styles.sectionIcon, { backgroundColor: status.error.light }]}>
                 <Ionicons name="exit-outline" size={20} color={status.error.DEFAULT} />
               </View>
               <View style={styles.sectionContent}>
-                <Text style={[styles.sectionLabel, { color: status.error.DEFAULT }]}>Leave group</Text>
+                <Text style={[styles.sectionLabel, { color: status.error.DEFAULT }]}>
+                  Leave group
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -409,44 +459,6 @@ export default function GroupChatInfoScreen() {
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={primary[500]} />
         </View>
-      )}
-
-      {/* Add Members Modal */}
-      <AddMembersToGroupModal
-        visible={showAddMemberModal}
-        onClose={() => setShowAddMemberModal(false)}
-        onMembersSelected={handleMembersAdded}
-        existingMemberIds={participants.map(p => p.player_id)}
-        currentUserId={playerId}
-      />
-
-      {/* Member Options Modal */}
-      <ChatMemberOptionsModal
-        visible={showMemberOptionsModal}
-        onClose={closeMemberOptionsModal}
-        member={selectedMember}
-        options={getMemberOptions().map(opt => ({
-          ...opt,
-          icon: opt.icon as keyof typeof Ionicons.glyphMap,
-          onPress: opt.id === 'view-profile' ? handleNavigateToProfile : opt.onPress,
-        }))}
-        onAvatarPress={handleNavigateToProfile}
-        isLoading={isMemberUpdating}
-      />
-
-      {/* Confirmation Modal */}
-      {confirmationConfig && (
-        <ConfirmationModal
-          visible={showConfirmationModal}
-          onClose={closeConfirmationModal}
-          onConfirm={confirmationConfig.onConfirm}
-          title={confirmationConfig.title}
-          message={confirmationConfig.message}
-          confirmLabel={confirmationConfig.confirmLabel}
-          cancelLabel={t('common.cancel')}
-          destructive={confirmationConfig.destructive}
-          isLoading={isMemberUpdating}
-        />
       )}
     </SafeAreaView>
   );

@@ -5,12 +5,7 @@
  */
 
 import React, { memo } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
@@ -28,7 +23,7 @@ interface ConversationItemProps {
 // Format time for display
 function formatTime(dateString: string | null): string {
   if (!dateString) return '';
-  
+
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -48,7 +43,7 @@ function formatTime(dateString: string | null): string {
 // Format last seen for display
 function formatLastSeen(dateString: string | null | undefined): string {
   if (!dateString) return '';
-  
+
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -64,8 +59,14 @@ function formatLastSeen(dateString: string | null | undefined): string {
   return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
+// Translation function type that accepts any key (for internal use)
+type TranslateFn = (key: string, options?: Record<string, string | number | boolean>) => string;
+
 // Get conversation display info
-function getConversationInfo(conversation: ConversationPreview, t: (key: string) => string): {
+function getConversationInfo(
+  conversation: ConversationPreview,
+  t: TranslateFn
+): {
   name: string;
   avatar: string | null;
   iconName: keyof typeof Ionicons.glyphMap;
@@ -88,7 +89,7 @@ function getConversationInfo(conversation: ConversationPreview, t: (key: string)
 
   // Group or other conversation types
   return {
-    name: conversation.title || t('chat.conversation.groupChat' as any),
+    name: conversation.title || t('chat.conversation.groupChat'),
     avatar: conversation.cover_image_url || null,
     iconName: conversation.conversation_type === 'announcement' ? 'megaphone' : 'people',
     isOnline: false,
@@ -104,7 +105,11 @@ function ConversationItemComponent({
 }: ConversationItemProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
-  const { name, avatar, iconName, isOnline, lastSeen } = getConversationInfo(conversation, t);
+  // Cast t to TranslateFn for getConversationInfo which uses dynamic keys
+  const { name, avatar, iconName, isOnline, lastSeen } = getConversationInfo(
+    conversation,
+    t as TranslateFn
+  );
   const hasUnread = conversation.unread_count > 0;
   const isPinned = conversation.is_pinned ?? false;
   const isMuted = conversation.is_muted ?? false;
@@ -112,10 +117,10 @@ function ConversationItemComponent({
   // Build preview message
   let previewText = '';
   let isBlockedPreview = false;
-  
+
   if (isBlocked && conversation.conversation_type === 'direct') {
     // Show blocked message for direct chats where user has blocked the other person
-    previewText = t('chat.conversation.blockedUser' as any);
+    previewText = t('chat.conversation.blockedUser');
     isBlockedPreview = true;
   } else if (conversation.last_message_content) {
     if (conversation.conversation_type !== 'direct' && conversation.last_message_sender_name) {
@@ -128,7 +133,7 @@ function ConversationItemComponent({
   return (
     <TouchableOpacity
       style={[
-        styles.container, 
+        styles.container,
         { backgroundColor: isDark ? colors.card : '#FFFFFF' },
         isPinned && styles.pinnedContainer,
       ]}
@@ -145,17 +150,17 @@ function ConversationItemComponent({
             <Ionicons name={iconName} size={24} color={primary[500]} />
           </View>
         )}
-        
+
         {/* Online Status Indicator */}
         {conversation.conversation_type === 'direct' && (
-          <View 
+          <View
             style={[
-              styles.onlineIndicator, 
-              { 
+              styles.onlineIndicator,
+              {
                 backgroundColor: isOnline ? '#22C55E' : neutral[400],
                 borderColor: isDark ? colors.card : '#FFFFFF',
-              }
-            ]} 
+              },
+            ]}
           />
         )}
       </View>
@@ -165,12 +170,7 @@ function ConversationItemComponent({
         <View style={styles.topRow}>
           <View style={styles.nameRow}>
             {isPinned && (
-              <Ionicons 
-                name="pin" 
-                size={14} 
-                color={primary[500]} 
-                style={styles.pinIcon}
-              />
+              <Ionicons name="pin" size={14} color={primary[500]} style={styles.pinIcon} />
             )}
             <Text
               style={[
@@ -184,10 +184,10 @@ function ConversationItemComponent({
           </View>
           <View style={styles.timeRow}>
             {isMuted && (
-              <Ionicons 
-                name="notifications-off" 
-                size={14} 
-                color={neutral[400]} 
+              <Ionicons
+                name="notifications-off"
+                size={14}
+                color={neutral[400]}
                 style={styles.muteIcon}
               />
             )}
@@ -201,15 +201,20 @@ function ConversationItemComponent({
           <Text
             style={[
               styles.preview,
-              { 
-                color: isBlockedPreview ? '#EF4444' : (hasUnread ? colors.text : colors.textMuted), 
+              {
+                color: isBlockedPreview ? '#EF4444' : hasUnread ? colors.text : colors.textMuted,
                 fontWeight: hasUnread ? '500' : undefined,
                 fontStyle: isBlockedPreview ? 'italic' : 'normal',
               },
             ]}
             numberOfLines={1}
           >
-            {previewText || (isOnline ? t('chat.conversation.online' as any) : lastSeen ? t('chat.conversation.lastSeen' as any, { time: formatLastSeen(lastSeen) }) : t('chat.conversation.noMessages' as any))}
+            {previewText ||
+              (isOnline
+                ? t('chat.conversation.online')
+                : lastSeen
+                  ? t('chat.conversation.lastSeen', { time: formatLastSeen(lastSeen) })
+                  : t('chat.conversation.noMessages'))}
           </Text>
 
           {/* Unread badge */}

@@ -5,7 +5,7 @@
  * Migrated from SportSelectionOverlay with theme-aware colors.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,9 @@ import { selectionHaptic } from '@rallia/shared-utils';
 import type { Sport } from '@rallia/shared-types';
 import type { TranslationKey } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useSport } from '../../../../../context/SportContext';
+import TennisIcon from '../../../../../../assets/icons/tennis.svg';
+import PickleballIcon from '../../../../../../assets/icons/pickleball.svg';
 
 interface ThemeColors {
   background: string;
@@ -50,6 +53,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
   const [isLoadingSports, setIsLoadingSports] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
 
+  // Get guest-selected sports from context (selected in SportSelectionScreen)
+  const { userSports: contextSports } = useSport();
+  const hasPrePopulatedFromContext = useRef(false);
+
   // Fetch player ID
   useEffect(() => {
     const fetchPlayerId = async () => {
@@ -74,7 +81,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToLoadSports' as TranslationKey));
+        Alert.alert(t('alerts.error'), t('onboarding.validation.failedToLoadSports'));
         setSports([
           {
             id: 'tennis-fallback',
@@ -110,12 +117,48 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     };
 
     fetchSports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load already selected sports from database
+  // Pre-populate from guest sports context (selected in SportSelectionScreen)
+  // This runs before/instead of database lookup for guest users
+  useEffect(() => {
+    if (
+      !hasPrePopulatedFromContext.current &&
+      sports.length > 0 &&
+      contextSports.length > 0 &&
+      formData.selectedSportIds.length === 0
+    ) {
+      hasPrePopulatedFromContext.current = true;
+
+      // Map context sports to available sports by ID
+      const preSelectedIds: string[] = [];
+      const preSelectedNames: string[] = [];
+
+      contextSports.forEach(contextSport => {
+        const matchingSport = sports.find(s => s.id === contextSport.id);
+        if (matchingSport) {
+          preSelectedIds.push(matchingSport.id);
+          preSelectedNames.push(matchingSport.name);
+        }
+      });
+
+      if (preSelectedIds.length > 0) {
+        onUpdateFormData({
+          selectedSportIds: preSelectedIds,
+          selectedSportNames: preSelectedNames,
+        });
+      }
+    }
+  }, [sports, contextSports, formData.selectedSportIds.length, onUpdateFormData]);
+
+  // Load already selected sports from database (for authenticated users)
   useEffect(() => {
     const loadSelectedSportIds = async () => {
       if (!playerId) return;
+
+      // Skip if already pre-populated from context
+      if (hasPrePopulatedFromContext.current) return;
 
       const { data, error } = await DatabaseService.PlayerSport.getPlayerSports(playerId);
       if (data && !error) {
@@ -140,7 +183,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.playerNotFound' as TranslationKey));
+      Alert.alert(t('alerts.error'), t('onboarding.validation.playerNotFound'));
       return;
     }
 
@@ -187,7 +230,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
           selectedSportNames: [...formData.selectedSportNames, sport.name],
         });
       }
-      Alert.alert(t('alerts.error' as TranslationKey), t('onboarding.validation.failedToUpdateSportSelection' as TranslationKey));
+      Alert.alert(t('alerts.error'), t('onboarding.validation.failedToUpdateSportSelection'));
     }
   };
 
@@ -211,10 +254,10 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.sportSelectionStep.title' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.title')}
       </Text>
       <Text size="base" color={colors.textSecondary} style={styles.subtitle}>
-        {t('onboarding.sportSelectionStep.subtitle' as TranslationKey)}
+        {t('onboarding.sportSelectionStep.subtitle')}
       </Text>
 
       {/* Sports Grid */}
@@ -222,7 +265,7 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
         <View style={styles.loadingContainer}>
           <Spinner size="lg" />
           <Text size="sm" color={colors.textMuted} style={styles.loadingText}>
-            {t('common.loading' as TranslationKey)}
+            {t('common.loading')}
           </Text>
         </View>
       ) : (
@@ -235,7 +278,9 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
               key={sport.id}
               style={[
                 styles.sportCard,
-                { borderColor: isSelected ? colors.buttonActive : 'transparent' },
+                isSelected
+                  ? { borderWidth: 3, borderColor: colors.buttonActive }
+                  : styles.sportCardUnselected,
                 isLastCard && styles.lastSportCard,
               ]}
               onPress={() => toggleSport(sport.id)}
@@ -256,10 +301,27 @@ export const SportSelectionStep: React.FC<SportSelectionStepProps> = ({
               </View>
 
               <View style={styles.sportNameContainer}>
-                <Text size="xl" weight="bold" color={BASE_WHITE}>
-                  {sport.display_name}
-                </Text>
-                {isSelected && <Ionicons name="checkmark" size={24} color={BASE_WHITE} />}
+                <View style={styles.sportNameRow}>
+                  {sport.name.toLowerCase() === 'pickleball' ? (
+                    <PickleballIcon
+                      width={24}
+                      height={24}
+                      fill={BASE_WHITE}
+                      style={styles.sportNameIcon}
+                    />
+                  ) : (
+                    <TennisIcon
+                      width={24}
+                      height={24}
+                      fill={BASE_WHITE}
+                      style={styles.sportNameIcon}
+                    />
+                  )}
+                  <Text size="xl" weight="bold" color={BASE_WHITE}>
+                    {sport.display_name}
+                  </Text>
+                </View>
+                {isSelected && <Ionicons name="checkmark-outline" size={24} color={BASE_WHITE} />}
               </View>
             </TouchableOpacity>
           );
@@ -301,7 +363,9 @@ const styles = StyleSheet.create({
     marginBottom: spacingPixels[4],
     overflow: 'hidden',
     position: 'relative',
-    borderWidth: 3,
+  },
+  sportCardUnselected: {
+    borderWidth: 0,
   },
   lastSportCard: {
     marginBottom: 0,
@@ -331,6 +395,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  sportNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sportNameIcon: {
+    marginRight: spacingPixels[2],
   },
 });
 

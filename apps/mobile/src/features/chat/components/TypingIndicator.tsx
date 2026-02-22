@@ -3,7 +3,7 @@
  * Shows when other users are typing in a conversation
  */
 
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 
 import { Text } from '@rallia/shared-components';
@@ -18,9 +18,10 @@ interface TypingIndicatorProps {
 function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  // Animation values - using useMemo for stable instances
+  const dot1 = useMemo(() => new Animated.Value(0), []);
+  const dot2 = useMemo(() => new Animated.Value(0), []);
+  const dot3 = useMemo(() => new Animated.Value(0), []);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
@@ -82,11 +83,17 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   // Build the typing message
   let typingText = '';
   if (typingUsers.length === 1) {
-    typingText = t('chat.typing.one' as any, { name: typingUsers[0].player_name });
+    typingText = t('chat.typing.one', { name: typingUsers[0].player_name });
   } else if (typingUsers.length === 2) {
-    typingText = t('chat.typing.two' as any, { name1: typingUsers[0].player_name, name2: typingUsers[1].player_name });
+    typingText = t('chat.typing.two', {
+      name1: typingUsers[0].player_name,
+      name2: typingUsers[1].player_name,
+    });
   } else {
-    typingText = t('chat.typing.many' as any, { name: typingUsers[0].player_name, count: typingUsers.length - 1 });
+    typingText = t('chat.typing.many', {
+      name: typingUsers[0].player_name,
+      count: typingUsers.length - 1,
+    });
   }
 
   const dotStyle = (anim: Animated.Value) => ({
@@ -107,9 +114,7 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={[styles.text, { color: colors.textMuted }]}>
-          {typingText}
-        </Text>
+        <Text style={[styles.text, { color: colors.textMuted }]}>{typingText}</Text>
         <View style={styles.dotsContainer}>
           <Animated.View style={[styles.dot, { backgroundColor: primary[500] }, dotStyle(dot1)]} />
           <Animated.View style={[styles.dot, { backgroundColor: primary[500] }, dotStyle(dot2)]} />

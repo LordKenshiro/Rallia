@@ -55,15 +55,20 @@ export const chatKeys = {
   all: ['chat'] as const,
   conversations: () => [...chatKeys.all, 'conversations'] as const,
   playerConversations: (playerId: string) => [...chatKeys.conversations(), playerId] as const,
-  conversation: (conversationId: string) => [...chatKeys.all, 'conversation', conversationId] as const,
+  conversation: (conversationId: string) =>
+    [...chatKeys.all, 'conversation', conversationId] as const,
   messages: (conversationId: string) => [...chatKeys.all, 'messages', conversationId] as const,
-  reactions: (messageIds: string[]) => [...chatKeys.all, 'reactions', messageIds.join(',')] as const,
+  reactions: (messageIds: string[]) =>
+    [...chatKeys.all, 'reactions', messageIds.join(',')] as const,
   unreadCount: (playerId: string) => [...chatKeys.all, 'unreadCount', playerId] as const,
-  networkConversation: (networkId: string) => [...chatKeys.all, 'networkConversation', networkId] as const,
+  networkConversation: (networkId: string) =>
+    [...chatKeys.all, 'networkConversation', networkId] as const,
   chatAgreement: (playerId: string) => [...chatKeys.all, 'chatAgreement', playerId] as const,
   // New enhanced keys
-  onlineStatus: (playerIds: string[]) => [...chatKeys.all, 'onlineStatus', playerIds.join(',')] as const,
-  searchMessages: (conversationId: string, query: string) => [...chatKeys.all, 'searchMessages', conversationId, query] as const,
+  onlineStatus: (playerIds: string[]) =>
+    [...chatKeys.all, 'onlineStatus', playerIds.join(',')] as const,
+  searchMessages: (conversationId: string, query: string) =>
+    [...chatKeys.all, 'searchMessages', conversationId, query] as const,
 };
 
 // ============================================================================
@@ -175,7 +180,7 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: (input: SendMessageInput) => sendMessage(input),
     // True optimistic update - add message immediately before API call
-    onMutate: async (variables) => {
+    onMutate: async variables => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
         queryKey: chatKeys.messages(variables.conversation_id),
@@ -209,7 +214,7 @@ export function useSendMessage() {
           };
 
           // Safely create new pages array with the optimistic message prepended to first page
-          const newPages = oldData.pages.map((page, index) => 
+          const newPages = oldData.pages.map((page, index) =>
             index === 0 ? [optimisticMessage, ...page] : page
           );
 
@@ -229,8 +234,8 @@ export function useSendMessage() {
         (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
           if (!oldData || !oldData.pages) return oldData;
 
-          const newPages = oldData.pages.map((page) =>
-            page.map((msg) =>
+          const newPages = oldData.pages.map(page =>
+            page.map(msg =>
               msg.id.startsWith('temp-') && msg.content === variables.content
                 ? (newMessage as MessageWithSender)
                 : msg
@@ -268,13 +273,8 @@ export function useMarkMessagesAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      conversationId,
-      playerId,
-    }: {
-      conversationId: string;
-      playerId: string;
-    }) => markMessagesAsRead(conversationId, playerId),
+    mutationFn: ({ conversationId, playerId }: { conversationId: string; playerId: string }) =>
+      markMessagesAsRead(conversationId, playerId),
     onSuccess: (_, variables) => {
       // Invalidate and refetch unread counts immediately
       queryClient.invalidateQueries({
@@ -460,13 +460,8 @@ export function useLeaveConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      conversationId,
-      playerId,
-    }: {
-      conversationId: string;
-      playerId: string;
-    }) => leaveConversation(conversationId, playerId),
+    mutationFn: ({ conversationId, playerId }: { conversationId: string; playerId: string }) =>
+      leaveConversation(conversationId, playerId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: chatKeys.playerConversations(variables.playerId),
@@ -515,19 +510,19 @@ export function useChatRealtime(
 
     const channel = subscribeToMessages(conversationId, {
       // Handle new messages
-      onInsert: (newMessage) => {
+      onInsert: newMessage => {
         queryClient.setQueryData(
           chatKeys.messages(conversationId),
           (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
             if (!oldData) return oldData;
-            
+
             const newPages = [...oldData.pages];
             // Only add if not already present (avoid duplicates)
-            const exists = newPages[0]?.some((m) => m.id === newMessage.id);
+            const exists = newPages[0]?.some(m => m.id === newMessage.id);
             if (!exists) {
               newPages[0] = [newMessage as MessageWithSender, ...(newPages[0] || [])];
             }
-            
+
             return {
               ...oldData,
               pages: newPages,
@@ -540,21 +535,17 @@ export function useChatRealtime(
       },
 
       // Handle message edits
-      onUpdate: (updatedMessage) => {
+      onUpdate: updatedMessage => {
         queryClient.setQueryData(
           chatKeys.messages(conversationId),
           (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
             if (!oldData) return oldData;
-            
+
             // Update the message in the cache
-            const newPages = oldData.pages.map((page) =>
-              page.map((msg) =>
-                msg.id === updatedMessage.id
-                  ? { ...msg, ...updatedMessage }
-                  : msg
-              )
+            const newPages = oldData.pages.map(page =>
+              page.map(msg => (msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg))
             );
-            
+
             return {
               ...oldData,
               pages: newPages,
@@ -567,22 +558,20 @@ export function useChatRealtime(
       },
 
       // Handle message deletions
-      onDelete: (messageId) => {
+      onDelete: messageId => {
         queryClient.setQueryData(
           chatKeys.messages(conversationId),
           (oldData: { pages: MessageWithSender[][]; pageParams: number[] } | undefined) => {
             if (!oldData) return oldData;
-            
+
             // Mark message as deleted in the cache (soft delete)
             // Or remove it entirely depending on your UI needs
-            const newPages = oldData.pages.map((page) =>
-              page.map((msg) =>
-                msg.id === messageId
-                  ? { ...msg, is_deleted: true, content: '' }
-                  : msg
+            const newPages = oldData.pages.map(page =>
+              page.map(msg =>
+                msg.id === messageId ? { ...msg, is_deleted: true, content: '' } : msg
               )
             );
-            
+
             return {
               ...oldData,
               pages: newPages,
@@ -615,9 +604,7 @@ export function useReactionsRealtime(conversationId: string | undefined) {
       // We invalidate all reactions queries since we don't know which specific query contains this message
       queryClient.invalidateQueries({
         queryKey: chatKeys.all,
-        predicate: (query) => 
-          query.queryKey[0] === 'chat' && 
-          query.queryKey[1] === 'reactions',
+        predicate: query => query.queryKey[0] === 'chat' && query.queryKey[1] === 'reactions',
       });
 
       // Also invalidate the messages query to refresh reaction counts
@@ -714,11 +701,11 @@ export function useUpdateLastSeen(playerId: string | undefined) {
 
   const updateLastSeen = useCallback(() => {
     if (!playerId) return;
-    
+
     // Throttle updates to max once per minute
     const now = Date.now();
     if (now - lastUpdateRef.current < 60 * 1000) return;
-    
+
     lastUpdateRef.current = now;
     updatePlayerLastSeen(playerId);
   }, [playerId]);
@@ -752,29 +739,26 @@ export function useTypingIndicators(
   playerName: string | undefined
 ) {
   const [typingUsers, setTypingUsers] = useState<TypingIndicator[]>([]);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Early return for invalid state - cleanup function handles clearing
     if (!conversationId || !playerId || !playerName) {
-      setTypingUsers([]);
       return;
     }
 
     // Subscribe to typing indicators (channel is managed internally)
-    subscribeToTypingIndicators(
-      conversationId,
-      playerId,
-      playerName,
-      (users) => {
-        // Filter out stale typing indicators (older than 5 seconds)
-        const now = Date.now();
-        const activeUsers = users.filter((u) => now - u.timestamp < 5000);
-        setTypingUsers(activeUsers);
-      }
-    );
+    subscribeToTypingIndicators(conversationId, playerId, playerName, users => {
+      // Filter out stale typing indicators (older than 5 seconds)
+      const now = Date.now();
+      const activeUsers = users.filter(u => now - u.timestamp < 5000);
+      setTypingUsers(activeUsers);
+    });
 
     return () => {
       unsubscribeFromTypingIndicators(conversationId);
+      // Clear typing users when unsubscribing (e.g., when leaving conversation)
+      setTypingUsers([]);
     };
   }, [conversationId, playerId, playerName]);
 

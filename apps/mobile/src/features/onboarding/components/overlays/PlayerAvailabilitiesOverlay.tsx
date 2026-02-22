@@ -1,33 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { Overlay } from '@rallia/shared-components';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, useToast } from '@rallia/shared-components';
 import { OnboardingService, Logger } from '@rallia/shared-services';
 import type { DayEnum, PeriodEnum, OnboardingAvailability } from '@rallia/shared-types';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../../../../hooks';
-
-interface PlayerAvailabilitiesOverlayProps {
-  visible: boolean;
-  onClose: () => void;
-  onBack?: () => void;
-  onContinue?: (availabilities: WeeklyAvailability) => void;
-  selectedSportIds?: string[]; // Sport IDs to create availability entries for each sport (optional for edit mode)
-  currentStep?: number;
-  totalSteps?: number;
-  mode?: 'onboarding' | 'edit'; // Mode: onboarding (create) or edit (update)
-  initialData?: WeeklyAvailability; // Initial availability data for edit mode
-  onSave?: (availabilities: WeeklyAvailability) => void; // Save callback for edit mode
-}
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
 
 type TimeSlot = 'AM' | 'PM' | 'EVE';
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
@@ -38,24 +19,34 @@ interface DayAvailability {
   EVE: boolean;
 }
 
-type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
+export type WeeklyAvailability = Record<DayOfWeek, DayAvailability>;
 
-const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = ({
-  visible,
-  onClose,
-  onBack,
-  onContinue,
-  selectedSportIds: _selectedSportIds,
-  currentStep = 1,
-  totalSteps = 8,
-  mode = 'onboarding',
-  initialData,
-  onSave,
-}) => {
+export function PlayerAvailabilitiesActionSheet({ payload }: SheetProps<'player-availabilities'>) {
+  const mode = payload?.mode || 'onboarding';
+  const onClose = () => SheetManager.hide('player-availabilities');
+  const onBack = payload?.onBack;
+  const onContinue = payload?.onContinue;
+  const onSave = payload?.onSave;
+  const currentStep = payload?.currentStep || 1;
+  const totalSteps = payload?.totalSteps || 8;
+  const initialData = payload?.initialData;
+  const _selectedSportIds = payload?.selectedSportIds;
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
+  const toast = useToast();
   const days: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const timeSlots: TimeSlot[] = ['AM', 'PM', 'EVE'];
+
+  // Map short day labels to translation keys (monday, tuesday, ...)
+  const dayTranslationKey: Record<DayOfWeek, string> = {
+    Mon: 'monday',
+    Tue: 'tuesday',
+    Wed: 'wednesday',
+    Thu: 'thursday',
+    Fri: 'friday',
+    Sat: 'saturday',
+    Sun: 'sunday',
+  };
 
   // Default availabilities for onboarding mode (all unselected)
   const defaultAvailabilities: WeeklyAvailability = {
@@ -73,31 +64,6 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     initialData || defaultAvailabilities
   );
   const [isSaving, setIsSaving] = useState(false);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Trigger animations when overlay becomes visible
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible, fadeAnim, slideAnim]);
 
   const toggleAvailability = (day: DayOfWeek, slot: TimeSlot) => {
     selectionHaptic();
@@ -119,6 +85,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
     // Edit mode: use the onSave callback
     if (mode === 'edit' && onSave) {
       onSave(availabilities);
+      SheetManager.hide('player-availabilities');
       return;
     }
 
@@ -165,9 +132,7 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
         if (error) {
           Logger.error('Failed to save player availability', error as Error, { availabilityData });
           setIsSaving(false);
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSaveAvailability'), [
-            { text: t('alerts.ok') },
-          ]);
+          toast.error(t('onboarding.validation.failedToSaveAvailability'));
           return;
         }
 
@@ -189,76 +154,72 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
       } catch (error) {
         Logger.error('Unexpected error saving availability', error as Error);
         setIsSaving(false);
-        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'), [{ text: t('alerts.ok') }]);
+        toast.error(t('onboarding.validation.unexpectedError'));
       }
     }
   };
 
   return (
-    <Overlay
-      visible={visible}
-      onClose={onClose}
-      onBack={onBack}
-      type="bottom"
-      showBackButton={false}
-      height={mode === 'edit' ? 0.80 : 0.67}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            flex: 1,
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Show progress indicator only in onboarding mode */}
-        {mode === 'onboarding' && (
-          <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
-        )}
-
-        {/* Back Button - Only show in onboarding mode */}
-        {mode === 'onboarding' && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBack || onClose}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+              {t('onboarding.availabilityStep.title')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
           </TouchableOpacity>
-        )}
+        </View>
 
-        {/* Title */}
-        <Text style={[styles.title, { color: colors.text }]}>{t('onboarding.availabilityStep.title' as TranslationKey)}</Text>
-        <Text style={[styles.subtitle, { color: colors.text }]}>{t('onboarding.availabilityStep.subtitle' as TranslationKey)}</Text>
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={[styles.content, { paddingBottom: spacingPixels[8] }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Show progress indicator only in onboarding mode */}
+          {mode === 'onboarding' && (
+            <ProgressIndicator currentStep={currentStep} totalSteps={totalSteps} />
+          )}
 
-        {/* Scrollable Content Area */}
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Back Button - Only show in onboarding mode */}
+          {mode === 'onboarding' && onBack && (
+            <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          )}
+
+          {/* Subtitle */}
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            {t('onboarding.availabilityStep.subtitle')}
+          </Text>
+
           {/* Availability Grid */}
           <View style={styles.gridContainer}>
-            {/* Header Row */}
-            <View style={styles.row}>
-              <View style={styles.dayCell} />
-              {timeSlots.map(slot => (
-                <View key={slot} style={styles.headerCell}>
-                  <Text style={[styles.headerText, { color: colors.textMuted }]}>{t(`onboarding.availabilityStep.${slot.toLowerCase()}` as TranslationKey)}</Text>
-                </View>
-              ))}
-            </View>
-
             {/* Day Rows */}
             {days.map(day => (
               <View key={day} style={styles.row}>
                 <View style={styles.dayCell}>
-                  <Text style={[styles.dayText, { color: colors.text }]}>{t(`onboarding.availabilityStep.days.${day.toLowerCase()}` as TranslationKey)}</Text>
+                  <Text style={[styles.dayText, { color: colors.text }]}>
+                    {t(
+                      `onboarding.availabilityStep.days.${dayTranslationKey[day]}` as TranslationKey
+                    )}
+                  </Text>
                 </View>
                 {timeSlots.map(slot => (
                   <TouchableOpacity
                     key={`${day}-${slot}`}
                     style={[
                       styles.timeSlotCell,
-                      { backgroundColor: colors.inputBackground },
+                      { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
                       availabilities[day][slot] && [
                         styles.timeSlotCellSelected,
                         { backgroundColor: colors.primary, borderColor: colors.primary },
@@ -286,67 +247,89 @@ const PlayerAvailabilitiesOverlay: React.FC<PlayerAvailabilitiesOverlayProps> = 
           </View>
         </ScrollView>
 
-        {/* Complete/Save Button - Fixed at bottom */}
-        <TouchableOpacity
-          style={[
-            styles.completeButton,
-            { backgroundColor: colors.primary },
-            isSaving && [styles.completeButtonDisabled, { backgroundColor: colors.buttonInactive }],
-          ]}
-          onPress={handleContinue}
-          activeOpacity={0.8}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <Text style={[styles.completeButtonText, { color: colors.primaryForeground }]}>
-              {mode === 'edit' ? t('onboarding.availabilityStep.saveButton' as TranslationKey) : t('onboarding.availabilityStep.complete' as TranslationKey)}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
-    </Overlay>
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              { backgroundColor: colors.primary },
+              isSaving && { opacity: 0.6 },
+            ]}
+            onPress={handleContinue}
+            disabled={isSaving}
+            activeOpacity={0.8}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={colors.primaryForeground} />
+            ) : (
+              <Text weight="semibold" style={{ color: colors.primaryForeground }}>
+                {mode === 'edit'
+                  ? t('onboarding.availabilityStep.saveButton')
+                  : t('onboarding.availabilityStep.complete')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ActionSheet>
   );
-};
+}
+
+export default PlayerAvailabilitiesActionSheet;
 
 const styles = StyleSheet.create({
-  container: {
+  sheetBackground: {
     flex: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
   },
   scrollContent: {
     flex: 1,
   },
+  content: {
+    padding: spacingPixels[4],
+  },
   backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    padding: 10,
-    zIndex: 10,
-  },
-  backButtonText: {
-    fontSize: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 28,
+    alignSelf: 'flex-start',
+    padding: spacingPixels[2],
+    marginBottom: spacingPixels[2],
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: spacingPixels[6],
   },
   gridContainer: {
-    marginBottom: 30,
+    marginBottom: spacingPixels[6],
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: spacingPixels[2],
     alignItems: 'center',
   },
   dayCell: {
@@ -368,13 +351,12 @@ const styles = StyleSheet.create({
   },
   timeSlotCell: {
     flex: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginHorizontal: 4,
+    borderRadius: radiusPixels.lg,
+    paddingVertical: spacingPixels[3],
+    marginHorizontal: spacingPixels[1],
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
   },
   timeSlotCellSelected: {
     // backgroundColor and borderColor applied inline
@@ -386,29 +368,18 @@ const styles = StyleSheet.create({
   timeSlotTextSelected: {
     // color applied inline
   },
-  completeButton: {
-    borderRadius: 10,
-    paddingVertical: 16,
-    justifyContent: 'center',
+  footer: {
+    paddingHorizontal: spacingPixels[4],
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[8],
+    borderTopWidth: 1,
+  },
+  submitButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  completeButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  completeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    justifyContent: 'center',
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });
-
-export default PlayerAvailabilitiesOverlay;

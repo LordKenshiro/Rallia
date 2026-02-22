@@ -28,7 +28,7 @@ export function subscribeToCommunityMembers(
         table: 'network_member',
         filter: `network_id=eq.${communityId}`,
       },
-      (payload) => {
+      payload => {
         onMemberChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           member: payload.new || payload.old,
@@ -61,7 +61,7 @@ export function subscribeToCommunityActivity(
         table: 'network_activity',
         filter: `network_id=eq.${communityId}`,
       },
-      (payload) => {
+      payload => {
         onActivity({
           eventType: 'INSERT',
           activity: payload.new,
@@ -94,7 +94,7 @@ export function subscribeToCommunityMatches(
         table: 'match_network',
         filter: `network_id=eq.${communityId}`,
       },
-      (payload) => {
+      payload => {
         onMatchChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           match: payload.new || payload.old,
@@ -127,7 +127,7 @@ export function subscribeToCommunitySettings(
         table: 'network',
         filter: `id=eq.${communityId}`,
       },
-      (payload) => {
+      payload => {
         onCommunityChange({
           eventType: payload.eventType as 'UPDATE' | 'DELETE',
           community: payload.new || payload.old,
@@ -149,7 +149,10 @@ export function subscribeToCommunitySettings(
  */
 export function subscribeToPlayerCommunities(
   playerId: string,
-  onMembershipChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; membership: unknown }) => void
+  onMembershipChange: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    membership: unknown;
+  }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel(`player_communities:${playerId}`)
@@ -161,7 +164,7 @@ export function subscribeToPlayerCommunities(
         table: 'network_member',
         filter: `player_id=eq.${playerId}`,
       },
-      (payload) => {
+      payload => {
         onMembershipChange({
           eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
           membership: payload.new || payload.old,
@@ -182,7 +185,10 @@ export function subscribeToPlayerCommunities(
  * Useful for discovery/explore screen
  */
 export function subscribeToPublicCommunities(
-  onCommunityChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; community: unknown }) => void
+  onCommunityChange: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    community: unknown;
+  }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel('public_communities')
@@ -195,7 +201,7 @@ export function subscribeToPublicCommunities(
         // We'll filter for communities with is_private=false on the client side
         // since Supabase filters don't support JOINs
       },
-      (payload) => {
+      payload => {
         const data = (payload.new || payload.old) as Record<string, unknown> | null;
         // Only emit if it's a public network (not private)
         if (data && !data.is_private) {
@@ -221,7 +227,10 @@ export function subscribeToPublicCommunities(
  */
 export function subscribeToPendingRequests(
   communityId: string,
-  onRequestChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; request: unknown }) => void
+  onRequestChange: (payload: {
+    eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+    request: unknown;
+  }) => void
 ): RealtimeChannel {
   const channel = supabase
     .channel(`pending_requests:${communityId}`)
@@ -233,7 +242,7 @@ export function subscribeToPendingRequests(
         table: 'network_member',
         filter: `network_id=eq.${communityId}`,
       },
-      (payload) => {
+      payload => {
         const data = (payload.new || payload.old) as Record<string, unknown> | null;
         const oldData = payload.old as Record<string, unknown> | null;
         // Only emit for pending status changes

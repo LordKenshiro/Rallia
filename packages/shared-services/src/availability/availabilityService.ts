@@ -7,12 +7,20 @@
 
 import { supabase } from '../supabase';
 import { getProvider, isProviderRegistered } from './providers';
+import { hasLocalTemplates, fetchLocalAvailability } from './localAvailabilityFetcher';
 import type {
   AvailabilitySlot,
   ProviderConfig,
   FetchAvailabilityParams,
   AvailabilityResult,
 } from './types';
+
+// Re-export for external access
+export {
+  hasLocalTemplates,
+  fetchLocalAvailability,
+  clearLocalTemplatesCache,
+} from './localAvailabilityFetcher';
 
 // =============================================================================
 // PROVIDER CONFIG CACHE
@@ -108,7 +116,7 @@ export function clearProviderCache(): void {
 // =============================================================================
 
 /**
- * Fetch availability slots for a facility.
+ * Fetch availability slots for a facility from an external provider.
  *
  * @param providerId - UUID of the data_provider
  * @param params - Fetch parameters
@@ -171,13 +179,17 @@ export async function fetchTodayAvailability(
   facilityExternalId: string | undefined,
   includeTomorrow = true
 ): Promise<AvailabilityResult> {
+  // Format date in local timezone to avoid UTC conversion issues
+  const formatDateLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   const today = new Date();
-  const dates = [today.toISOString().split('T')[0]];
+  const dates = [formatDateLocal(today)];
 
   if (includeTomorrow) {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    dates.push(tomorrow.toISOString().split('T')[0]);
+    dates.push(formatDateLocal(tomorrow));
   }
 
   return fetchAvailability(providerId, {
@@ -191,12 +203,83 @@ export async function fetchTodayAvailability(
 // =============================================================================
 
 /**
+ * Get the current date and time in a specific timezone as a comparable string.
+ * Returns format: "YYYY-MM-DD HH:MM:SS" for easy string comparison.
+ *
+ * @param timezone - IANA timezone identifier (e.g., "America/Toronto")
+ * @returns Current datetime string in the specified timezone
+ */
+function getCurrentDateTimeInTimezone(timezone: string): string {
+  const now = new Date();
+
+  const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  // en-CA gives YYYY-MM-DD, en-GB gives HH:MM:SS in 24h format
+  return `${dateFormatter.format(now)} ${timeFormatter.format(now)}`;
+}
+
+/**
+ * Extract the date and time string from a slot's datetime for comparison.
+ * The slot's datetime was created by parsing "YYYY-MM-DDTHH:MM:SS" as local time,
+ * but it actually represents the facility's local time.
+ *
+ * @param slotDatetime - The slot's datetime (created from facility-local time string)
+ * @returns DateTime string in "YYYY-MM-DD HH:MM:SS" format
+ */
+function getSlotDateTimeString(slotDatetime: Date): string {
+  // Extract the date/time components as they were stored
+  // This works because the slot was created by parsing a string without timezone,
+  // so JavaScript stored it as-if it were local time, preserving the original values
+  const year = slotDatetime.getFullYear();
+  const month = String(slotDatetime.getMonth() + 1).padStart(2, '0');
+  const day = String(slotDatetime.getDate()).padStart(2, '0');
+  const hours = String(slotDatetime.getHours()).padStart(2, '0');
+  const minutes = String(slotDatetime.getMinutes()).padStart(2, '0');
+  const seconds = String(slotDatetime.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Filter slots to only future times.
  *
+ * When facilityTimezone is provided, the comparison is done based on the
+ * current time at the facility's location. This is important when users
+ * are in a different timezone than the facility they're viewing.
+ *
  * @param slots - Array of availability slots
- * @returns Slots that start after now
+ * @param facilityTimezone - Optional IANA timezone identifier (e.g., "America/Toronto")
+ * @returns Slots that start after now (in facility timezone if provided)
  */
-export function filterFutureSlots(slots: AvailabilitySlot[]): AvailabilitySlot[] {
+export function filterFutureSlots(
+  slots: AvailabilitySlot[],
+  facilityTimezone?: string | null
+): AvailabilitySlot[] {
+  if (facilityTimezone) {
+    // Compare based on the current time at the facility's location
+    const nowAtFacility = getCurrentDateTimeInTimezone(facilityTimezone);
+
+    return slots.filter(slot => {
+      // The slot's datetime represents facility-local time
+      const slotDateTime = getSlotDateTimeString(slot.datetime);
+      return slotDateTime > nowAtFacility;
+    });
+  }
+
+  // Fallback: simple comparison (works when user and facility are in same timezone)
   const now = new Date();
   return slots.filter(slot => slot.datetime > now);
 }
@@ -212,4 +295,71 @@ export function getNextSlots(slots: AvailabilitySlot[], count: number = 3): Avai
   return filterFutureSlots(slots)
     .sort((a, b) => a.datetime.getTime() - b.datetime.getTime())
     .slice(0, count);
+}
+
+// =============================================================================
+// UNIFIED AVAILABILITY FETCHING (LOCAL-FIRST)
+// =============================================================================
+
+/**
+ * Parameters for unified availability fetching.
+ */
+export interface UnifiedAvailabilityParams {
+  /** Facility UUID */
+  facilityId: string;
+  /** Dates to fetch (YYYY-MM-DD format) */
+  dates: string[];
+  /** External provider ID (from data_provider table) */
+  dataProviderId?: string | null;
+  /** External facility ID (e.g., Loisir Montreal siteId) */
+  externalProviderId?: string | null;
+}
+
+/**
+ * Fetch availability with local-first priority.
+ *
+ * Priority:
+ * 1. Local templates (court_slot, court_one_time_availability) → use Supabase RPC
+ * 2. External provider (data_provider configured) → use provider system
+ * 3. Neither → return empty result
+ *
+ * This unified entry point abstracts away the source of availability,
+ * allowing consumers to fetch availability without knowing whether it
+ * comes from local templates or external providers.
+ *
+ * @param params - Unified fetch parameters
+ * @returns Availability result with slots
+ */
+export async function fetchUnifiedAvailability(
+  params: UnifiedAvailabilityParams
+): Promise<AvailabilityResult> {
+  const { facilityId, dates, dataProviderId, externalProviderId } = params;
+
+  try {
+    // 1. Check for local templates (cached for 5 minutes)
+    const hasLocal = await hasLocalTemplates(facilityId);
+
+    // 2. Local templates take priority
+    if (hasLocal) {
+      return fetchLocalAvailability(facilityId, dates);
+    }
+
+    // 3. Fall back to external provider
+    if (dataProviderId && externalProviderId) {
+      return fetchAvailability(dataProviderId, {
+        dates,
+        siteId: parseInt(externalProviderId, 10),
+      });
+    }
+
+    // 4. No availability source configured
+    return { slots: [], success: true };
+  } catch (error) {
+    console.error('[AvailabilityService] Error in unified fetch:', error);
+    return {
+      slots: [],
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

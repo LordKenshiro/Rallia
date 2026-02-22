@@ -30,12 +30,7 @@ interface QRScannerModalProps {
   onGroupJoined: (groupId: string, groupName: string) => void;
 }
 
-export function QRScannerModal({
-  visible,
-  onClose,
-  playerId,
-  onGroupJoined,
-}: QRScannerModalProps) {
+export function QRScannerModal({ visible, onClose, playerId, onGroupJoined }: QRScannerModalProps) {
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
@@ -49,8 +44,10 @@ export function QRScannerModal({
   const joinGroupMutation = useJoinGroupByInviteCode();
 
   // Reset scanned state when modal opens
+  // This effect resets modal state when it becomes visible - standard modal reset pattern
   useEffect(() => {
     if (visible) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional reset of modal state on open
       setScanned(false);
       setIsProcessing(false);
       setTorchEnabled(false);
@@ -76,91 +73,95 @@ export function QRScannerModal({
     return null;
   }, []);
 
-  const handleBarCodeScanned = useCallback(async ({ data }: { data: string }) => {
-    if (scanned || isProcessing) return;
+  const handleBarCodeScanned = useCallback(
+    async ({ data }: { data: string }) => {
+      if (scanned || isProcessing) return;
 
-    setScanned(true);
-    setIsProcessing(true);
+      setScanned(true);
+      setIsProcessing(true);
 
-    const inviteCode = extractInviteCode(data);
+      const inviteCode = extractInviteCode(data);
 
-    if (!inviteCode) {
-      Alert.alert(
-        t('groups.invalidQRCode' as any),
-        t('groups.invalidQRCodeMessage' as any),
-        [
+      if (!inviteCode) {
+        Alert.alert(t('groups.invalidQRCode'), t('groups.invalidQRCodeMessage'), [
           {
-            text: t('groups.tryAgain' as any),
+            text: t('groups.tryAgain'),
             onPress: () => {
               setScanned(false);
               setIsProcessing(false);
             },
           },
           {
-            text: t('common.cancel' as any),
+            text: t('common.cancel'),
             style: 'cancel',
             onPress: onClose,
           },
-        ]
-      );
-      return;
-    }
+        ]);
+        return;
+      }
 
-    try {
-      const result = await joinGroupMutation.mutateAsync({
-        inviteCode,
-        playerId,
-      });
+      try {
+        const result = await joinGroupMutation.mutateAsync({
+          inviteCode,
+          playerId,
+        });
 
-      if (result.success && result.groupId && result.groupName) {
-        onClose();
-        onGroupJoined(result.groupId, result.groupName);
-      } else {
-        Alert.alert(
-          t('groups.couldNotJoin' as any),
-          result.error || t('groups.failedToJoinGroup' as any),
-          [
+        if (result.success && result.groupId && result.groupName) {
+          onClose();
+          onGroupJoined(result.groupId, result.groupName);
+        } else {
+          Alert.alert(t('groups.couldNotJoin'), result.error || t('groups.failedToJoinGroup'), [
             {
-              text: t('groups.tryAgain' as any),
+              text: t('groups.tryAgain'),
               onPress: () => {
                 setScanned(false);
                 setIsProcessing(false);
               },
             },
             {
-              text: t('common.cancel' as any),
+              text: t('common.cancel'),
+              style: 'cancel',
+              onPress: onClose,
+            },
+          ]);
+        }
+      } catch (error) {
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : t('groups.failedToJoinGroup'),
+          [
+            {
+              text: t('groups.tryAgain'),
+              onPress: () => {
+                setScanned(false);
+                setIsProcessing(false);
+              },
+            },
+            {
+              text: t('common.cancel'),
               style: 'cancel',
               onPress: onClose,
             },
           ]
         );
       }
-    } catch (error) {
-      Alert.alert(
-        t('common.error' as any),
-        error instanceof Error ? error.message : t('groups.failedToJoinGroup' as any),
-        [
-          {
-            text: t('groups.tryAgain' as any),
-            onPress: () => {
-              setScanned(false);
-              setIsProcessing(false);
-            },
-          },
-          {
-            text: t('common.cancel' as any),
-            style: 'cancel',
-            onPress: onClose,
-          },
-        ]
-      );
-    }
-  }, [scanned, isProcessing, extractInviteCode, joinGroupMutation, playerId, onClose, onGroupJoined, t]);
+    },
+    [
+      scanned,
+      isProcessing,
+      extractInviteCode,
+      joinGroupMutation,
+      playerId,
+      onClose,
+      onGroupJoined,
+      t,
+    ]
+  );
 
   // Handle manual code submission
   const handleManualSubmit = useCallback(() => {
     if (!manualCode.trim()) {
-      Alert.alert(t('common.error' as any), t('groups.pleaseEnterInviteCode' as any));
+      Alert.alert(t('common.error'), t('groups.pleaseEnterInviteCode'));
       return;
     }
     // Simulate barcode scan with manual entry
@@ -169,20 +170,16 @@ export function QRScannerModal({
 
   // Toggle flashlight
   const toggleTorch = useCallback(() => {
-    setTorchEnabled((prev) => !prev);
+    setTorchEnabled(prev => !prev);
   }, []);
 
   const handleRequestPermission = useCallback(async () => {
     const result = await requestPermission();
     if (!result.granted) {
-      Alert.alert(
-        t('groups.cameraPermissionRequired' as any),
-        t('groups.cameraPermissionMessage' as any),
-        [
-          { text: t('common.cancel' as any), style: 'cancel', onPress: onClose },
-          { text: t('groups.openSettings' as any), onPress: () => Linking.openSettings() },
-        ]
-      );
+      Alert.alert(t('groups.cameraPermissionRequired'), t('groups.cameraPermissionMessage'), [
+        { text: t('common.cancel'), style: 'cancel', onPress: onClose },
+        { text: t('groups.openSettings'), onPress: () => Linking.openSettings() },
+      ]);
     }
   }, [requestPermission, onClose, t]);
 
@@ -190,18 +187,29 @@ export function QRScannerModal({
   const renderPermissionRequest = () => (
     <View style={styles.permissionContainer}>
       <Ionicons name="camera-outline" size={64} color={colors.textMuted} />
-      <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
-        {t('groups.cameraAccessRequired' as any)}
+      <Text
+        weight="semibold"
+        size="lg"
+        style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+      >
+        {t('groups.cameraAccessRequired')}
       </Text>
-      <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>
-        {t('groups.cameraAccessDescription' as any)}
+      <Text
+        style={{
+          color: colors.textSecondary,
+          marginTop: 8,
+          textAlign: 'center',
+          paddingHorizontal: 32,
+        }}
+      >
+        {t('groups.cameraAccessDescription')}
       </Text>
       <TouchableOpacity
         style={[styles.permissionButton, { backgroundColor: colors.primary }]}
         onPress={handleRequestPermission}
       >
         <Text weight="semibold" style={{ color: '#FFFFFF' }}>
-          {t('groups.allowCameraAccess' as any)}
+          {t('groups.allowCameraAccess')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -215,41 +223,48 @@ export function QRScannerModal({
     >
       <View style={styles.manualEntryContent}>
         <Ionicons name="keypad-outline" size={48} color={colors.textMuted} />
-        <Text weight="semibold" size="lg" style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
-          {t('groups.enterInviteCode' as any)}
+        <Text
+          weight="semibold"
+          size="lg"
+          style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}
+        >
+          {t('groups.enterInviteCode')}
         </Text>
         <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
-          {t('groups.enterInviteCodeDescription' as any)}
+          {t('groups.enterInviteCodeDescription')}
         </Text>
-        
+
         <TextInput
-          style={[styles.manualInput, { 
-            backgroundColor: colors.inputBackground, 
-            color: colors.text,
-            borderColor: colors.border,
-          }]}
+          style={[
+            styles.manualInput,
+            {
+              backgroundColor: colors.inputBackground,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
           placeholder="ABC12345"
           placeholderTextColor={colors.textMuted}
           value={manualCode}
-          onChangeText={(text) => setManualCode(text.toUpperCase())}
+          onChangeText={text => setManualCode(text.toUpperCase())}
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={8}
           returnKeyType="done"
           onSubmitEditing={handleManualSubmit}
         />
-        
+
         <View style={styles.manualEntryButtons}>
           <TouchableOpacity
             style={[styles.manualEntryButton, { backgroundColor: colors.border }]}
             onPress={() => setShowManualEntry(false)}
           >
-            <Ionicons name="camera" size={20} color={colors.text} />
+            <Ionicons name="camera-outline" size={20} color={colors.text} />
             <Text weight="medium" style={{ color: colors.text, marginLeft: 8 }}>
-              {t('groups.scanQR' as any)}
+              {t('groups.scanQR')}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.manualEntryButton, { backgroundColor: colors.primary }]}
             onPress={handleManualSubmit}
@@ -259,9 +274,9 @@ export function QRScannerModal({
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" />
                 <Text weight="medium" style={{ color: '#FFFFFF', marginLeft: 8 }}>
-                  {t('groups.join' as any)}
+                  {t('groups.join')}
                 </Text>
               </>
             )}
@@ -289,11 +304,11 @@ export function QRScannerModal({
       <View style={styles.overlay}>
         {/* Top dark area */}
         <View style={styles.overlayTop} />
-        
+
         {/* Middle row with scan frame */}
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
-          
+
           {/* Scan frame */}
           <View style={styles.scanFrame}>
             {/* Corner markers */}
@@ -302,19 +317,19 @@ export function QRScannerModal({
             <View style={[styles.corner, styles.cornerBottomLeft]} />
             <View style={[styles.corner, styles.cornerBottomRight]} />
           </View>
-          
+
           <View style={styles.overlaySide} />
         </View>
-        
+
         {/* Bottom dark area with instructions and controls */}
         <View style={styles.overlayBottom}>
           <Text weight="medium" style={styles.instructionText}>
-            {isProcessing ? t('groups.processing' as any) : t('groups.pointAtQRCode' as any)}
+            {isProcessing ? t('groups.processing') : t('groups.pointAtQRCode')}
           </Text>
           {isProcessing && (
             <ActivityIndicator size="small" color="#FFFFFF" style={{ marginTop: 12 }} />
           )}
-          
+
           {/* Scanner controls */}
           {!isProcessing && (
             <View style={styles.scannerControls}>
@@ -323,16 +338,16 @@ export function QRScannerModal({
                 style={[styles.controlButton, torchEnabled && styles.controlButtonActive]}
                 onPress={toggleTorch}
               >
-                <Ionicons 
-                  name={torchEnabled ? 'flash' : 'flash-outline'} 
-                  size={24} 
-                  color="#FFFFFF" 
+                <Ionicons
+                  name={torchEnabled ? 'flash' : 'flash-outline'}
+                  size={24}
+                  color="#FFFFFF"
                 />
                 <Text size="xs" style={styles.controlButtonText}>
-                  {torchEnabled ? t('groups.lightOn' as any) : t('groups.lightOff' as any)}
+                  {torchEnabled ? t('groups.lightOn') : t('groups.lightOff')}
                 </Text>
               </TouchableOpacity>
-              
+
               {/* Manual entry */}
               <TouchableOpacity
                 style={styles.controlButton}
@@ -340,7 +355,7 @@ export function QRScannerModal({
               >
                 <Ionicons name="keypad-outline" size={24} color="#FFFFFF" />
                 <Text size="xs" style={styles.controlButtonText}>
-                  {t('groups.enterCode' as any)}
+                  {t('groups.enterCode')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -360,20 +375,20 @@ export function QRScannerModal({
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text weight="semibold" size="lg" style={styles.headerTitle}>
-            {t('groups.scanQRCode' as any)}
-          </Text>
           <View style={styles.headerSpacer} />
+          <Text weight="semibold" size="lg" style={styles.headerTitle}>
+            {t('groups.scanQRCode')}
+          </Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
-        {!permission?.granted 
-          ? renderPermissionRequest() 
-          : showManualEntry 
-            ? renderManualEntry() 
+        {!permission?.granted
+          ? renderPermissionRequest()
+          : showManualEntry
+            ? renderManualEntry()
             : renderScanner()}
       </View>
     </Modal>

@@ -1,17 +1,12 @@
 /**
  * PendingScoreCard Component
- * 
+ *
  * Card displaying a pending score confirmation request.
  * Tapping opens the ScoreConfirmationModal.
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles } from '../../../hooks';
@@ -32,7 +27,10 @@ export function PendingScoreCard({ confirmation, onPress }: PendingScoreCardProp
 
   const deadline = new Date(confirmation.confirmation_deadline);
   const now = new Date();
-  const hoursRemaining = Math.max(0, Math.floor((deadline.getTime() - now.getTime()) / (1000 * 60 * 60)));
+  const hoursRemaining = Math.max(
+    0,
+    Math.floor((deadline.getTime() - now.getTime()) / (1000 * 60 * 60))
+  );
 
   const isUrgent = hoursRemaining < 6;
 
@@ -52,7 +50,7 @@ export function PendingScoreCard({ confirmation, onPress }: PendingScoreCardProp
       {/* Urgent badge */}
       {isUrgent && (
         <View style={styles.urgentBadge}>
-          <Ionicons name="time" size={12} color="#fff" />
+          <Ionicons name="time-outline" size={12} color="#fff" />
           <Text size="xs" weight="medium" style={{ color: '#fff', marginLeft: 2 }}>
             {hoursRemaining}h left
           </Text>
@@ -63,12 +61,9 @@ export function PendingScoreCard({ confirmation, onPress }: PendingScoreCardProp
         {/* Avatar */}
         <View style={[styles.avatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
           {confirmation.submitted_by_avatar ? (
-            <Image
-              source={{ uri: confirmation.submitted_by_avatar }}
-              style={styles.avatarImage}
-            />
+            <Image source={{ uri: confirmation.submitted_by_avatar }} style={styles.avatarImage} />
           ) : (
-            <Ionicons name="person" size={20} color={colors.textMuted} />
+            <Ionicons name="person-outline" size={20} color={colors.textMuted} />
           )}
         </View>
 

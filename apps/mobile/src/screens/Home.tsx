@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,19 +8,35 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { MatchCard, MyMatchCard, Text, Heading, Button, Skeleton, SkeletonMatchCard } from '@rallia/shared-components';
+import {
+  MatchCard,
+  MyMatchCard,
+  Text,
+  Heading,
+  Button,
+  LocationSelector,
+  Skeleton,
+  SkeletonMatchCard,
+} from '@rallia/shared-components';
 import { lightHaptic } from '@rallia/shared-utils';
 import {
   useAuth,
   useThemeStyles,
   useTranslation,
-  useUserLocation,
-  useTourSequence,
+  useEffectiveLocation,
   type TranslationKey,
+  useTourSequence,
 } from '../hooks';
-import { useOverlay, useActionsSheet, useSport, useMatchDetailSheet } from '../context';
+import {
+  useOverlay,
+  useActionsSheet,
+  useSport,
+  useMatchDetailSheet,
+  useUserHomeLocation,
+} from '../context';
 import { CopilotStep, WalkthroughableView } from '../context/TourContext';
 import {
   useProfile,
@@ -33,6 +49,7 @@ import type { NearbyMatch } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { Logger } from '@rallia/shared-services';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
+import { SportIcon } from '../components/SportIcon';
 import { useHomeNavigation, useAppNavigation } from '../navigation/hooks';
 
 const Home = () => {
@@ -41,6 +58,9 @@ const Home = () => {
   const { profile } = useProfile();
   const { setOnHomeScreen } = useOverlay();
   const { openSheet } = useActionsSheet();
+
+  // User is fully onboarded only if authenticated AND onboarding is complete
+  const isOnboarded = !!session?.user && profile?.onboarding_completed;
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
   const { colors } = useThemeStyles();
   const { t, locale } = useTranslation();
@@ -58,16 +78,17 @@ const Home = () => {
   });
 
   // Get user's current location and player preferences for nearby matches
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { location: _realLocation } = useUserLocation();
+  const { location, locationMode, setLocationMode, hasHomeLocation, hasBothLocationOptions } =
+    useEffectiveLocation();
+  const { homeLocation } = useUserHomeLocation();
   const { player, maxTravelDistanceKm, loading: playerLoading } = usePlayer();
   const { selectedSport, isLoading: sportLoading } = useSport();
 
-  // TODO: Remove this hardcoded Montreal location after testing
-  // Using downtown Montreal coordinates for development/testing
-  const MONTREAL_DEV_LOCATION = { latitude: 45.5017, longitude: -73.5673 };
-  const location = MONTREAL_DEV_LOCATION; // Use hardcoded location for testing
-  // const location = _realLocation; // Uncomment to use real location
+  // Default search radius for signed-out users (10km)
+  const GUEST_SEARCH_RADIUS_KM = 15;
+
+  // Use player's travel distance if signed in, otherwise use guest default
+  const searchRadiusKm = session ? maxTravelDistanceKm : GUEST_SEARCH_RADIUS_KM;
 
   // Determine if we should show the nearby matches section
   // For dev: always show since we're using hardcoded location
@@ -87,7 +108,7 @@ const Home = () => {
   } = useNearbyMatches({
     latitude: location?.latitude,
     longitude: location?.longitude,
-    maxDistanceKm: maxTravelDistanceKm,
+    maxDistanceKm: searchRadiusKm,
     sportId: selectedSport?.id,
     userGender: player?.gender,
     limit: 20,
@@ -125,6 +146,9 @@ const Home = () => {
     limit: 5,
     enabled: !!session?.user?.id,
   });
+
+  const flatListRef = useRef<FlatList>(null);
+  useScrollToTop(flatListRef);
 
   const [showWelcome, setShowWelcome] = useState(true);
   const welcomeOpacity = useState(new Animated.Value(1))[0];
@@ -199,7 +223,7 @@ const Home = () => {
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoader}>
-        <SkeletonMatchCard 
+        <SkeletonMatchCard
           backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
           highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
           style={{ backgroundColor: colors.card, marginHorizontal: 16 }}
@@ -208,8 +232,7 @@ const Home = () => {
     );
   }, [isFetchingNextPage, colors.card, isDark]);
 
-  // Render empty state with helpful message about travel distance
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Render empty state with helpful message about travel distance (signed in) or simple message (signed out)
   const renderEmptyComponent = useCallback(
     () => (
       <View style={styles.emptyContainer}>
@@ -220,83 +243,114 @@ const Home = () => {
           {t('home.nearbyEmpty.title')}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })}
-        </Text>
-        <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
-          {t('home.nearbyEmpty.suggestion')}
+          {session
+            ? t('home.nearbyEmpty.description', { distance: maxTravelDistanceKm })
+            : t('home.nearbyEmpty.guestDescription')}
         </Text>
         {session && (
-          <Button
-            variant="outline"
-            onPress={() => appNavigation.navigate('Settings')}
-            style={styles.updateSettingsButton}
-            isDark={isDark}
-            themeColors={{
-              primary: colors.primary,
-              primaryForeground: colors.primaryForeground,
-              buttonActive: colors.buttonActive,
-              buttonInactive: colors.buttonInactive,
-              buttonTextActive: colors.buttonTextActive,
-              buttonTextInactive: colors.buttonTextInactive,
-              text: colors.text,
-              textMuted: colors.textMuted,
-              border: colors.border,
-              background: colors.background,
-            }}
-          >
-            {t('home.nearbyEmpty.updateSettings')}
-          </Button>
+          <>
+            <Text size="sm" color={colors.textMuted} style={styles.emptySuggestion}>
+              {t('home.nearbyEmpty.suggestion')}
+            </Text>
+            <Button
+              variant="outline"
+              onPress={() => appNavigation.navigate('Settings')}
+              style={styles.updateSettingsButton}
+              isDark={isDark}
+              themeColors={{
+                primary: colors.primary,
+                primaryForeground: colors.primaryForeground,
+                buttonActive: colors.buttonActive,
+                buttonInactive: colors.buttonInactive,
+                buttonTextActive: colors.buttonTextActive,
+                buttonTextInactive: colors.buttonTextInactive,
+                text: colors.text,
+                textMuted: colors.textMuted,
+                border: colors.border,
+                background: colors.background,
+              }}
+            >
+              {t('home.nearbyEmpty.updateSettings')}
+            </Button>
+          </>
         )}
       </View>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [colors.card, colors.text, colors.textMuted, t, maxTravelDistanceKm, session, appNavigation]
+    [colors, t, maxTravelDistanceKm, session, appNavigation, isDark]
   );
 
+  // Render section header with "Soon & Nearby" title, location selector, and "View All" button
   // Render section header with "Soon & Nearby" title and "View All" button
   // Wrapped with CopilotStep for home screen tour
   const renderSectionHeader = useCallback(() => {
+    // Get a short label for the home location (full address if available, otherwise postal code)
+    const homeLocationLabel = player?.address
+      ? [player.address.split(',')[0].trim(), player.city].filter(Boolean).join(', ')
+      : homeLocation?.postalCode || homeLocation?.formattedAddress?.split(',')[0];
+
     return (
-      <CopilotStep
-        text={t('tour.homeScreen.nearbyMatches.description' as TranslationKey)}
-        order={11}
-        name="home_nearby_matches"
-      >
-        <WalkthroughableView style={[styles.sectionHeader]}>
+      <View style={[styles.sectionHeader]}>
+        <View style={styles.sectionTitleRow}>
           <Text size="xl" weight="bold" color={colors.text}>
-            {t('home.soonAndNearby' as TranslationKey)}
+            {t('home.soonAndNearby')}
           </Text>
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => {
-              lightHaptic();
-              navigation.navigate('PublicMatches');
-            }}
-            activeOpacity={0.7}
-          >
-            <Text size="base" weight="medium" color={colors.primary}>
-              {t('home.viewAll')}
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={colors.primary}
-              style={styles.chevronIcon}
-            />
-          </TouchableOpacity>
-        </WalkthroughableView>
-      </CopilotStep>
+          {/* Only show LocationSelector when both GPS and home location are available */}
+          {hasBothLocationOptions && (
+            <View style={styles.locationSelectorWrapper}>
+              <LocationSelector
+                selectedMode={locationMode}
+                onSelectMode={setLocationMode}
+                hasHomeLocation={hasHomeLocation}
+                homeLocationLabel={homeLocationLabel}
+                isDark={isDark}
+                t={t as (key: string) => string}
+              />
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.viewAllButton}
+          onPress={() => {
+            lightHaptic();
+            navigation.navigate('PublicMatches');
+          }}
+          activeOpacity={0.7}
+        >
+          <Text size="base" weight="medium" color={colors.primary}>
+            {t('home.viewAll')}
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.primary}
+            style={styles.chevronIcon}
+          />
+        </TouchableOpacity>
+      </View>
     );
-  }, [colors.text, colors.primary, navigation, t]);
+  }, [
+    colors.text,
+    colors.primary,
+    navigation,
+    t,
+    locationMode,
+    setLocationMode,
+    hasHomeLocation,
+    hasBothLocationOptions,
+    homeLocation,
+    isDark,
+    player?.address,
+    player?.city,
+  ]);
 
   // Render "My Matches" section with horizontal scroll
   const renderMyMatchesSection = useCallback(() => {
-    // Only show for authenticated users
-    if (!session) return null;
+    // Only show for fully onboarded users
+    if (!isOnboarded) return null;
 
     return (
       <CopilotStep
-        text={t('tour.homeScreen.upcomingMatches.description' as TranslationKey)}
+        text={t('tour.homeScreen.upcomingMatches.description')}
         order={10}
         name="home_my_matches"
       >
@@ -304,7 +358,7 @@ const Home = () => {
           {/* Header with title and "See All" button */}
           <View style={[styles.sectionHeader]}>
             <Text size="xl" weight="bold" color={colors.text}>
-              {t('home.myMatches' as TranslationKey)}
+              {t('home.myMatches')}
             </Text>
             <TouchableOpacity
               style={styles.viewAllButton}
@@ -329,55 +383,100 @@ const Home = () => {
           {/* Content: horizontal scroll or empty state */}
           {loadingMyMatches ? (
             <View style={styles.myMatchesLoading}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
-                    <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
-                    <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
-                    <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                {[1, 2, 3].map(i => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.myMatchSkeletonCard,
+                      { backgroundColor: colors.card, marginRight: 12 },
+                    ]}
+                  >
+                    <Skeleton
+                      width={120}
+                      height={16}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <Skeleton
+                      width={80}
+                      height={14}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                      style={{ marginBottom: 6 }}
+                    />
+                    <Skeleton
+                      width={100}
+                      height={12}
+                      backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                      highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    />
                   </View>
                 ))}
               </ScrollView>
             </View>
           ) : myMatches.length === 0 ? (
-          <View style={styles.myMatchesEmpty}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-            <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
-              {t('home.myMatchesEmpty.title' as TranslationKey)}
-            </Text>
-            <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
-              {t('home.myMatchesEmpty.description' as TranslationKey)}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.myMatchesScrollContent}
-          >
-            {myMatches.slice(0, 5).map((match: MatchWithDetails) => (
-              <MyMatchCard
-                key={match.id}
-                match={match}
-                isDark={isDark}
-                t={
-                  t as (key: string, options?: Record<string, string | number | boolean>) => string
-                }
-                locale={locale}
-                onPress={() => {
-                  Logger.logUserAction('my_match_pressed', { matchId: match.id });
-                  openMatchDetail(match);
-                }}
-              />
-            ))}
-          </ScrollView>
-        )}
+            <View style={styles.myMatchesEmpty}>
+              <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+              <Text size="sm" color={colors.textMuted} style={styles.myMatchesEmptyText}>
+                {t('home.myMatchesEmpty.title')}
+              </Text>
+              <Text size="xs" color={colors.textMuted} style={styles.myMatchesEmptyDescription}>
+                {t('home.myMatchesEmpty.description')}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.myMatchesScrollContent}
+            >
+              {myMatches.slice(0, 5).map((match: MatchWithDetails) => {
+                // Check if current player is invited (has pending invitation)
+                const isInvited = !!(
+                  player?.id &&
+                  match.participants?.some(p => p.player_id === player.id && p.status === 'pending')
+                );
+                // Count pending join requests (only relevant if current user is creator)
+                const pendingRequestCount =
+                  match.created_by === player?.id
+                    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+                    : 0;
+
+                return (
+                  <MyMatchCard
+                    key={match.id}
+                    match={match}
+                    isDark={isDark}
+                    t={
+                      t as (
+                        key: string,
+                        options?: Record<string, string | number | boolean>
+                      ) => string
+                    }
+                    locale={locale}
+                    isInvited={isInvited}
+                    pendingRequestCount={pendingRequestCount}
+                    onPress={() => {
+                      Logger.logUserAction('my_match_pressed', { matchId: match.id });
+                      openMatchDetail(match);
+                    }}
+                  />
+                );
+              })}
+            </ScrollView>
+          )}
         </WalkthroughableView>
       </CopilotStep>
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    session,
+    isOnboarded,
     colors.text,
     colors.primary,
     colors.textMuted,
@@ -388,6 +487,7 @@ const Home = () => {
     isDark,
     locale,
     openMatchDetail,
+    player,
   ]);
 
   // Render list header (welcome section for logged-in users)
@@ -395,6 +495,7 @@ const Home = () => {
     const headerComponents = [];
 
     if (!session) {
+      // Not signed in: show sign-in prompt
       headerComponents.push(
         <View
           key="sign-in"
@@ -406,6 +507,12 @@ const Home = () => {
             },
           ]}
         >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.matchesSectionIcon}
+          />
           <Heading level={3}>{t('home.yourMatches')}</Heading>
           <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
             {t('home.signInPrompt')}
@@ -415,8 +522,36 @@ const Home = () => {
           </Button>
         </View>
       );
+    } else if (!isOnboarded) {
+      // Signed in but not onboarded: show complete profile prompt
+      headerComponents.push(
+        <View
+          key="complete-profile"
+          style={[
+            styles.matchesSection,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <SportIcon
+            sportName={selectedSport?.name ?? 'tennis'}
+            size={32}
+            color={colors.text}
+            style={styles.matchesSectionIcon}
+          />
+          <Heading level={3}>{t('home.yourMatches')}</Heading>
+          <Text size="sm" color={colors.textMuted} style={styles.sectionSubtitle}>
+            {t('home.onboardingPrompt')}
+          </Text>
+          <Button variant="primary" onPress={openSheet} style={styles.signInButton}>
+            {t('home.completeProfile')}
+          </Button>
+        </View>
+      );
     } else {
-      // Show welcome message for logged-in users
+      // Fully onboarded: show welcome and My Matches
       if (showWelcome) {
         headerComponents.push(
           <Animated.View
@@ -439,7 +574,7 @@ const Home = () => {
         );
       }
 
-      // Add "My Matches" section for authenticated users
+      // Add "My Matches" section for fully onboarded users
       headerComponents.push(<View key="my-matches">{renderMyMatchesSection()}</View>);
     }
 
@@ -451,6 +586,7 @@ const Home = () => {
     return <View>{headerComponents}</View>;
   }, [
     session,
+    isOnboarded,
     showWelcome,
     showNearbySection,
     colors.card,
@@ -462,6 +598,7 @@ const Home = () => {
     openSheet,
     welcomeOpacity,
     displayName,
+    selectedSport,
     renderMyMatchesSection,
     renderSectionHeader,
   ]);
@@ -477,52 +614,79 @@ const Home = () => {
         <View style={styles.loadingContainer}>
           {/* Welcome skeleton */}
           <View style={styles.skeletonWelcome}>
-            <Skeleton 
-              width={200} 
-              height={24} 
+            <Skeleton
+              width={200}
+              height={24}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 8 }}
             />
-            <Skeleton 
-              width={150} 
-              height={16} 
+            <Skeleton
+              width={150}
+              height={16}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
             />
           </View>
-          
+
           {/* My Matches skeleton */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={120} 
-              height={20} 
+            <Skeleton
+              width={120}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.myMatchSkeletonCard, { backgroundColor: colors.card, marginRight: 12 }]}>
-                  <Skeleton width={120} height={16} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 8 }} />
-                  <Skeleton width={80} height={14} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} style={{ marginBottom: 6 }} />
-                  <Skeleton width={100} height={12} backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'} highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'} />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {[1, 2, 3].map(i => (
+                <View
+                  key={i}
+                  style={[
+                    styles.myMatchSkeletonCard,
+                    { backgroundColor: colors.card, marginRight: 12 },
+                  ]}
+                >
+                  <Skeleton
+                    width={120}
+                    height={16}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 8 }}
+                  />
+                  <Skeleton
+                    width={80}
+                    height={14}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                    style={{ marginBottom: 6 }}
+                  />
+                  <Skeleton
+                    width={100}
+                    height={12}
+                    backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
+                    highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
+                  />
                 </View>
               ))}
             </ScrollView>
           </View>
-          
+
           {/* Nearby Matches skeleton */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={150} 
-              height={20} 
+            <Skeleton
+              width={150}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            {[1, 2, 3].map((i) => (
-              <SkeletonMatchCard 
+            {[1, 2, 3].map(i => (
+              <SkeletonMatchCard
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
@@ -540,12 +704,14 @@ const Home = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <FlatList
+          ref={flatListRef}
           data={[]}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
           ListEmptyComponent={null}
         />
       </SafeAreaView>
@@ -558,15 +724,15 @@ const Home = () => {
         <View style={styles.loadingContainer}>
           {/* Skeleton for matches list */}
           <View style={styles.skeletonSection}>
-            <Skeleton 
-              width={150} 
-              height={20} 
+            <Skeleton
+              width={150}
+              height={20}
               backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
               highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
               style={{ marginBottom: 12, marginHorizontal: 16 }}
             />
-            {[1, 2, 3].map((i) => (
-              <SkeletonMatchCard 
+            {[1, 2, 3].map(i => (
+              <SkeletonMatchCard
                 key={i}
                 backgroundColor={isDark ? '#2C2C2E' : '#E1E9EE'}
                 highlightColor={isDark ? '#3C3C3E' : '#F2F8FC'}
@@ -577,14 +743,16 @@ const Home = () => {
         </View>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={matches}
           renderItem={renderMatchCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={renderListHeader}
-          ListEmptyComponent={renderEmptyComponent}
-          ListFooterComponent={renderFooter}
+          automaticallyAdjustContentInsets={false}
+          ListHeaderComponent={renderListHeader()}
+          ListEmptyComponent={renderEmptyComponent()}
+          ListFooterComponent={renderFooter()}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
           refreshControl={
@@ -629,6 +797,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
+    paddingTop: spacingPixels[2],
   },
   matchesSection: {
     padding: spacingPixels[5],
@@ -647,6 +816,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeText: {
+    marginBottom: spacingPixels[2],
+  },
+  matchesSectionIcon: {
     marginBottom: spacingPixels[2],
   },
   sectionSubtitle: {
@@ -698,6 +870,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[5],
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingPixels[2],
+  },
+  locationSelectorWrapper: {
+    marginLeft: spacingPixels[1],
+  },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,7 +886,7 @@ const styles = StyleSheet.create({
     marginLeft: spacingPixels[1],
   },
   myMatchesSection: {
-    marginTop: spacingPixels[2],
+    overflow: 'visible', // Allow corner badges to extend outside cards
   },
   myMatchesLoading: {
     padding: spacingPixels[8],
@@ -729,6 +909,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   myMatchesScrollContent: {
+    paddingTop: 10, // Minimal space for corner badges (badge extends 8px above card)
     paddingLeft: spacingPixels[4],
     paddingRight: spacingPixels[4],
     paddingBottom: spacingPixels[2],

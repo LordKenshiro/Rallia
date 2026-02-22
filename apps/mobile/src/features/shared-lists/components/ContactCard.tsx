@@ -30,13 +30,7 @@ interface ContactCardProps {
   onDelete: () => void;
 }
 
-const ContactCard: React.FC<ContactCardProps> = ({
-  contact,
-  colors,
-  isDark,
-  onEdit,
-  onDelete,
-}) => {
+const ContactCard: React.FC<ContactCardProps> = ({ contact, colors, isDark, onEdit, onDelete }) => {
   const { t } = useTranslation();
   // Get initials from name
   const getInitials = (name: string) => {
@@ -54,7 +48,10 @@ const ContactCard: React.FC<ContactCardProps> = ({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+      style={[
+        styles.container,
+        { backgroundColor: colors.cardBackground, borderColor: colors.border },
+      ]}
     >
       {/* Avatar */}
       <View style={[styles.avatar, { backgroundColor: isDark ? primary[900] : primary[100] }]}>
@@ -80,14 +77,18 @@ const ContactCard: React.FC<ContactCardProps> = ({
         )}
         {/* Source badge */}
         <View style={styles.sourceContainer}>
-          <View style={[styles.sourceBadge, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}>
+          <View
+            style={[styles.sourceBadge, { backgroundColor: isDark ? neutral[700] : neutral[100] }]}
+          >
             <Ionicons
               name={contact.source === 'phone_book' ? 'phone-portrait-outline' : 'create-outline'}
               size={12}
               color={colors.textMuted}
             />
             <Text size="xs" color={colors.textMuted}>
-              {contact.source === 'phone_book' ? t('sharedLists.contact.fromContacts' as TranslationKey) : t('sharedLists.contact.manual' as TranslationKey)}
+              {contact.source === 'phone_book'
+                ? t('sharedLists.contact.fromContacts')
+                : t('sharedLists.contact.manual')}
             </Text>
           </View>
         </View>

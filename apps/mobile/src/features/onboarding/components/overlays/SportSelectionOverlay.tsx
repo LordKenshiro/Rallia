@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,6 +15,7 @@ import DatabaseService, { Logger } from '@rallia/shared-services';
 import ProgressIndicator from '../ProgressIndicator';
 import { selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useTranslation } from '../../../../hooks';
+import { SportIcon } from '../../../../components/SportIcon';
 
 interface SportSelectionOverlayProps {
   visible: boolean;
@@ -41,8 +42,8 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
   const [playerId, setPlayerId] = useState<string | null>(null);
 
   // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Fetch player ID when overlay becomes visible
   useEffect(() => {
@@ -70,7 +71,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
 
       if (error) {
         Logger.error('Failed to fetch sports', error as Error);
-        Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToLoadSports'));
+        Alert.alert(t('common.error'), t('onboarding.validation.failedToLoadSports'));
         // Fallback to hardcoded sports if fetch fails
         setSports([
           {
@@ -110,7 +111,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
     if (visible) {
       fetchSports();
     }
-  }, [visible]);
+  }, [visible, t]);
 
   // Load already selected sports from database
   useEffect(() => {
@@ -148,13 +149,14 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
         }),
       ]).start();
     }
-  }, [visible, fadeAnim, slideAnim]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const toggleSport = async (sportId: string) => {
     selectionHaptic();
 
     if (!playerId) {
-      Alert.alert(t('alerts.error'), t('onboarding.overlay.playerNotFound'));
+      Alert.alert(t('common.error'), t('onboarding.validation.playerNotFound'));
       return;
     }
 
@@ -190,7 +192,7 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
           return [...prev, sportId];
         }
       });
-      Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToUpdateSportSelection'));
+      Alert.alert(t('common.error'), t('onboarding.validation.failedToUpdateSportSelection'));
     }
   };
 
@@ -288,13 +290,25 @@ const SportSelectionOverlay: React.FC<SportSelectionOverlayProps> = ({
                     <View style={styles.sportImageOverlay} />
                   </View>
 
-                  {/* Sport Name */}
+                  {/* Sport icon + name */}
                   <View style={styles.sportNameContainer}>
-                    <Text size="xl" weight="bold" color={colors.primaryForeground}>
-                      {sport.display_name}
-                    </Text>
+                    <View style={styles.sportNameRow}>
+                      <SportIcon
+                        sportName={sport.name}
+                        size={28}
+                        color={colors.primaryForeground}
+                        style={styles.sportCardIcon}
+                      />
+                      <Text size="xl" weight="bold" color={colors.primaryForeground}>
+                        {sport.display_name}
+                      </Text>
+                    </View>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={24} color={colors.primaryForeground} />
+                      <Ionicons
+                        name="checkmark-outline"
+                        size={24}
+                        color={colors.primaryForeground}
+                      />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -380,6 +394,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  sportNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sportCardIcon: {
+    marginRight: 2,
   },
   continueButton: {
     marginTop: 10,

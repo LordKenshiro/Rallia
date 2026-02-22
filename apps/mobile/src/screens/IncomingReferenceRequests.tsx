@@ -1,9 +1,9 @@
 /**
  * IncomingReferenceRequests Screen
- * 
+ *
  * Displays pending reference requests that other players have sent to the current user.
  * Allows users to view requester info and respond (approve/decline) to requests.
- * 
+ *
  * UX Considerations:
  * - Empty state with helpful messaging
  * - Pull-to-refresh for real-time updates
@@ -24,13 +24,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '@rallia/shared-components';
 import { supabase, Logger } from '@rallia/shared-services';
-import { useThemeStyles, useTranslation } from '../hooks';
+import { getSafeAreaEdges } from '../utils';
+import { useThemeStyles, useTranslation, useNavigateToPlayerProfile } from '../hooks';
 import { lightHaptic } from '@rallia/shared-utils';
-import type { RootStackParamList } from '../navigation/types';
 import {
   spacingPixels,
   radiusPixels,
@@ -40,8 +38,6 @@ import {
 } from '@rallia/design-system';
 import { CertificationBadge } from '../features/ratings/components';
 import { RespondToReferenceOverlay } from '../features/ratings/components';
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface ReferenceRequest {
   id: string;
@@ -68,10 +64,9 @@ interface ReferenceRequest {
 }
 
 const IncomingReferenceRequests: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
-  
+
   const [requests, setRequests] = useState<ReferenceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,13 +79,16 @@ const IncomingReferenceRequests: React.FC = () => {
 
   const fetchIncomingRequests = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Fetch pending reference requests where current user is the referee
       const { data: requestsData, error } = await supabase
         .from('rating_reference_request')
-        .select(`
+        .select(
+          `
           id,
           requester_id,
           player_rating_score_id,
@@ -98,7 +96,8 @@ const IncomingReferenceRequests: React.FC = () => {
           status,
           expires_at,
           created_at
-        `)
+        `
+        )
         .eq('referee_id', user.id)
         .eq('status', 'pending')
         .gte('expires_at', new Date().toISOString()) // Not expired
@@ -122,7 +121,8 @@ const IncomingReferenceRequests: React.FC = () => {
       const ratingScoreIds = [...new Set(requestsData.map(r => r.player_rating_score_id))];
       const { data: ratingScores } = await supabase
         .from('player_rating_score')
-        .select(`
+        .select(
+          `
           id,
           rating_score:rating_score_id (
             label,
@@ -134,24 +134,30 @@ const IncomingReferenceRequests: React.FC = () => {
               )
             )
           )
-        `)
+        `
+        )
         .in('id', ratingScoreIds);
 
       // Create lookup maps
       const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      const ratingsMap = new Map<string, { label: string; value: number | null; sport_name: string; sport_display_name: string }>();
+      const ratingsMap = new Map<
+        string,
+        { label: string; value: number | null; sport_name: string; sport_display_name: string }
+      >();
 
       ratingScores?.forEach(rs => {
         // Handle Supabase nested relations (can be arrays or single objects)
         const ratingScoreRaw = rs.rating_score;
         const ratingScore = Array.isArray(ratingScoreRaw) ? ratingScoreRaw[0] : ratingScoreRaw;
-        
+
         if (ratingScore) {
           const ratingSystemRaw = ratingScore.rating_system;
-          const ratingSystem = Array.isArray(ratingSystemRaw) ? ratingSystemRaw[0] : ratingSystemRaw;
+          const ratingSystem = Array.isArray(ratingSystemRaw)
+            ? ratingSystemRaw[0]
+            : ratingSystemRaw;
           const sportRaw = ratingSystem?.sport;
           const sport = Array.isArray(sportRaw) ? sportRaw[0] : sportRaw;
-          
+
           ratingsMap.set(rs.id, {
             label: ratingScore.label || '',
             value: ratingScore.value ?? null,
@@ -204,9 +210,10 @@ const IncomingReferenceRequests: React.FC = () => {
     setShowRespondOverlay(true);
   };
 
+  const navigateToPlayerProfile = useNavigateToPlayerProfile();
   const handleViewRequesterProfile = (requesterId: string) => {
     lightHaptic();
-    navigation.navigate('PlayerProfile', { playerId: requesterId });
+    navigateToPlayerProfile(requesterId);
   };
 
   const handleResponseComplete = () => {
@@ -242,11 +249,14 @@ const IncomingReferenceRequests: React.FC = () => {
 
   const getExpiryInfo = (expiresAt: string) => {
     const daysLeft = getDaysLeft(expiresAt);
-    
+
     if (daysLeft <= 1) {
       return { text: t('referenceRequest.expiresVerySoon'), color: status.error.DEFAULT };
     } else if (daysLeft <= 3) {
-      return { text: t('referenceRequest.expiresSoon', { days: daysLeft }), color: status.warning.DEFAULT };
+      return {
+        text: t('referenceRequest.expiresSoon', { days: daysLeft }),
+        color: status.warning.DEFAULT,
+      };
     }
     return { text: t('referenceRequest.expiresIn', { days: daysLeft }), color: colors.textMuted };
   };
@@ -263,18 +273,21 @@ const IncomingReferenceRequests: React.FC = () => {
       >
         {/* Header with requester info */}
         <View style={styles.cardHeader}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.requesterInfo}
             onPress={() => handleViewRequesterProfile(item.requester.id)}
           >
             {item.requester.profile_picture_url ? (
-              <Image 
-                source={{ uri: item.requester.profile_picture_url }} 
-                style={styles.avatar} 
-              />
+              <Image source={{ uri: item.requester.profile_picture_url }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: colors.inputBackground }]}>
-                <Ionicons name="person" size={20} color={colors.textMuted} />
+              <View
+                style={[
+                  styles.avatar,
+                  styles.avatarPlaceholder,
+                  { backgroundColor: colors.inputBackground },
+                ]}
+              >
+                <Ionicons name="person-outline" size={20} color={colors.textMuted} />
               </View>
             )}
             <View style={styles.requesterText}>
@@ -288,7 +301,7 @@ const IncomingReferenceRequests: React.FC = () => {
               )}
             </View>
           </TouchableOpacity>
-          
+
           <View style={[styles.sportBadge, { backgroundColor: colors.primary + '20' }]}>
             <Text style={[styles.sportText, { color: colors.primary }]}>
               {item.rating_info.sport_display_name}
@@ -328,14 +341,10 @@ const IncomingReferenceRequests: React.FC = () => {
 
         {/* Footer with time and expiry */}
         <View style={styles.cardFooter}>
-          <Text style={[styles.timeText, { color: colors.textMuted }]}>
-            {timeAgo}
-          </Text>
+          <Text style={[styles.timeText, { color: colors.textMuted }]}>{timeAgo}</Text>
           <View style={styles.expiryContainer}>
             <Ionicons name="time-outline" size={12} color={expiryInfo.color} />
-            <Text style={[styles.expiryText, { color: expiryInfo.color }]}>
-              {expiryInfo.text}
-            </Text>
+            <Text style={[styles.expiryText, { color: expiryInfo.color }]}>{expiryInfo.text}</Text>
           </View>
         </View>
 
@@ -366,7 +375,10 @@ const IncomingReferenceRequests: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={getSafeAreaEdges(['bottom'])}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textMuted }]}>
@@ -378,7 +390,10 @@ const IncomingReferenceRequests: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={getSafeAreaEdges(['bottom'])}
+    >
       {/* Header info */}
       <View style={[styles.headerInfo, { backgroundColor: colors.card }]}>
         <Ionicons name="information-circle-outline" size={20} color={colors.primary} />

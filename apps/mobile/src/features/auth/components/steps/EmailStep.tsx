@@ -144,7 +144,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
           </TouchableOpacity>
         )}
 
-        {/* Facebook Sign In */}
+        {/* Facebook Sign In - commented out; re-enable by uncommenting
         <TouchableOpacity
           style={[
             styles.socialButton,
@@ -161,6 +161,7 @@ export const EmailStep: React.FC<EmailStepProps> = ({
             <Ionicons name="logo-facebook" size={24} color="#fff" />
           )}
         </TouchableOpacity>
+        */}
       </View>
 
       {/* OR Divider */}

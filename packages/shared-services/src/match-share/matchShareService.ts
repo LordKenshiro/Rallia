@@ -102,10 +102,12 @@ async function generateShareMessage(
   // Fetch match details
   const { data: match, error } = await supabase
     .from('match')
-    .select(`
+    .select(
+      `
       *,
       sport:sport_id (name)
-    `)
+    `
+    )
     .eq('id', matchId)
     .single();
 
@@ -149,11 +151,15 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
   // Get sender's display name for the message
   const { data: profile } = await supabase
     .from('profile')
-    .select('display_name, full_name')
+    .select('display_name, first_name, last_name')
     .eq('id', userId)
     .single();
 
-  const senderName = profile?.display_name || profile?.full_name;
+  const senderName =
+    profile?.display_name ||
+    (profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile?.first_name);
 
   // Create the share record
   const { data: share, error: shareError } = await supabase
@@ -209,10 +215,12 @@ export async function shareMatchWithContacts(input: ShareMatchInput): Promise<Sh
 export async function getMatchShares(matchId: string): Promise<MatchShareWithRecipients[]> {
   const { data, error } = await supabase
     .from('match_share')
-    .select(`
+    .select(
+      `
       *,
       recipients:match_share_recipient (*)
-    `)
+    `
+    )
     .eq('match_id', matchId)
     .order('created_at', { ascending: false });
 
@@ -234,10 +242,12 @@ export async function getUserMatchShares(): Promise<MatchShareWithRecipients[]> 
 
   const { data, error } = await supabase
     .from('match_share')
-    .select(`
+    .select(
+      `
       *,
       recipients:match_share_recipient (*)
-    `)
+    `
+    )
     .eq('shared_by', userData.user.id)
     .order('created_at', { ascending: false });
 
@@ -323,10 +333,7 @@ export async function cancelShare(shareId: string): Promise<void> {
   }
 
   // Delete the share record
-  const { error: shareError } = await supabase
-    .from('match_share')
-    .delete()
-    .eq('id', shareId);
+  const { error: shareError } = await supabase.from('match_share').delete().eq('id', shareId);
 
   if (shareError) {
     throw new Error(`Failed to delete share: ${shareError.message}`);
@@ -342,7 +349,8 @@ export async function getShareByToken(token: string): Promise<{
 } | null> {
   const { data, error } = await supabase
     .from('match_share')
-    .select(`
+    .select(
+      `
       *,
       match:match_id (
         *,
@@ -350,10 +358,11 @@ export async function getShareByToken(token: string): Promise<{
         facility:facility_id (name, address),
         created_by_player:created_by (
           id,
-          profile:id (display_name, full_name, avatar_url)
+          profile:id (display_name, first_name, last_name, avatar_url)
         )
       )
-    `)
+    `
+    )
     .eq('share_link_token', token)
     .single();
 

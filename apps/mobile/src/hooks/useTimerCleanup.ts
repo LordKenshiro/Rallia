@@ -14,7 +14,7 @@ export const useTimerCleanup = () => {
       callback();
       timers.current.delete(timerId); // Remove from tracking after execution
     }, delay);
-    
+
     timers.current.add(timerId);
     return timerId;
   }, []);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,9 +70,9 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
   const hasTennis = selectedSports.includes('tennis');
   const hasPickleball = selectedSports.includes('pickleball');
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  // Animation values - using useMemo to create stable Animated.Value instances
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideAnim = useMemo(() => new Animated.Value(50), []);
 
   // Trigger animations when overlay becomes visible
   useEffect(() => {
@@ -150,8 +150,8 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
         if (error) {
           Logger.error('Failed to save player preferences', error as Error, { preferencesData });
           setIsSaving(false);
-          Alert.alert(t('alerts.error'), t('onboarding.overlay.failedToSavePreferences'), [
-            { text: t('alerts.ok') },
+          Alert.alert(t('common.error'), t('onboarding.validation.failedToSavePreferences'), [
+            { text: t('common.ok') },
           ]);
           return;
         }
@@ -177,7 +177,9 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
       } catch (error) {
         Logger.error('Unexpected error saving preferences', error as Error);
         setIsSaving(false);
-        Alert.alert(t('alerts.error'), t('onboarding.overlay.unexpectedError'), [{ text: t('alerts.ok') }]);
+        Alert.alert(t('common.error'), t('onboarding.validation.unexpectedError'), [
+          { text: t('common.ok') },
+        ]);
       }
     }
   };
@@ -581,7 +583,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   ]}
                 >
                   {sameDurationForAllSports && (
-                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    <Ionicons name="checkmark-outline" size={16} color={colors.primaryForeground} />
                   )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>
@@ -813,7 +815,7 @@ const PlayerPreferencesOverlay: React.FC<PlayerPreferencesOverlayProps> = ({
                   ]}
                 >
                   {sameMatchTypeForAllSports && (
-                    <Ionicons name="checkmark" size={16} color={colors.primaryForeground} />
+                    <Ionicons name="checkmark-outline" size={16} color={colors.primaryForeground} />
                   )}
                 </View>
                 <Text style={styles.checkboxLabel}>Same for all sports</Text>

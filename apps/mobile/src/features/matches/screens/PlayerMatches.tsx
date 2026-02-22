@@ -1,9 +1,13 @@
 /**
  * PlayerMatches Screen
  * Displays the user's matches with tabbed Upcoming/Past views and date-sectioned lists.
+ *
+ * Also handles deep linking from push notifications:
+ * - When a match-related notification is tapped, this screen opens
+ * - The screen checks for a pending match ID and opens the detail sheet
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -15,18 +19,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchCard, Text } from '@rallia/shared-components';
-import { useTheme, usePlayerMatches } from '@rallia/shared-hooks';
+import { useTheme, usePlayerMatches, useMatch, usePlayerMatchFilters } from '@rallia/shared-hooks';
 import type { MatchWithDetails } from '@rallia/shared-types';
 import { useAuth, useThemeStyles, useTranslation } from '../../../hooks';
 import type { TranslationKey } from '@rallia/shared-translations';
-import { useMatchDetailSheet } from '../../../context';
+import { useMatchDetailSheet, useDeepLink, useSport } from '../../../context';
 import { Logger } from '@rallia/shared-services';
-import {
-  spacingPixels,
-  radiusPixels,
-  primary,
-  neutral,
-} from '@rallia/design-system';
+import { PlayerMatchFilterChips } from '../components';
+import { spacingPixels } from '@rallia/design-system';
 
 // =============================================================================
 // TYPES
@@ -62,15 +62,15 @@ function getUpcomingDateSectionKey(
   const matchDateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === tomorrow.getTime()) {
-    return t('playerMatches.time.tomorrow' as TranslationKey);
+    return t('playerMatches.time.tomorrow');
   } else if (matchDateOnly < thisWeekEnd) {
-    return t('playerMatches.time.thisWeek' as TranslationKey);
+    return t('playerMatches.time.thisWeek');
   } else if (matchDateOnly < nextWeekEnd) {
-    return t('playerMatches.time.nextWeek' as TranslationKey);
+    return t('playerMatches.time.nextWeek');
   } else {
-    return t('playerMatches.time.later' as TranslationKey);
+    return t('playerMatches.time.later');
   }
 }
 
@@ -94,13 +94,13 @@ function getPastDateSectionKey(
 
   // Check for today first (matches that ended earlier today)
   if (matchDateOnly.getTime() === today.getTime()) {
-    return t('playerMatches.time.today' as TranslationKey);
+    return t('playerMatches.time.today');
   } else if (matchDateOnly.getTime() === yesterday.getTime()) {
-    return t('playerMatches.time.yesterday' as TranslationKey);
+    return t('playerMatches.time.yesterday');
   } else if (matchDateOnly >= lastWeekStart) {
-    return t('playerMatches.time.lastWeek' as TranslationKey);
+    return t('playerMatches.time.lastWeek');
   } else {
-    return t('playerMatches.time.earlier' as TranslationKey);
+    return t('playerMatches.time.earlier');
   }
 }
 
@@ -119,17 +119,17 @@ function groupMatchesByDate(
   const order =
     timeFilter === 'upcoming'
       ? [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.tomorrow' as TranslationKey),
-          t('playerMatches.time.thisWeek' as TranslationKey),
-          t('playerMatches.time.nextWeek' as TranslationKey),
-          t('playerMatches.time.later' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.tomorrow'),
+          t('playerMatches.time.thisWeek'),
+          t('playerMatches.time.nextWeek'),
+          t('playerMatches.time.later'),
         ]
       : [
-          t('playerMatches.time.today' as TranslationKey),
-          t('playerMatches.time.yesterday' as TranslationKey),
-          t('playerMatches.time.lastWeek' as TranslationKey),
-          t('playerMatches.time.earlier' as TranslationKey),
+          t('playerMatches.time.today'),
+          t('playerMatches.time.yesterday'),
+          t('playerMatches.time.lastWeek'),
+          t('playerMatches.time.earlier'),
         ];
 
   const groups: Record<string, MatchWithDetails[]> = {};
@@ -157,23 +157,81 @@ export default function PlayerMatches() {
   const { t, locale } = useTranslation();
   const { colors } = useThemeStyles();
   const { openSheet: openMatchDetail } = useMatchDetailSheet();
+  const { consumePendingMatchId } = useDeepLink();
+  const { selectedSport } = useSport();
   const isDark = theme === 'dark';
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TimeFilter>('upcoming');
 
-  // Theme colors
-  const tabColors = useMemo(
-    () => ({
-      activeBackground: isDark ? primary[600] : primary[500],
-      activeText: '#ffffff',
-      inactiveBackground: isDark ? neutral[800] : neutral[100],
-      inactiveText: isDark ? neutral[400] : neutral[600],
-    }),
-    [isDark]
+  // Filter state
+  const {
+    upcomingFilter,
+    pastFilter,
+    toggleUpcomingFilter,
+    togglePastFilter,
+    resetUpcomingFilter,
+    resetPastFilter,
+  } = usePlayerMatchFilters();
+
+  // Get current filter based on active tab
+  const currentStatusFilter = activeTab === 'upcoming' ? upcomingFilter : pastFilter;
+
+  // Handle tab change - reset filters when switching tabs
+  const handleTabChange = useCallback(
+    (tab: TimeFilter) => {
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+        // Reset the filter for the tab we're leaving
+        if (activeTab === 'upcoming') {
+          resetUpcomingFilter();
+        } else {
+          resetPastFilter();
+        }
+      }
+    },
+    [activeTab, resetUpcomingFilter, resetPastFilter]
   );
 
-  // Fetch matches based on active tab
+  // Deep link handling - use ref to avoid cascading renders from setState in effect
+  const pendingMatchIdRef = useRef<string | null>(null);
+  const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
+
+  // Fetch match data when we have a pending deep link
+  const { match: deepLinkMatch, isLoading: isLoadingDeepLinkMatch } = useMatch(
+    pendingMatchId ?? undefined,
+    { enabled: !!pendingMatchId }
+  );
+
+  // Check for pending deep link on mount - deferred to avoid cascading renders
+  useEffect(() => {
+    const matchId = consumePendingMatchId();
+    if (matchId) {
+      Logger.logUserAction('deep_link_match_opening', { matchId });
+      pendingMatchIdRef.current = matchId;
+      // Use queueMicrotask to defer state update and avoid cascading render warning
+      queueMicrotask(() => {
+        setPendingMatchId(matchId);
+      });
+    }
+  }, [consumePendingMatchId]);
+
+  // Open match detail sheet when deep link match data is loaded
+  useEffect(() => {
+    if (deepLinkMatch && !isLoadingDeepLinkMatch && pendingMatchIdRef.current) {
+      Logger.logUserAction('deep_link_match_opened', { matchId: pendingMatchIdRef.current });
+      openMatchDetail(deepLinkMatch);
+      // Clear the pending match ID after opening
+      pendingMatchIdRef.current = null;
+      queueMicrotask(() => {
+        setPendingMatchId(null);
+      });
+    }
+  }, [deepLinkMatch, isLoadingDeepLinkMatch, openMatchDetail]);
+
+  // Theme colors
+
+  // Fetch matches based on active tab and filter
   const {
     matches,
     isLoading,
@@ -185,6 +243,8 @@ export default function PlayerMatches() {
   } = usePlayerMatches({
     userId: session?.user?.id,
     timeFilter: activeTab,
+    sportId: selectedSport?.id,
+    statusFilter: currentStatusFilter,
     limit: 20,
     enabled: !!session?.user?.id,
   });
@@ -232,21 +292,77 @@ export default function PlayerMatches() {
     [colors]
   );
 
-  // Render empty state
+  // Render empty state - shows filter-specific messages when a filter is active
   const renderEmptyState = () => {
-    const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
+    const isFiltered = currentStatusFilter !== 'all';
+
+    // Determine icon based on filter or tab
+    const getIcon = (): keyof typeof Ionicons.glyphMap => {
+      if (!isFiltered) {
+        return activeTab === 'upcoming' ? 'calendar-outline' : 'time-outline';
+      }
+      // Filter-specific icons
+      switch (currentStatusFilter) {
+        case 'hosting':
+        case 'hosted':
+          return 'person-outline';
+        case 'confirmed':
+          return 'checkmark-circle-outline';
+        case 'pending':
+          return 'hourglass-outline';
+        case 'requested':
+          return 'paper-plane-outline';
+        case 'waitlisted':
+          return 'list-outline';
+        case 'needs_players':
+          return 'people-outline';
+        case 'ready_to_play':
+          return 'checkmark-done-outline';
+        case 'feedback_needed':
+          return 'chatbubble-outline';
+        case 'played':
+          return 'trophy-outline';
+        case 'as_participant':
+          return 'people-outline';
+        case 'expired':
+          return 'time-outline';
+        case 'cancelled':
+          return 'close-circle-outline';
+        default:
+          return 'search-outline';
+      }
+    };
+
+    // Get appropriate translation keys
+    const getEmptyContent = () => {
+      if (!isFiltered) {
+        const emptyKey = activeTab === 'upcoming' ? 'emptyUpcoming' : 'emptyPast';
+        return {
+          title: t(`playerMatches.${emptyKey}.title`),
+          description: t(`playerMatches.${emptyKey}.description`),
+        };
+      }
+      // Filter-specific empty state
+      return {
+        title: t(`playerMatches.emptyFiltered.title`),
+        description: t(`playerMatches.emptyFiltered.description`, {
+          filter: t(
+            `playerMatches.filters.${currentStatusFilter === 'needs_players' ? 'needsPlayers' : currentStatusFilter === 'ready_to_play' ? 'readyToPlay' : currentStatusFilter === 'feedback_needed' ? 'feedbackNeeded' : currentStatusFilter === 'as_participant' ? 'asParticipant' : currentStatusFilter}`
+          ),
+        }),
+      };
+    };
+
+    const { title, description } = getEmptyContent();
+
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons
-          name={activeTab === 'upcoming' ? 'calendar-outline' : 'time-outline'}
-          size={64}
-          color={colors.textMuted}
-        />
+        <Ionicons name={getIcon()} size={64} color={colors.textMuted} />
         <Text size="lg" weight="semibold" color={colors.textMuted} style={styles.emptyTitle}>
-          {t(`playerMatches.${emptyKey}.title` as TranslationKey)}
+          {title}
         </Text>
         <Text size="sm" color={colors.textMuted} style={styles.emptyDescription}>
-          {t(`playerMatches.${emptyKey}.description` as TranslationKey)}
+          {description}
         </Text>
       </View>
     );
@@ -262,48 +378,81 @@ export default function PlayerMatches() {
     );
   };
 
-  // Render tab bar
+  // Render tab bar (pill style – matches Communities)
   const renderTabBar = () => (
-    <View style={[styles.tabBar, { backgroundColor: tabColors.inactiveBackground }]}>
+    <View style={[styles.tabBar, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7' }]}>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'upcoming' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'upcoming' && [
+            styles.activeTab,
+            { backgroundColor: colors.cardBackground },
+          ],
         ]}
-        onPress={() => setActiveTab('upcoming')}
+        onPress={() => handleTabChange('upcoming')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color={activeTab === 'upcoming' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'upcoming' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'upcoming' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'upcoming' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
-          {t('playerMatches.tabs.upcoming' as TranslationKey)}
+          {t('playerMatches.tabs.upcoming')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[
           styles.tab,
-          activeTab === 'past' && { backgroundColor: tabColors.activeBackground },
+          activeTab === 'past' && [styles.activeTab, { backgroundColor: colors.cardBackground }],
         ]}
-        onPress={() => setActiveTab('past')}
+        onPress={() => handleTabChange('past')}
         activeOpacity={0.8}
       >
+        <Ionicons
+          name="time-outline"
+          size={18}
+          color={activeTab === 'past' ? colors.primary : colors.textMuted}
+        />
         <Text
           size="sm"
-          weight="semibold"
-          color={activeTab === 'past' ? tabColors.activeText : tabColors.inactiveText}
+          weight={activeTab === 'past' ? 'semibold' : 'medium'}
+          style={{
+            color: activeTab === 'past' ? colors.primary : colors.textMuted,
+            marginLeft: 6,
+          }}
         >
-          {t('playerMatches.tabs.past' as TranslationKey)}
+          {t('playerMatches.tabs.past')}
         </Text>
       </TouchableOpacity>
     </View>
+  );
+
+  // Render filter chips
+  const renderFilterChips = () => (
+    <PlayerMatchFilterChips
+      timeFilter={activeTab}
+      upcomingFilter={upcomingFilter}
+      pastFilter={pastFilter}
+      onUpcomingFilterToggle={toggleUpcomingFilter}
+      onPastFilterToggle={togglePastFilter}
+    />
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* Tab Bar */}
       {renderTabBar()}
+
+      {/* Filter Chips */}
+      {renderFilterChips()}
 
       {/* Content */}
       {isLoading ? (
@@ -355,18 +504,26 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    marginHorizontal: spacingPixels[4],
+    marginHorizontal: 16,
     marginTop: spacingPixels[3],
-    marginBottom: spacingPixels[2],
-    borderRadius: radiusPixels.lg,
-    padding: spacingPixels[1],
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacingPixels[2.5],
-    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeTab: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   listContent: {
     paddingTop: spacingPixels[2],

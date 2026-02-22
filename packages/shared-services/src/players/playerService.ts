@@ -4,7 +4,21 @@
  */
 
 import { supabase } from '../supabase';
-import type { Profile } from '@rallia/shared-types';
+
+// =============================================================================
+// HOME LOCATION TYPES
+// =============================================================================
+
+export interface HomeLocation {
+  /** Normalized postal code */
+  postalCode: string;
+  /** Country code: 'CA' or 'US' */
+  country: 'CA' | 'US';
+  /** Latitude of postal code centroid */
+  latitude: number;
+  /** Longitude of postal code centroid */
+  longitude: number;
+}
 
 // =============================================================================
 // TYPES
@@ -15,8 +29,21 @@ import type { Profile } from '@rallia/shared-types';
  */
 export type GenderFilter = 'all' | 'male' | 'female' | 'other';
 export type AvailabilityFilter = 'all' | 'morning' | 'afternoon' | 'evening';
-export type DayFilter = 'all' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
-export type PlayStyleFilter = 'all' | 'counterpuncher' | 'aggressive_baseliner' | 'serve_and_volley' | 'all_court';
+export type DayFilter =
+  | 'all'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+export type PlayStyleFilter =
+  | 'all'
+  | 'counterpuncher'
+  | 'aggressive_baseliner'
+  | 'serve_and_volley'
+  | 'all_court';
 export type SkillLevelFilter = 'all' | string; // '1.0', '1.5', etc.
 export type DistanceFilter = 'all' | number; // 5, 10, 15, etc.
 
@@ -48,6 +75,12 @@ export interface PlayerSearchResult {
     label: string;
     value: number | null;
   } | null;
+  /** Player's latitude (from home location) */
+  latitude: number | null;
+  /** Player's longitude (from home location) */
+  longitude: number | null;
+  /** Distance in meters from the searching user's location (null if location not provided) */
+  distance_meters: number | null;
 }
 
 /**
@@ -65,8 +98,8 @@ export interface PlayersPage {
 export interface SearchPlayersParams {
   /** Sport ID to filter players by (required - only shows active players in this sport) */
   sportId: string;
-  /** Current user ID to exclude from results */
-  currentUserId: string;
+  /** Current user ID to exclude from results (optional - for guest users) */
+  currentUserId?: string;
   /** Search query for name matching */
   searchQuery?: string;
   /** Pagination offset */
@@ -81,6 +114,10 @@ export interface SearchPlayersParams {
   favoritePlayerIds?: string[];
   /** Blocked player IDs (to filter by blocked or exclude blocked) */
   blockedPlayerIds?: string[];
+  /** User's current latitude (for distance calculation) */
+  latitude?: number;
+  /** User's current longitude (for distance calculation) */
+  longitude?: number;
 }
 
 // =============================================================================
@@ -105,16 +142,22 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     filters = {},
     favoritePlayerIds = [],
     blockedPlayerIds = [],
+    latitude,
+    longitude,
   } = params;
 
   // Step 1: Get player IDs that are active in this sport
   // Using player_sport table which links players to their sports
-  const sportQuery = supabase
+  let sportQuery = supabase
     .from('player_sport')
     .select('player_id')
     .eq('sport_id', sportId)
-    .neq('player_id', currentUserId)
     .or('is_active.is.null,is_active.eq.true'); // Include null (default) or true
+
+  // Exclude current user if provided (for authenticated users)
+  if (currentUserId) {
+    sportQuery = sportQuery.neq('player_id', currentUserId);
+  }
 
   const { data: playerSports, error: sportError } = await sportQuery;
 
@@ -183,8 +226,11 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   // Step 3: Apply distance filter if specified
   // Filter players whose max_travel_distance is >= the selected distance
   if (filters.maxDistance && filters.maxDistance !== 'all') {
-    const distanceValue = typeof filters.maxDistance === 'number' ? filters.maxDistance : parseInt(String(filters.maxDistance), 10);
-    
+    const distanceValue =
+      typeof filters.maxDistance === 'number'
+        ? filters.maxDistance
+        : parseInt(String(filters.maxDistance), 10);
+
     if (!isNaN(distanceValue)) {
       const { data: distanceFilteredPlayers, error: distanceError } = await supabase
         .from('player')
@@ -247,32 +293,20 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 5: Apply play style filter if specified
+  // Uses player_sport.preferred_play_style enum column directly
   if (filters.playStyle && filters.playStyle !== 'all') {
-    // First get play_style_id for the given play style name
-    const { data: playStyleData, error: playStyleError } = await supabase
-      .from('play_style')
-      .select('id')
+    const { data: styledPlayers, error: styledError } = await supabase
+      .from('player_sport')
+      .select('player_id')
+      .in('player_id', playerIds)
       .eq('sport_id', sportId)
-      .ilike('name', filters.playStyle.replace(/_/g, ' ')); // Convert snake_case to space separated
+      .eq('preferred_play_style', filters.playStyle);
 
-    if (playStyleError) {
-      console.error('[searchPlayersForSport] Error fetching play style:', playStyleError);
-    } else if (playStyleData && playStyleData.length > 0) {
-      const playStyleIds = playStyleData.map(ps => ps.id);
-      
-      const { data: styledPlayers, error: styledError } = await supabase
-        .from('player_sport_profile')
-        .select('player_id')
-        .in('player_id', playerIds)
-        .eq('sport_id', sportId)
-        .in('play_style_id', playStyleIds);
-
-      if (styledError) {
-        console.error('[searchPlayersForSport] Error filtering by play style:', styledError);
-      } else if (styledPlayers) {
-        const styledPlayerIds = styledPlayers.map(p => p.player_id);
-        playerIds = playerIds.filter(id => styledPlayerIds.includes(id));
-      }
+    if (styledError) {
+      console.error('[searchPlayersForSport] Error filtering by play style:', styledError);
+    } else if (styledPlayers) {
+      const styledPlayerIds = styledPlayers.map(p => p.player_id);
+      playerIds = playerIds.filter(id => styledPlayerIds.includes(id));
     }
 
     if (playerIds.length === 0) {
@@ -281,7 +315,7 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   }
 
   // Step 6: Apply skill level filter - we need to fetch ratings first
-  let ratingsMap: Record<string, { label: string; value: number | null }> = {};
+  const ratingsMap: Record<string, { label: string; value: number | null }> = {};
   let skillFilteredPlayerIds = playerIds;
 
   // Always fetch ratings (we need them for the result anyway)
@@ -345,25 +379,48 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
     return { players: [], hasMore: false, nextOffset: null };
   }
 
-  // Step 7: Fetch profiles with search filter
-  // Note: city is now on player table, not profile table
-  let profileQuery = supabase
+  // Step 7: If searching, find player IDs matching city and union with name-matched profile IDs
+  if (searchQuery && searchQuery.trim().length > 0) {
+    const searchTerm = `%${searchQuery.trim()}%`;
+
+    // Find IDs matching city in player table
+    const { data: cityMatches } = await supabase
+      .from('player')
+      .select('id')
+      .in('id', playerIds)
+      .ilike('city', searchTerm);
+
+    // Find IDs matching name in profile table
+    const { data: nameMatches } = await supabase
+      .from('profile')
+      .select('id')
+      .in('id', playerIds)
+      .or('is_active.is.null,is_active.eq.true')
+      .or(
+        `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
+      );
+
+    // Union the matched IDs
+    const matchedIds = new Set<string>();
+    cityMatches?.forEach(p => matchedIds.add(p.id));
+    nameMatches?.forEach(p => matchedIds.add(p.id));
+
+    // Narrow playerIds to only matched ones
+    playerIds = playerIds.filter(id => matchedIds.has(id));
+
+    if (playerIds.length === 0) {
+      return { players: [], hasMore: false, nextOffset: null };
+    }
+  }
+
+  // Step 8: Fetch profiles (paginated)
+  const { data: profiles, error: profileError } = await supabase
     .from('profile')
     .select('id, first_name, last_name, display_name, profile_picture_url')
     .in('id', playerIds)
-    .or('is_active.is.null,is_active.eq.true') // Include null (default) or true
+    .or('is_active.is.null,is_active.eq.true')
     .order('first_name', { ascending: true })
     .range(offset, offset + limit); // Fetch one extra to check if more exist
-
-  // Apply search filter if provided (searches name only - city search handled separately via player table)
-  if (searchQuery && searchQuery.trim().length > 0) {
-    const searchTerm = `%${searchQuery.trim()}%`;
-    profileQuery = profileQuery.or(
-      `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
-    );
-  }
-
-  const { data: profiles, error: profileError } = await profileQuery;
 
   if (profileError) {
     throw new Error(`Failed to fetch profiles: ${profileError.message}`);
@@ -378,36 +435,144 @@ export async function searchPlayersForSport(params: SearchPlayersParams): Promis
   const resultsToReturn = hasMore ? profiles.slice(0, limit) : profiles;
   const profileIdsToFetch = resultsToReturn.map(p => p.id);
 
-  // Fetch gender and city data from player table (city was moved from profile to player)
+  // Fetch gender, city, and location data for profiles
   const genderMap: Record<string, string | null> = {};
   const cityMap: Record<string, string | null> = {};
+  const latitudeMap: Record<string, number | null> = {};
+  const longitudeMap: Record<string, number | null> = {};
   const { data: playerData, error: playerError } = await supabase
     .from('player')
-    .select('id, gender, city')
+    .select('id, gender, city, latitude, longitude')
     .in('id', profileIdsToFetch);
 
   if (!playerError && playerData) {
     playerData.forEach(p => {
       genderMap[p.id] = p.gender;
       cityMap[p.id] = p.city;
+      latitudeMap[p.id] = p.latitude;
+      longitudeMap[p.id] = p.longitude;
     });
   }
 
-  // Step 8: Combine profiles with ratings, gender and city
-  const players: PlayerSearchResult[] = resultsToReturn.map(profile => ({
-    id: profile.id,
-    first_name: profile.first_name,
-    last_name: profile.last_name,
-    display_name: profile.display_name,
-    profile_picture_url: profile.profile_picture_url,
-    city: cityMap[profile.id] ?? null,
-    gender: genderMap[profile.id] ?? null,
-    rating: ratingsMap[profile.id] ?? null,
-  }));
+  // Step 9: Combine profiles with ratings, gender, city, and distance
+  const players: PlayerSearchResult[] = resultsToReturn.map(profile => {
+    const playerLat = latitudeMap[profile.id];
+    const playerLon = longitudeMap[profile.id];
+
+    // Calculate distance using Haversine formula if both locations are available
+    let distanceMeters: number | null = null;
+    if (
+      latitude !== undefined &&
+      longitude !== undefined &&
+      playerLat != null &&
+      playerLon != null
+    ) {
+      const R = 6371000; // Earth's radius in meters
+      const lat1Rad = (latitude * Math.PI) / 180;
+      const lat2Rad = (playerLat * Math.PI) / 180;
+      const deltaLat = ((playerLat - latitude) * Math.PI) / 180;
+      const deltaLon = ((playerLon - longitude) * Math.PI) / 180;
+
+      const a =
+        Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+        Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+      distanceMeters = R * c;
+    }
+
+    return {
+      id: profile.id,
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      display_name: profile.display_name,
+      profile_picture_url: profile.profile_picture_url,
+      city: cityMap[profile.id] ?? null,
+      gender: genderMap[profile.id] ?? null,
+      rating: ratingsMap[profile.id] ?? null,
+      latitude: playerLat ?? null,
+      longitude: playerLon ?? null,
+      distance_meters: distanceMeters,
+    };
+  });
 
   return {
     players,
     hasMore,
     nextOffset: hasMore ? offset + limit : null,
   };
+}
+
+// =============================================================================
+// HOME LOCATION SYNC
+// =============================================================================
+
+/**
+ * Sync home location to the player table.
+ * Called after user authentication to persist postal code location.
+ *
+ * @param playerId - The player's user ID
+ * @param location - The home location data from pre-onboarding
+ * @returns Success status
+ */
+export async function syncHomeLocation(
+  playerId: string,
+  location: HomeLocation
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('player')
+      .update({
+        postal_code: location.postalCode,
+        country: location.country,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      })
+      .eq('id', playerId);
+
+    if (error) {
+      console.error('[PlayerService] Failed to sync home location:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[PlayerService] Error syncing home location:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Get player's home location from the database.
+ *
+ * @param playerId - The player's user ID
+ * @returns The home location or null if not set
+ */
+export async function getHomeLocation(playerId: string): Promise<HomeLocation | null> {
+  try {
+    const { data, error } = await supabase
+      .from('player')
+      .select('postal_code, country, latitude, longitude')
+      .eq('id', playerId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    if (!data.postal_code || !data.country || !data.latitude || !data.longitude) {
+      return null;
+    }
+
+    return {
+      postalCode: data.postal_code,
+      country: data.country as 'CA' | 'US',
+      latitude: data.latitude,
+      longitude: data.longitude,
+    };
+  } catch (error) {
+    console.error('[PlayerService] Error fetching home location:', error);
+    return null;
+  }
 }

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import type { PlacePrediction } from '@rallia/shared-types';
+import type { PlacePrediction, AddressComponent } from '@rallia/shared-types';
 import { useDebounce } from './useDebounce';
 
 // =============================================================================
@@ -16,10 +16,6 @@ import { useDebounce } from './useDebounce';
 interface UsePlacesAutocompleteOptions {
   /** Search query string */
   searchQuery: string;
-  /** User's latitude for location bias (optional) */
-  latitude?: number;
-  /** User's longitude for location bias (optional) */
-  longitude?: number;
   /** Debounce delay in ms (default: 300) */
   debounceMs?: number;
   /** Whether the hook is enabled */
@@ -28,13 +24,23 @@ interface UsePlacesAutocompleteOptions {
   minQueryLength?: number;
 }
 
-/** Place details with coordinates */
+/** Place details with coordinates and optional timezone (from Google Time Zone API) */
 export interface PlaceDetails {
   placeId: string;
   name: string;
   address: string;
   latitude: number;
   longitude: number;
+  /** IANA timezone (e.g. America/New_York) when available from Google Time Zone API */
+  timezone?: string;
+  /** Structured address components from Google Places API */
+  addressComponents?: AddressComponent[];
+  /** Extracted city name from address components */
+  city?: string;
+  /** Extracted province/state code from address components (e.g. "QC", "ON") */
+  province?: string;
+  /** Extracted postal code from address components */
+  postalCode?: string;
 }
 
 interface UsePlacesAutocompleteReturn {
@@ -58,6 +64,7 @@ interface UsePlacesAutocompleteReturn {
 
 const GOOGLE_PLACES_API_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const GOOGLE_PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
+const GOOGLE_TIMEZONE_API_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
 
 // Get API key from environment
 // In Expo, environment variables prefixed with EXPO_PUBLIC_ are embedded at build time
@@ -104,14 +111,7 @@ function generateSessionToken(): string {
 export function usePlacesAutocomplete(
   options: UsePlacesAutocompleteOptions
 ): UsePlacesAutocompleteReturn {
-  const {
-    searchQuery,
-    latitude,
-    longitude,
-    debounceMs = 300,
-    enabled = true,
-    minQueryLength = 2,
-  } = options;
+  const { searchQuery, debounceMs = 300, enabled = true, minQueryLength = 2 } = options;
 
   // State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -161,7 +161,7 @@ export function usePlacesAutocomplete(
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'displayName,formattedAddress,location',
+          'X-Goog-FieldMask': 'displayName,formattedAddress,location,addressComponents',
         },
       });
 
@@ -182,12 +182,61 @@ export function usePlacesAutocomplete(
         return null;
       }
 
+      const lat = data.location.latitude;
+      const lng = data.location.longitude;
+
+      // Fetch timezone from Google Time Zone API (same key as Places)
+      let timezone: string | undefined;
+      try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const timezoneUrl = `${GOOGLE_TIMEZONE_API_URL}?location=${lat},${lng}&timestamp=${timestamp}&key=${apiKey}`;
+        const tzResponse = await fetch(timezoneUrl);
+        if (tzResponse.ok) {
+          const tzData = (await tzResponse.json()) as {
+            status?: string;
+            timeZoneId?: string;
+          };
+          if (tzData.status === 'OK' && tzData.timeZoneId) {
+            timezone = tzData.timeZoneId;
+          }
+        }
+      } catch (tzErr) {
+        // Non-critical: continue without timezone
+      }
+
+      // Parse structured address components
+      const components: AddressComponent[] = (data.addressComponents || []).map(
+        (c: { longText?: string; shortText?: string; types?: string[] }) => ({
+          longText: c.longText || '',
+          shortText: c.shortText || '',
+          types: c.types || [],
+        })
+      );
+
+      // Extract city, province, and postal code from structured components
+      const getComponent = (types: string[], useShort = false): string => {
+        const component = components.find(c => types.some(type => c.types.includes(type)));
+        return (useShort ? component?.shortText : component?.longText) || '';
+      };
+
+      const city =
+        getComponent(['locality']) ||
+        getComponent(['administrative_area_level_3']) ||
+        getComponent(['sublocality_level_1']);
+      const province = getComponent(['administrative_area_level_1'], true);
+      const postalCode = getComponent(['postal_code']);
+
       return {
         placeId,
         name: data.displayName?.text || '',
         address: data.formattedAddress || '',
-        latitude: data.location.latitude,
-        longitude: data.location.longitude,
+        latitude: lat,
+        longitude: lng,
+        ...(timezone && { timezone }),
+        addressComponents: components.length > 0 ? components : undefined,
+        ...(city && { city }),
+        ...(province && { province }),
+        ...(postalCode && { postalCode }),
       };
     } catch (err) {
       console.error('Place details fetch error:', err);
@@ -226,24 +275,22 @@ export function usePlacesAutocomplete(
       setError(null);
 
       try {
-        // Build request body
+        // Build request body with GMA restriction
         const requestBody: Record<string, unknown> = {
           input: query,
           sessionToken: sessionTokenRef.current,
-        };
-
-        // Add location bias if coordinates are available
-        if (latitude !== undefined && longitude !== undefined) {
-          requestBody.locationBias = {
-            circle: {
-              center: {
-                latitude,
-                longitude,
-              },
-              radius: 50000, // 50km radius bias
+          includedRegionCodes: ['ca'],
+          // Hard restriction to Greater Montreal Area (CMM) bounding box
+          // Covers H1-H9, J3-J7 FSAs: Montreal, Laval, South Shore, North Shore
+          // SW: south of Saint-Jean-sur-Richelieu, west of Mirabel
+          // NE: north of Mirabel, east of Mont-Saint-Hilaire
+          locationRestriction: {
+            rectangle: {
+              low: { latitude: 45.25, longitude: -74.2 },
+              high: { latitude: 45.75, longitude: -73.1 },
             },
-          };
-        }
+          },
+        };
 
         const response = await fetch(GOOGLE_PLACES_API_URL, {
           method: 'POST',
@@ -302,7 +349,7 @@ export function usePlacesAutocomplete(
         setIsLoading(false);
       }
     },
-    [latitude, longitude, minQueryLength]
+    [minQueryLength]
   );
 
   // Effect to trigger search when debounced query changes

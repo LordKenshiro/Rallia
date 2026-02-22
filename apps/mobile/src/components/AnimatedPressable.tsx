@@ -1,11 +1,11 @@
 /**
  * AnimatedPressable Component
- * 
+ *
  * A wrapper component that adds a subtle scale animation on press.
  * Use this to make cards and interactive elements feel more responsive.
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Animated,
   TouchableWithoutFeedback,
@@ -33,7 +33,8 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
   scaleValue = 0.97,
   animationDuration = 100,
 }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  // Using useMemo to create stable Animated.Value instance
+  const scaleAnim = useMemo(() => new Animated.Value(1), []);
 
   const handlePressIn = useCallback(() => {
     Animated.timing(scaleAnim, {

@@ -1,31 +1,29 @@
 /**
  * AddCommunityMemberModal
  * Modal for adding/referring members to a community
- * 
+ *
  * FLOWS:
  * - Moderators: Can directly add members (instant) or add as moderator
  * - Regular members: Can refer other players (creates pending request that needs approval)
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  ActivityIndicator,
-  Image,
-  Switch,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Switch } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps, FlatList } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text, useToast } from '@rallia/shared-components';
 import { lightHaptic, successHaptic } from '@rallia/shared-utils';
 import { useThemeStyles, useAuth, useTranslation } from '../../../hooks';
-import { useDebounce, useAddCommunityMember, useReferPlayerToCommunity, useIsCommunityModerator } from '@rallia/shared-hooks';
+import {
+  useDebounce,
+  useAddCommunityMember,
+  useReferPlayerToCommunity,
+  useIsCommunityModerator,
+} from '@rallia/shared-hooks';
 import { supabase } from '@rallia/shared-services';
+import { radiusPixels, spacingPixels } from '@rallia/design-system';
+import { SearchBar } from '../../../components/SearchBar';
 
 interface PlayerProfile {
   id: string;
@@ -36,21 +34,11 @@ interface PlayerProfile {
   profile_picture_url: string | null;
 }
 
-interface AddCommunityMemberModalProps {
-  visible: boolean;
-  onClose: () => void;
-  communityId: string;
-  currentMemberIds: string[];
-  onSuccess: () => void;
-}
+export function AddCommunityMemberActionSheet({ payload }: SheetProps<'add-community-member'>) {
+  const communityId = payload?.communityId ?? '';
+  const currentMemberIds = payload?.currentMemberIds ?? [];
+  const onSuccess = payload?.onSuccess;
 
-export function AddCommunityMemberModal({
-  visible,
-  onClose,
-  communityId,
-  currentMemberIds,
-  onSuccess,
-}: AddCommunityMemberModalProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -68,20 +56,29 @@ export function AddCommunityMemberModal({
   // Mutations
   const addMemberMutation = useAddCommunityMember(); // For moderators - direct add
   const referMemberMutation = useReferPlayerToCommunity(); // For regular members - creates pending request
-  
+
   const { data: isModerator } = useIsCommunityModerator(communityId, playerId);
 
-  // Load suggested players when modal opens
+  const handleClose = useCallback(() => {
+    lightHaptic();
+    setSearchQuery('');
+    setSearchResults([]);
+    setAddAsModerator(false);
+    SheetManager.hide('add-community-member');
+  }, []);
+
+  // Load suggested players when component mounts
   useEffect(() => {
     const loadSuggestedPlayers = async () => {
-      if (!visible || !playerId) return;
+      if (!playerId) return;
 
       setIsLoadingSuggestions(true);
       try {
         // Get profiles of players (users who have a player record), excluding current user
         const { data, error } = await supabase
           .from('profile')
-          .select(`
+          .select(
+            `
             id,
             first_name,
             last_name,
@@ -89,7 +86,8 @@ export function AddCommunityMemberModal({
             city,
             profile_picture_url,
             player!inner(id)
-          `)
+          `
+          )
           .neq('id', playerId)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -114,7 +112,7 @@ export function AddCommunityMemberModal({
     };
 
     loadSuggestedPlayers();
-  }, [visible, playerId]);
+  }, [playerId]);
 
   // Search players when query changes
   useEffect(() => {
@@ -129,7 +127,8 @@ export function AddCommunityMemberModal({
         const searchTerm = `%${debouncedSearch}%`;
         const { data, error } = await supabase
           .from('profile')
-          .select(`
+          .select(
+            `
             id,
             first_name,
             last_name,
@@ -137,9 +136,12 @@ export function AddCommunityMemberModal({
             city,
             profile_picture_url,
             player!inner(id)
-          `)
+          `
+          )
           .neq('id', playerId || '')
-          .or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`)
+          .or(
+            `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},display_name.ilike.${searchTerm}`
+          )
           .limit(20);
 
         if (error) throw error;
@@ -170,215 +172,203 @@ export function AddCommunityMemberModal({
     return sourceList.filter(player => !currentMemberIds.includes(player.id));
   }, [searchResults, suggestedPlayers, currentMemberIds, searchQuery]);
 
-  const handleClose = useCallback(() => {
-    lightHaptic();
-    setSearchQuery('');
-    setSearchResults([]);
-    setAddAsModerator(false);
-    onClose();
-  }, [onClose]);
+  const handleAddOrReferMember = useCallback(
+    async (memberPlayerId: string) => {
+      if (!playerId) return;
 
-  const handleAddOrReferMember = useCallback(async (memberPlayerId: string) => {
-    if (!playerId) return;
-
-    lightHaptic();
-    try {
-      if (isModerator) {
-        // Moderator: Direct add
-        await addMemberMutation.mutateAsync({
+      lightHaptic();
+      try {
+        if (isModerator) {
+          // Moderator: Direct add
+          await addMemberMutation.mutateAsync({
+            communityId,
+            playerId: memberPlayerId,
+            moderatorId: playerId,
+            addAsModerator,
+          });
+          successHaptic();
+          toast.success(
+            addAsModerator
+              ? t('community.moderatorAddedToCommunity')
+              : t('community.memberAddedToCommunity')
+          );
+        } else {
+          // Regular member: Refer (creates pending request)
+          await referMemberMutation.mutateAsync({
+            communityId,
+            referredPlayerId: memberPlayerId,
+            referrerId: playerId,
+          });
+          successHaptic();
+          toast.success(t('community.membershipRequestSubmitted'));
+        }
+        onSuccess?.();
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : t('community.failedToAddMember');
+        console.error('[AddCommunityMemberModal] Error adding/referring member:', {
+          error,
+          errorMessage,
           communityId,
-          playerId: memberPlayerId,
-          moderatorId: playerId,
+          memberPlayerId,
+          isModerator,
           addAsModerator,
         });
-        successHaptic();
-        toast.success(addAsModerator ? t('community.moderatorAddedToCommunity' as any) : t('community.memberAddedToCommunity' as any));
-      } else {
-        // Regular member: Refer (creates pending request)
-        await referMemberMutation.mutateAsync({
-          communityId,
-          referredPlayerId: memberPlayerId,
-          referrerId: playerId,
-        });
-        successHaptic();
-        toast.success(t('community.membershipRequestSubmitted' as any));
+        toast.error(errorMessage);
       }
-      onSuccess();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : t('community.failedToAddMember' as any);
-      console.error('[AddCommunityMemberModal] Error adding/referring member:', {
-        error,
-        errorMessage,
-        communityId,
-        memberPlayerId,
-        isModerator,
-        addAsModerator,
-      });
-      toast.error(errorMessage);
-    }
-  }, [communityId, playerId, isModerator, addMemberMutation, referMemberMutation, onSuccess, toast, addAsModerator, t]);
+    },
+    [
+      communityId,
+      playerId,
+      isModerator,
+      addMemberMutation,
+      referMemberMutation,
+      onSuccess,
+      toast,
+      addAsModerator,
+      t,
+    ]
+  );
 
   const isPending = addMemberMutation.isPending || referMemberMutation.isPending;
 
-  const renderPlayerItem = useCallback(({ item }: { item: PlayerProfile }) => (
-    <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
-      <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
-        {item.profile_picture_url ? (
-          <Image
-            source={{ uri: item.profile_picture_url }}
-            style={styles.avatarImage}
-          />
-        ) : (
-          <Ionicons name="person" size={24} color={colors.textMuted} />
-        )}
-      </View>
-      <View style={styles.playerInfo}>
-        <Text weight="medium" style={{ color: colors.text }}>
-          {item.display_name || `${item.first_name || ''} ${item.last_name || ''}`.trim() || 'Unknown'}
-        </Text>
-        {item.city && (
-          <Text size="sm" style={{ color: colors.textSecondary }}>
-            {item.city}
+  const renderPlayerItem = useCallback(
+    ({ item }: { item: PlayerProfile }) => (
+      <View style={[styles.playerItem, { borderBottomColor: colors.border }]}>
+        <View style={[styles.playerAvatar, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+          {item.profile_picture_url ? (
+            <Image source={{ uri: item.profile_picture_url }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person-outline" size={24} color={colors.textMuted} />
+          )}
+        </View>
+        <View style={styles.playerInfo}>
+          <Text weight="medium" style={{ color: colors.text }}>
+            {item.display_name ||
+              `${item.first_name || ''} ${item.last_name || ''}`.trim() ||
+              'Unknown'}
           </Text>
-        )}
+          {item.city && (
+            <Text size="sm" style={{ color: colors.textSecondary }}>
+              {item.city}
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={() => handleAddOrReferMember(item.id)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => handleAddOrReferMember(item.id)}
-        disabled={isPending}
-      >
-        {isPending ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-        )}
-      </TouchableOpacity>
-    </View>
-  ), [colors, isDark, handleAddOrReferMember, isPending]);
+    ),
+    [colors, isDark, handleAddOrReferMember, isPending]
+  );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.cardBackground }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-        
-        <View style={[styles.container, { backgroundColor: colors.cardBackground }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text weight="semibold" size="lg" style={{ color: colors.text }}>
-              {isModerator ? t('community.addCommunityMember' as any) : t('community.referAPlayer' as any)}
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text weight="semibold" size="lg" style={{ color: colors.text }}>
+            {isModerator ? t('community.addCommunityMember') : t('community.referAPlayer')}
+          </Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Info text for non-moderators */}
+        {!isModerator && (
+          <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+            <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
+              {t('community.referralApprovalInfo')}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
           </View>
-          
-          {/* Info text for non-moderators */}
-          {!isModerator && (
-            <View style={[styles.infoBox, { backgroundColor: colors.inputBackground }]}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
-              <Text size="sm" style={{ color: colors.textSecondary, marginLeft: 8, flex: 1 }}>
-                {t('community.referralApprovalInfo' as any)}
+        )}
+
+        {/* Add as Moderator Toggle (only for moderators) */}
+        {isModerator && (
+          <View style={[styles.moderatorToggle, { borderBottomColor: colors.border }]}>
+            <View style={styles.toggleInfo}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
+                {t('community.addAsModerator')}
               </Text>
             </View>
-          )}
-
-          {/* Add as Moderator Toggle (only for moderators) */}
-          {isModerator && (
-            <View style={[styles.moderatorToggle, { borderBottomColor: colors.border }]}>
-              <View style={styles.toggleInfo}>
-                <Ionicons name="shield-checkmark" size={20} color={colors.primary} />
-                <Text size="sm" style={{ color: colors.text, marginLeft: 8 }}>
-                  {t('community.addAsModerator' as any)}
-                </Text>
-              </View>
-              <Switch
-                value={addAsModerator}
-                onValueChange={setAddAsModerator}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          )}
-
-          {/* Search */}
-          <View style={styles.searchContainer}>
-            <View style={[styles.searchInput, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-              <Ionicons name="search" size={20} color={colors.textMuted} />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder={t('community.searchPlayers' as any)}
-                placeholderTextColor={colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
+            <Switch
+              value={addAsModerator}
+              onValueChange={setAddAsModerator}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
           </View>
+        )}
 
-          {/* Results */}
-          <View style={styles.resultsContainer}>
-            {(isLoadingSuggestions || isSearching) ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-              </View>
-            ) : filteredResults.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="people-outline" size={48} color={colors.textMuted} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  {searchQuery.length >= 2 
-                    ? t('community.noPlayersFound' as any) 
-                    : t('community.noPlayersAvailable' as any)}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredResults}
-                renderItem={renderPlayerItem}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-              />
-            )}
-          </View>
+        {/* Search */}
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('community.searchPlayers')}
+            colors={colors}
+          />
         </View>
+
+        {/* Results */}
+        {isLoadingSuggestions || isSearching ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : filteredResults.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="people-outline" size={48} color={colors.textMuted} />
+            <Text style={{ color: colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
+              {searchQuery.length >= 2
+                ? t('community.noPlayersFound')
+                : t('community.noPlayersAvailable')}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredResults}
+            renderItem={renderPlayerItem}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
       </View>
-    </Modal>
+    </ActionSheet>
   );
 }
 
+// Keep old export for backwards compatibility during migration
+export const AddCommunityMemberModal = AddCommunityMemberActionSheet;
+
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  sheetBackground: {
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   container: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    minHeight: 400,
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -413,22 +403,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     padding: 16,
   },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  input: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  resultsContainer: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -442,7 +416,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: spacingPixels[4],
   },
   playerItem: {
     flexDirection: 'row',

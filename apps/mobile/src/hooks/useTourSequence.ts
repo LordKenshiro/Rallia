@@ -56,7 +56,7 @@ export const useTourSequence = ({
 }: UseTourSequenceOptions): UseTourSequenceResult => {
   // TEMPORARILY DISABLED: Return static values to prevent infinite loops
   // TODO: Re-enable after fixing the loop issue properly
-  
+
   const startScreenTour = useCallback(() => {
     Logger.warn('useTourSequence is temporarily disabled', { screenId });
   }, [screenId]);

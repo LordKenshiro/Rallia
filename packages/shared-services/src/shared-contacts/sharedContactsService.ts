@@ -167,10 +167,7 @@ export async function updateSharedContactList(
  * Delete a shared contact list (cascades to contacts)
  */
 export async function deleteSharedContactList(listId: string): Promise<void> {
-  const { error } = await supabase
-    .from('shared_contact_list')
-    .delete()
-    .eq('id', listId);
+  const { error } = await supabase.from('shared_contact_list').delete().eq('id', listId);
 
   if (error) {
     Logger.error('Failed to delete shared contact list', error);
@@ -277,10 +274,7 @@ export async function bulkCreateSharedContacts(
     device_contact_id: contact.device_contact_id || null,
   }));
 
-  const { data, error } = await supabase
-    .from('shared_contact')
-    .insert(contactsToInsert)
-    .select();
+  const { data, error } = await supabase.from('shared_contact').insert(contactsToInsert).select();
 
   if (error) {
     Logger.error('Failed to bulk create shared contacts', error);
@@ -321,10 +315,7 @@ export async function updateSharedContact(
  * Delete a shared contact
  */
 export async function deleteSharedContact(contactId: string): Promise<void> {
-  const { error } = await supabase
-    .from('shared_contact')
-    .delete()
-    .eq('id', contactId);
+  const { error } = await supabase.from('shared_contact').delete().eq('id', contactId);
 
   if (error) {
     Logger.error('Failed to delete shared contact', error);
@@ -338,10 +329,7 @@ export async function deleteSharedContact(contactId: string): Promise<void> {
 export async function bulkDeleteSharedContacts(contactIds: string[]): Promise<void> {
   if (contactIds.length === 0) return;
 
-  const { error } = await supabase
-    .from('shared_contact')
-    .delete()
-    .in('id', contactIds);
+  const { error } = await supabase.from('shared_contact').delete().in('id', contactIds);
 
   if (error) {
     Logger.error('Failed to bulk delete shared contacts', error);
@@ -359,7 +347,7 @@ export async function getSharedContactListWithContacts(
   if (!list) return null;
 
   const contacts = await getSharedContacts(listId);
-  
+
   return {
     ...list,
     contacts,

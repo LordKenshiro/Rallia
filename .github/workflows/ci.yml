@@ -1,3 +1,4 @@
+# Dummy change to test GitHub Actions (can be reverted)
 name: CI - Lint, Type Check, Test, Build
 
 on:
@@ -81,7 +82,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm run test -- --passWithNoTests
+        run: npm run test -- -- --passWithNoTests
 
   build-mobile:
     name: Build Mobile App
@@ -100,4 +101,4 @@ jobs:
         run: npm ci
 
       - name: Build mobile app
-        run: npx turbo run build --filter=mobile
+        run: npx turbo run build --filter=@rallia/mobile

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../foundation/Text.native';
@@ -19,7 +20,7 @@ import {
   neutral,
   duration,
 } from '@rallia/design-system';
-import { lightHaptic, selectionHaptic } from '@rallia/shared-utils';
+import { lightHaptic, selectionHaptic, mediumHaptic } from '@rallia/shared-utils';
 
 export interface Sport {
   id: string;
@@ -37,6 +38,10 @@ export interface SportSelectorProps {
   onSelectSport: (sport: Sport) => void;
   /** Whether dark mode is enabled */
   isDark?: boolean;
+  /** Whether to show confirmation before switching sports */
+  confirmBeforeSwitch?: boolean;
+  /** Translation function for localized strings */
+  t?: (key: string) => string;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -46,13 +51,22 @@ const SportSelector: React.FC<SportSelectorProps> = ({
   userSports,
   onSelectSport,
   isDark = false,
+  confirmBeforeSwitch = true,
+  t,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingSport, setPendingSport] = useState<Sport | null>(null);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const buttonScaleAnim = useRef(new Animated.Value(1)).current;
+  // Translation helper with fallback
+  const translate = (key: string, fallback: string): string => {
+    return t ? t(key) : fallback;
+  };
+
+  // Animation values - using useMemo to create stable Animated.Value instances
+  const fadeAnim = React.useMemo(() => new Animated.Value(0), []);
+  const scaleAnim = React.useMemo(() => new Animated.Value(0.9), []);
+  const buttonScaleAnim = React.useMemo(() => new Animated.Value(1), []);
 
   // Theme-aware colors
   const themeColors = isDark ? darkTheme : lightTheme;
@@ -112,8 +126,30 @@ const SportSelector: React.FC<SportSelectorProps> = ({
 
   const handleSportSelect = (sport: Sport) => {
     selectionHaptic();
-    onSelectSport(sport);
     setShowDropdown(false);
+
+    // If switching to a different sport and confirmation is enabled, show confirmation
+    if (confirmBeforeSwitch && selectedSport?.id !== sport.id) {
+      setPendingSport(sport);
+      setShowConfirmation(true);
+    } else {
+      onSelectSport(sport);
+    }
+  };
+
+  const handleConfirmSwitch = () => {
+    mediumHaptic();
+    if (pendingSport) {
+      onSelectSport(pendingSport);
+    }
+    setShowConfirmation(false);
+    setPendingSport(null);
+  };
+
+  const handleCancelSwitch = () => {
+    lightHaptic();
+    setShowConfirmation(false);
+    setPendingSport(null);
   };
 
   const handleClose = () => {
@@ -210,7 +246,7 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             {/* Header */}
             <View style={[styles.dropdownHeader, { borderBottomColor: colors.itemBorder }]}>
               <Text size="base" weight="semibold" color={themeColors.foreground}>
-                Select Sport
+                {translate('sportSelector.selectSport', 'Select Sport')}
               </Text>
               <TouchableOpacity
                 onPress={handleClose}
@@ -286,6 +322,84 @@ const SportSelector: React.FC<SportSelectorProps> = ({
             </ScrollView>
           </Animated.View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        visible={showConfirmation}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelSwitch}
+        statusBarTranslucent
+      >
+        <TouchableWithoutFeedback onPress={handleCancelSwitch}>
+          <View style={styles.confirmationBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.confirmationModal, { backgroundColor: themeColors.card }]}>
+                {/* Title */}
+                <Text
+                  size="lg"
+                  weight="semibold"
+                  style={[styles.confirmationTitle, { color: themeColors.foreground }]}
+                >
+                  {translate('sportSelector.switchConfirmTitle', 'Switch Sport?')}
+                </Text>
+
+                {/* Message */}
+                <Text
+                  size="base"
+                  style={[styles.confirmationMessage, { color: themeColors.mutedForeground }]}
+                >
+                  {translate(
+                    'sportSelector.switchConfirmMessage',
+                    `You are about to switch to ${pendingSport?.display_name || 'another sport'}. Your match feed will update to show games for this sport.`
+                  )}
+                </Text>
+
+                {/* Buttons */}
+                <View style={styles.confirmationButtonContainer}>
+                  {/* Cancel Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmationButton,
+                      styles.confirmationCancelButton,
+                      { borderColor: themeColors.border },
+                    ]}
+                    onPress={handleCancelSwitch}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: themeColors.foreground, textAlign: 'center' }}
+                    >
+                      {translate('common.cancel', 'Cancel')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Confirm Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmationButton,
+                      styles.confirmationConfirmButton,
+                      { backgroundColor: primary[500] },
+                    ]}
+                    onPress={handleConfirmSwitch}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      size="base"
+                      weight="medium"
+                      style={{ color: '#ffffff', textAlign: 'center' }}
+                    >
+                      {translate('sportSelector.switchConfirmButton', 'Switch')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </>
   );
@@ -373,6 +487,54 @@ const styles = StyleSheet.create({
   },
   checkContainer: {
     marginLeft: spacingPixels[2],
+  },
+  // Confirmation modal styles
+  confirmationBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[5],
+  },
+  confirmationModal: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: radiusPixels.xl,
+    paddingTop: spacingPixels[6],
+    paddingHorizontal: spacingPixels[5],
+    paddingBottom: spacingPixels[5],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmationTitle: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[2],
+  },
+  confirmationMessage: {
+    textAlign: 'center',
+    marginBottom: spacingPixels[4],
+    lineHeight: 22,
+  },
+  confirmationButtonContainer: {
+    flexDirection: 'row',
+    gap: spacingPixels[3],
+  },
+  confirmationButton: {
+    flex: 1,
+    paddingVertical: spacingPixels[3],
+    borderRadius: radiusPixels.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  confirmationCancelButton: {
+    borderWidth: 1,
+  },
+  confirmationConfirmButton: {
+    // Background color is set dynamically
   },
 });
 

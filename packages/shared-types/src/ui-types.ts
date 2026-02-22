@@ -18,7 +18,7 @@ import type {
   LocationTypeEnum,
   MatchDurationEnum,
   MatchTypeEnum,
-  GenderType,
+  GenderEnum,
 } from './database';
 
 // ============================================
@@ -81,6 +81,19 @@ export interface FacilityCardDisplay {
 }
 
 /**
+ * Structured address component from Google Places API (New)
+ * @see https://developers.google.com/maps/documentation/places/web-service/reference/rest/v1/places#AddressComponent
+ */
+export interface AddressComponent {
+  /** Long form text of the address component (e.g. "Montreal") */
+  longText: string;
+  /** Short form text of the address component (e.g. "MTL") */
+  shortText?: string;
+  /** Types describing this component (e.g. ["locality", "political"]) */
+  types: string[];
+}
+
+/**
  * Place prediction from Google Places Autocomplete API
  * Used for location search in match creation
  */
@@ -128,9 +141,11 @@ export interface PlayerProfileScreenParams {
 
 /**
  * Props for Facility detail screen
+ * returnTo: when set, back button navigates to this root screen instead of popping the stack
  */
 export interface FacilityDetailScreenParams {
   facilityId: string;
+  returnTo?: 'MyBookings';
 }
 
 /**
@@ -266,7 +281,7 @@ export interface MatchFormData {
   minRatingScoreId?: string;
 
   /** Preferred gender of opponent/partner */
-  preferredOpponentGender?: GenderType;
+  preferredOpponentGender?: GenderEnum;
 
   // ============================================
   // VISIBILITY & ACCESS
@@ -274,6 +289,12 @@ export interface MatchFormData {
 
   /** Match visibility: public (discoverable) or private (invite only) */
   visibility: MatchVisibilityEnum;
+
+  /** When private: whether the match is visible in groups the creator is part of */
+  visibleInGroups?: boolean;
+
+  /** When private: whether the match is visible in communities the creator is part of */
+  visibleInCommunities?: boolean;
 
   /** How players join: direct (auto-approve) or request (manual approval) */
   joinMode: MatchJoinModeEnum;
@@ -343,7 +364,7 @@ export interface PreferencesFormData {
 
 /**
  * Player sport preferences information (UI view model)
- * Note: playStyle and playAttributes now use string values from the 
+ * Note: playStyle and playAttributes now use string values from the
  * play_style and play_attribute database tables instead of enums,
  * allowing for sport-specific options that can be updated without code changes.
  */

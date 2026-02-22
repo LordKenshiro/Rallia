@@ -25,7 +25,6 @@ import {
   secondary,
   accent,
   neutral,
-  status,
   base,
   duration,
 } from '@rallia/design-system';
@@ -37,6 +36,7 @@ import {
   getProfilePictureUrl,
   deriveMatchStatus,
 } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
@@ -47,8 +47,9 @@ import {
  * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
  * - readyToPlay: Court booked only → secondary/coral
  * - regular: Default → primary/teal
+ * - expired: Match started but not full (disabled appearance) → neutral/gray
  */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
 
 /**
  * Threshold for "high reputation" creator (percentage 0-100)
@@ -116,6 +117,19 @@ const TIER_PALETTES = {
       accentEnd: primary[300],
     },
   },
+  // Expired - neutral/gray palette (disabled, past matches)
+  expired: {
+    light: {
+      background: neutral[100], // Light gray background
+      accentStart: neutral[400], // Gray accent
+      accentEnd: neutral[300], // Lighter gray
+    },
+    dark: {
+      background: neutral[900], // Dark gray background
+      accentStart: neutral[500], // Gray accent
+      accentEnd: neutral[400], // Slightly lighter gray
+    },
+  },
 } as const;
 
 /**
@@ -161,9 +175,19 @@ export interface MyMatchCardProps {
   /** Whether dark mode is enabled */
   isDark: boolean;
   /** Translation function */
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
+  /**
+   * Number of pending join requests (only shown to match creator)
+   * Shows a notification badge in the top-right corner
+   */
+  pendingRequestCount?: number;
+  /**
+   * Whether the current user has been invited to this match
+   * Shows an "Invited" indicator in the day label row
+   */
+  isInvited?: boolean;
 }
 
 interface ThemeColors {
@@ -197,7 +221,7 @@ function getCompactTimeDisplay(
   startTime: string,
   timezone: string,
   locale: string,
-  t: (key: string, options?: TranslationOptions) => string
+  t: (key: TranslationKey, options?: TranslationOptions) => string
 ): { dayLabel: string; timeLabel: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
@@ -257,22 +281,181 @@ const GradientStrip: React.FC<GradientStripProps> = ({ isDark, tier }) => {
   );
 };
 
+// =============================================================================
+// PENDING REQUESTS BADGE (Creator view - top-right notification badge)
+// =============================================================================
+
+interface PendingRequestsBadgeProps {
+  count: number;
+  isDark: boolean;
+}
+
+/**
+ * Notification badge for pending join requests
+ * Shows in top-right corner with shimmer animation (matching invited badge)
+ * Uses secondary (coral) color for visual distinction from invited badge
+ */
+const PendingRequestsBadge: React.FC<PendingRequestsBadgeProps> = ({ count, isDark }) => {
+  // Use useMemo to avoid accessing refs during render
+  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
+
+  // Memoize interpolated values
+  const shimmerOpacity = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.8, 1, 0.8],
+      }),
+    [shimmerAnim]
+  );
+
+  const shimmerScale = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.1, 1],
+      }),
+    [shimmerAnim]
+  );
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [shimmerAnim]);
+
+  // Use secondary (coral) color for distinction from gold invited badge
+  const badgeColor = isDark ? secondary[400] : secondary[500];
+  const textColor = base.white;
+
+  return (
+    <Animated.View
+      style={[
+        styles.pendingBadge,
+        {
+          backgroundColor: badgeColor,
+          shadowColor: badgeColor,
+          transform: [{ scale: shimmerScale }],
+          opacity: shimmerOpacity,
+        },
+      ]}
+    >
+      <Text size="xs" weight="bold" color={textColor} style={styles.pendingBadgeText}>
+        {count > 9 ? '9+' : count}
+      </Text>
+    </Animated.View>
+  );
+};
+
+// =============================================================================
+// INVITED INDICATOR (Player view - shows when invited to a match)
+// =============================================================================
+
+interface InvitedIndicatorProps {
+  isDark: boolean;
+}
+
+/**
+ * "Invited" badge indicator with subtle shimmer animation
+ * Compact icon-only design for bottom-right position
+ * Uses accent (gold) color to signal something special awaits action
+ */
+const InvitedIndicator: React.FC<InvitedIndicatorProps> = ({ isDark }) => {
+  // Use useMemo to avoid accessing refs during render
+  const shimmerAnim = useMemo(() => new Animated.Value(0), []);
+
+  // Memoize interpolated values
+  const shimmerOpacity = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.8, 1, 0.8],
+      }),
+    [shimmerAnim]
+  );
+
+  const shimmerScale = useMemo(
+    () =>
+      shimmerAnim.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 1.1, 1],
+      }),
+    [shimmerAnim]
+  );
+
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: duration.extraSlow,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [shimmerAnim]);
+
+  const badgeBg = isDark ? accent[600] : accent[500];
+  const iconColor = base.white;
+
+  return (
+    <Animated.View
+      style={[
+        styles.invitedBadge,
+        {
+          backgroundColor: badgeBg,
+          transform: [{ scale: shimmerScale }],
+          opacity: shimmerOpacity,
+          shadowColor: badgeBg,
+        },
+      ]}
+    >
+      <Ionicons name="mail" size={12} color={iconColor} />
+    </Animated.View>
+  );
+};
+
 interface ParticipantAvatarsProps {
   match: MatchWithDetails;
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
 }
 
 const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, isDark, t }) => {
   const participants = match.participants?.filter(p => p.status === 'joined') ?? [];
 
-  // Filter out creator from participants list
-  const otherParticipants = participants.filter(p => p.player_id !== match.created_by);
+  // Identify host and other participants using is_host flag
+  const hostParticipant = participants.find(p => p.is_host);
+  const otherParticipants = participants.filter(p => !p.is_host);
 
-  // Calculate total spots and spots left
+  // Calculate total spots and spots left (creator is now in participants)
   const total = match.format === 'doubles' ? 4 : 2;
-  const current = otherParticipants.length + 1; // +1 for creator
+  const current = participants.length;
   const spotsLeft = Math.max(0, total - current);
 
   // If no other participants, show spots available indicator
@@ -291,15 +474,21 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
     );
   }
 
-  // Build avatars list (creator first, then other participants)
+  // Build avatars list (host first, then other participants)
   // Normalize URLs to use current environment's Supabase URL
   const avatars: Array<{ url?: string }> = [];
-  const creatorProfile = match.created_by_player?.profile;
 
-  // Add creator
-  avatars.push({
-    url: getProfilePictureUrl(creatorProfile?.profile_picture_url) ?? undefined,
-  });
+  // Add host (using is_host flag to identify)
+  if (hostParticipant) {
+    avatars.push({
+      url: getProfilePictureUrl(hostParticipant.player?.profile?.profile_picture_url) ?? undefined,
+    });
+  } else {
+    // Fallback to created_by_player for backwards compatibility
+    avatars.push({
+      url: getProfilePictureUrl(match.created_by_player?.profile?.profile_picture_url) ?? undefined,
+    });
+  }
 
   // Add other participants
   for (const participant of otherParticipants) {
@@ -377,17 +566,47 @@ const ParticipantAvatars: React.FC<ParticipantAvatarsProps> = ({ match, colors, 
 // MAIN COMPONENT
 // =============================================================================
 
-const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, locale }) => {
+const MyMatchCard: React.FC<MyMatchCardProps> = ({
+  match,
+  onPress,
+  isDark,
+  t,
+  locale,
+  pendingRequestCount = 0,
+  isInvited = false,
+}) => {
+  // Calculate participant info early to check for expired state
+  const participants = match.participants?.filter(p => p.status === 'joined') ?? [];
+  const total = match.format === 'doubles' ? 4 : 2;
+  const isFull = participants.length >= total;
+
+  // Derive match status early to check for expired state
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine match tier based on court status and creator reputation
+  // Override with 'expired' tier if match is expired
   const creatorReputationScore = match.created_by_player?.reputation_score;
-  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
   // Get most wanted colors from design system
   const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
-  // Animated pulse effect for urgent matches
-  const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
+  // Animated pulse effect for urgent matches - use useMemo to avoid accessing refs during render
+  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Get tier palette colors
   const tierPaletteColors = TIER_PALETTES[tier][isDark ? 'dark' : 'light'];
@@ -405,6 +624,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
           return {
             accent: isDark ? secondary[400] : secondary[500],
             accentLight: isDark ? secondary[700] : secondary[200],
+          };
+        case 'expired':
+          return {
+            accent: isDark ? neutral[500] : neutral[400],
+            accentLight: isDark ? neutral[700] : neutral[300],
           };
         case 'regular':
         default:
@@ -447,21 +671,13 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
   // Get location - check facility first, then custom location, fallback to TBD
   const locationName = match.facility?.name ?? match.location_name ?? t('matchDetail.locationTBD');
 
-  // Derive match status to determine if ongoing
-  const derivedStatus = deriveMatchStatus({
-    cancelled_at: match.cancelled_at,
-    match_date: match.match_date,
-    start_time: match.start_time,
-    end_time: match.end_time,
-    timezone: match.timezone,
-    result: match.result,
-  });
-
-  // Determine animation type:
+  // Determine animation type (derivedStatus already computed above for expired check):
   // - "in_progress" = ongoing match = live indicator animation
   // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
-  const isOngoing = derivedStatus === 'in_progress';
+  const isOngoing = isInProgress;
   const isStartingSoon = isUrgent && !isOngoing;
+  const liveColor = isDark ? secondary[400] : secondary[500];
+  const soonColor = isDark ? accent[400] : accent[500];
 
   // Start animation when match is ongoing or starting soon
   useEffect(() => {
@@ -491,32 +707,52 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
     }
   }, [isOngoing, isStartingSoon, urgentPulseAnimation]);
 
-  // "Live indicator" interpolations for ongoing matches
-  const liveRingScale = urgentPulseAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 2],
-  });
+  // "Live indicator" interpolations for ongoing matches - memoize to avoid accessing refs during render
+  const liveRingScale = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 2],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const liveRingOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.3, 1],
-    outputRange: [0.7, 0.3, 0],
-  });
+  const liveRingOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.3, 1],
+        outputRange: [0.7, 0.3, 0],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const liveDotOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 0.7, 1],
-  });
+  const liveDotOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [1, 0.7, 1],
+      }),
+    [urgentPulseAnimation]
+  );
 
   // "Starting soon" interpolations - subtle bouncing chevron
-  const countdownBounce = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 2, 0],
-  });
+  const countdownBounce = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0, 2, 0],
+      }),
+    [urgentPulseAnimation]
+  );
 
-  const countdownOpacity = urgentPulseAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.6, 1, 0.6],
-  });
+  const countdownOpacity = useMemo(
+    () =>
+      urgentPulseAnimation.interpolate({
+        inputRange: [0, 0.5, 1],
+        outputRange: [0.6, 1, 0.6],
+      }),
+    [urgentPulseAnimation]
+  );
 
   // Dynamic border color based on tier
   // Most Wanted uses design system accent colors for border
@@ -526,6 +762,16 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
       ? `${tierPaletteColors.accentStart}40` // 25% opacity accent border in dark mode
       : `${tierPaletteColors.accentStart}20`; // 12% opacity accent border in light mode
 
+  // Determine if we should show pending requests badge (only for creators with pending requests)
+  const showPendingBadge = pendingRequestCount > 0;
+
+  // Build accessibility label with status indicators
+  let accessibilityLabel = `Match ${dayLabel} at ${timeLabel}`;
+  if (isMostWanted) accessibilityLabel += ' - Most Wanted';
+  if (isInvited) accessibilityLabel += ' - You are invited';
+  if (showPendingBadge)
+    accessibilityLabel += ` - ${pendingRequestCount} pending join request${pendingRequestCount > 1 ? 's' : ''}`;
+
   return (
     <TouchableOpacity
       style={[
@@ -533,28 +779,47 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
         {
           backgroundColor: tierPaletteColors.background,
           borderColor: dynamicBorderColor,
+          // Softer shadow for light mode, subtle for dark mode
+          shadowColor: isDark ? '#000' : neutral[400],
+          shadowOffset: { width: 0, height: isDark ? 2 : 3 },
+          shadowOpacity: isDark ? 0.2 : 0.15,
+          shadowRadius: isDark ? 8 : 10,
+          elevation: isDark ? 3 : 2,
+          opacity: isExpired ? 0.7 : 1,
         },
         isMostWanted && [styles.premiumCard, { shadowColor: mwColors.shadow }],
       ]}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={`Match ${dayLabel} at ${timeLabel}${isMostWanted ? ' - Most Wanted' : ''}`}
+      accessibilityLabel={accessibilityLabel}
     >
+      {/* Pending join requests badge (top-right corner) */}
+      {showPendingBadge && <PendingRequestsBadge count={pendingRequestCount} isDark={isDark} />}
+
       {/* Gradient accent strip */}
       <GradientStrip isDark={isDark} tier={tier} />
 
       <View style={styles.content}>
         {/* Day label with indicator */}
         <View style={styles.dayLabelRow}>
-          {/* "Live" indicator for ongoing matches */}
-          {isOngoing && (
+          {/* Expired indicator icon */}
+          {isExpired && (
+            <Ionicons
+              name="close-circle-outline"
+              size={12}
+              color={colors.textMuted}
+              style={styles.expiredIcon}
+            />
+          )}
+          {/* "Live" indicator for ongoing matches (not shown when expired) */}
+          {isOngoing && !isExpired && (
             <View style={styles.liveIndicatorContainer}>
               <Animated.View
                 style={[
                   styles.liveRing,
                   {
-                    backgroundColor: status.error.DEFAULT,
+                    backgroundColor: liveColor,
                     transform: [{ scale: liveRingScale }],
                     opacity: liveRingOpacity,
                   },
@@ -564,15 +829,15 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
                 style={[
                   styles.liveDot,
                   {
-                    backgroundColor: status.error.DEFAULT,
+                    backgroundColor: liveColor,
                     opacity: liveDotOpacity,
                   },
                 ]}
               />
             </View>
           )}
-          {/* Bouncing chevron for starting soon */}
-          {isStartingSoon && (
+          {/* Bouncing chevron for starting soon (not shown when expired) */}
+          {isStartingSoon && !isExpired && (
             <Animated.View
               style={[
                 styles.countdownIndicator,
@@ -582,18 +847,21 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
                 },
               ]}
             >
-              <Ionicons name="chevron-forward" size={10} color={status.warning.DEFAULT} />
+              <Ionicons name="chevron-forward" size={10} color={soonColor} />
             </Animated.View>
           )}
+          {/* Day label - always show */}
           <Text
             size="xs"
             weight="semibold"
             color={
-              isOngoing
-                ? status.error.DEFAULT
-                : isStartingSoon
-                  ? status.warning.DEFAULT
-                  : colors.textMuted
+              isExpired
+                ? colors.textMuted
+                : isOngoing
+                  ? liveColor
+                  : isStartingSoon
+                    ? soonColor
+                    : colors.textMuted
             }
             style={styles.dayLabel}
           >
@@ -606,7 +874,13 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
           size="lg"
           weight="bold"
           color={
-            isOngoing ? status.error.DEFAULT : isStartingSoon ? status.warning.DEFAULT : colors.text
+            isExpired
+              ? colors.textMuted
+              : isOngoing
+                ? liveColor
+                : isStartingSoon
+                  ? soonColor
+                  : colors.text
           }
           numberOfLines={1}
         >
@@ -621,8 +895,11 @@ const MyMatchCard: React.FC<MyMatchCardProps> = ({ match, onPress, isDark, t, lo
           </Text>
         </View>
 
-        {/* Participants */}
-        <ParticipantAvatars match={match} colors={colors} isDark={isDark} t={t} />
+        {/* Bottom row: Participants + Invited indicator */}
+        <View style={styles.bottomRow}>
+          <ParticipantAvatars match={match} colors={colors} isDark={isDark} t={t} />
+          {isInvited && <InvitedIndicator isDark={isDark} />}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -637,29 +914,70 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: radiusPixels.lg,
     borderWidth: 1.5,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    // Note: overflow NOT hidden to allow corner badges to extend outside
+    // Shadow is applied dynamically based on theme in the component
   },
 
   // Premium "Most Wanted" card styles
   premiumCard: {
     borderWidth: 2,
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
     // shadowColor is set dynamically using mwColors.shadow
   },
 
   gradientStrip: {
     height: 3,
     zIndex: 1,
+    borderTopLeftRadius: radiusPixels.lg - 1, // Match card border radius
+    borderTopRightRadius: radiusPixels.lg - 1,
+    overflow: 'hidden',
   },
   gradientStripPremium: {
     height: 5, // Slightly taller for premium cards
+  },
+
+  // Pending requests badge (top-right corner, extends outside card)
+  pendingBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    zIndex: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
+
+  // Bottom row: avatars + invited indicator
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  // Invited indicator badge (compact circular badge for bottom-right)
+  invitedBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   content: {
@@ -696,7 +1014,7 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     // Subtle shadow for depth
-    shadowColor: '#ef4444',
+    shadowColor: secondary[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 3,
@@ -705,6 +1023,10 @@ const styles = StyleSheet.create({
   // "Starting soon" countdown indicator
   countdownIndicator: {
     marginRight: spacingPixels[0.5],
+  },
+  // Expired icon indicator
+  expiredIcon: {
+    marginRight: spacingPixels[1],
   },
 
   locationRow: {

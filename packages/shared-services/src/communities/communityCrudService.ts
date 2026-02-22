@@ -103,11 +103,7 @@ export async function createCommunity(
  * Get a community by ID
  */
 export async function getCommunity(communityId: string): Promise<Community | null> {
-  const { data, error } = await supabase
-    .from('network')
-    .select('*')
-    .eq('id', communityId)
-    .single();
+  const { data, error } = await supabase.from('network').select('*').eq('id', communityId).single();
 
   if (error) {
     if (error.code === 'PGRST116') return null; // Not found
@@ -125,7 +121,9 @@ export async function getCommunity(communityId: string): Promise<Community | nul
 /**
  * Get a community with its members
  */
-export async function getCommunityWithMembers(communityId: string): Promise<CommunityWithMembers | null> {
+export async function getCommunityWithMembers(
+  communityId: string
+): Promise<CommunityWithMembers | null> {
   const { data: community, error: communityError } = await supabase
     .from('network')
     .select('*')
@@ -140,7 +138,8 @@ export async function getCommunityWithMembers(communityId: string): Promise<Comm
 
   const { data: members, error: membersError } = await supabase
     .from('network_member')
-    .select(`
+    .select(
+      `
       *,
       player:player_id (
         id,
@@ -152,7 +151,8 @@ export async function getCommunityWithMembers(communityId: string): Promise<Comm
           last_active_at
         )
       )
-    `)
+    `
+    )
     .eq('network_id', communityId)
     .eq('status', 'active')
     .order('role', { ascending: false }) // Moderators first
@@ -176,8 +176,9 @@ export async function getCommunityWithMembers(communityId: string): Promise<Comm
  * Returns communities with membership status for the current user
  */
 export async function getPublicCommunities(playerId?: string): Promise<CommunityWithStatus[]> {
-  const { data, error } = await supabase
-    .rpc('get_public_communities', { p_player_id: playerId || null });
+  const { data, error } = await supabase.rpc('get_public_communities', {
+    p_player_id: playerId || null,
+  });
 
   if (error) {
     console.error('Error fetching public communities:', error);
@@ -195,8 +196,7 @@ export async function getPublicCommunities(playerId?: string): Promise<Community
  * Get all communities for a player (communities they are a member of)
  */
 export async function getPlayerCommunities(playerId: string): Promise<CommunityWithStatus[]> {
-  const { data, error } = await supabase
-    .rpc('get_player_communities', { p_player_id: playerId });
+  const { data, error } = await supabase.rpc('get_player_communities', { p_player_id: playerId });
 
   if (error) {
     console.error('Error fetching player communities:', error);
@@ -232,7 +232,7 @@ export async function updateCommunity(
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
-  
+
   if (input.name !== undefined) {
     updateData.name = input.name;
   }
@@ -279,10 +279,7 @@ export async function deleteCommunity(communityId: string, playerId: string): Pr
     throw new Error('Only the community creator can delete the community');
   }
 
-  const { error } = await supabase
-    .from('network')
-    .delete()
-    .eq('id', communityId);
+  const { error } = await supabase.from('network').delete().eq('id', communityId);
 
   if (error) {
     console.error('Error deleting community:', error);
@@ -301,11 +298,10 @@ export async function requestToJoinCommunity(
   communityId: string,
   playerId: string
 ): Promise<string> {
-  const { data, error } = await supabase
-    .rpc('request_to_join_community', {
-      p_community_id: communityId,
-      p_player_id: playerId,
-    });
+  const { data, error } = await supabase.rpc('request_to_join_community', {
+    p_community_id: communityId,
+    p_player_id: playerId,
+  });
 
   if (error) {
     console.error('Error requesting to join community:', error);
@@ -323,12 +319,11 @@ export async function referPlayerToCommunity(
   referredPlayerId: string,
   referrerId: string
 ): Promise<string> {
-  const { data, error } = await supabase
-    .rpc('refer_player_to_community', {
-      p_community_id: communityId,
-      p_referred_player_id: referredPlayerId,
-      p_referrer_id: referrerId,
-    });
+  const { data, error } = await supabase.rpc('refer_player_to_community', {
+    p_community_id: communityId,
+    p_referred_player_id: referredPlayerId,
+    p_referrer_id: referrerId,
+  });
 
   if (error) {
     console.error('Error referring player to community:', error);
@@ -346,12 +341,11 @@ export async function approveCommunityMember(
   memberId: string,
   approverId: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('approve_community_member', {
-      p_community_id: communityId,
-      p_member_id: memberId,
-      p_approver_id: approverId,
-    });
+  const { data, error } = await supabase.rpc('approve_community_member', {
+    p_community_id: communityId,
+    p_member_id: memberId,
+    p_approver_id: approverId,
+  });
 
   if (error) {
     console.error('Error approving community member:', error);
@@ -369,12 +363,11 @@ export async function rejectCommunityMember(
   memberId: string,
   rejectorId: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .rpc('reject_community_member', {
-      p_community_id: communityId,
-      p_member_id: memberId,
-      p_rejector_id: rejectorId,
-    });
+  const { data, error } = await supabase.rpc('reject_community_member', {
+    p_community_id: communityId,
+    p_member_id: memberId,
+    p_rejector_id: rejectorId,
+  });
 
   if (error) {
     console.error('Error rejecting community member:', error);
@@ -391,11 +384,10 @@ export async function getPendingCommunityMembers(
   communityId: string,
   moderatorId: string
 ): Promise<PendingMemberRequest[]> {
-  const { data, error } = await supabase
-    .rpc('get_pending_community_members', {
-      p_community_id: communityId,
-      p_moderator_id: moderatorId,
-    });
+  const { data, error } = await supabase.rpc('get_pending_community_members', {
+    p_community_id: communityId,
+    p_moderator_id: moderatorId,
+  });
 
   if (error) {
     console.error('Error fetching pending community members:', error);
@@ -428,7 +420,10 @@ export async function isCommunityMember(communityId: string, playerId: string): 
 /**
  * Check if a player is a community moderator
  */
-export async function isCommunityModerator(communityId: string, playerId: string): Promise<boolean> {
+export async function isCommunityModerator(
+  communityId: string,
+  playerId: string
+): Promise<boolean> {
   return checkIsCommunityModerator(communityId, playerId);
 }
 
@@ -527,7 +522,9 @@ export async function leaveCommunity(communityId: string, playerId: string): Pro
   // Check if the player is the creator
   const community = await getCommunity(communityId);
   if (community?.created_by === playerId) {
-    throw new Error('The creator cannot leave the community. Transfer ownership or delete the community instead.');
+    throw new Error(
+      'The creator cannot leave the community. Transfer ownership or delete the community instead.'
+    );
   }
 
   const { error } = await supabase
@@ -577,8 +574,8 @@ export async function addCommunityMember(
       // Moderator is approving the pending request directly
       const { error } = await supabase
         .from('network_member')
-        .update({ 
-          status: 'active', 
+        .update({
+          status: 'active',
           role,
           joined_at: new Date().toISOString(),
           added_by: moderatorId,
@@ -591,8 +588,8 @@ export async function addCommunityMember(
     // Reactivate if they were previously removed
     const { error } = await supabase
       .from('network_member')
-      .update({ 
-        status: 'active', 
+      .update({
+        status: 'active',
         role,
         joined_at: new Date().toISOString(),
         added_by: moderatorId,
@@ -605,17 +602,15 @@ export async function addCommunityMember(
   }
 
   // Add new member
-  const { error } = await supabase
-    .from('network_member')
-    .insert({
-      network_id: communityId,
-      player_id: playerId,
-      status: 'active',
-      role,
-      added_by: moderatorId,
-      request_type: 'direct_add',
-      joined_at: new Date().toISOString(),
-    });
+  const { error } = await supabase.from('network_member').insert({
+    network_id: communityId,
+    player_id: playerId,
+    status: 'active',
+    role,
+    added_by: moderatorId,
+    request_type: 'direct_add',
+    joined_at: new Date().toISOString(),
+  });
 
   if (error) {
     console.error('Error adding community member:', error);
@@ -728,11 +723,13 @@ export async function requestToJoinCommunityByInviteCode(
   // First, look up the community by invite code
   const { data: networkData, error: lookupError } = await supabase
     .from('network')
-    .select(`
+    .select(
+      `
       id,
       name,
       network_type:network_type_id (name)
-    `)
+    `
+    )
     .eq('invite_code', inviteCode.toUpperCase())
     .single();
 

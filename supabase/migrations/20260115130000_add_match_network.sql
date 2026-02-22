@@ -33,11 +33,6 @@ CREATE INDEX IF NOT EXISTS idx_match_network_posted_at ON public.match_network(p
 -- =============================================================================
 ALTER TABLE public.match_network ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies first for idempotency
-DROP POLICY IF EXISTS "match_network_select_policy" ON public.match_network;
-DROP POLICY IF EXISTS "match_network_insert_policy" ON public.match_network;
-DROP POLICY IF EXISTS "match_network_delete_policy" ON public.match_network;
-
 -- Members can view matches posted to their networks
 CREATE POLICY "match_network_select_policy" ON public.match_network
   FOR SELECT USING (
@@ -76,34 +71,15 @@ CREATE POLICY "match_network_insert_policy" ON public.match_network
     )
   );
 
--- Only the poster can delete their post (or moderators if role column exists)
-DO $$
-BEGIN
-  -- Check if role column exists on network_member
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_schema = 'public' 
-    AND table_name = 'network_member' 
-    AND column_name = 'role'
-  ) THEN
-    -- Create policy with role check
-    CREATE POLICY "match_network_delete_policy" ON public.match_network
-      FOR DELETE USING (
-        posted_by = auth.uid()
-        OR
-        EXISTS (
-          SELECT 1 FROM public.network_member nm
-          WHERE nm.network_id = match_network.network_id
-          AND nm.player_id = auth.uid()
-          AND nm.role = 'moderator'
-          AND nm.status = 'active'
-        )
-      );
-  ELSE
-    -- Create simpler policy without role check
-    CREATE POLICY "match_network_delete_policy" ON public.match_network
-      FOR DELETE USING (
-        posted_by = auth.uid()
-      );
-  END IF;
-END $$;
+-- Only the poster can delete their post (or network creator)
+-- Note: Moderator check will be added in a later migration after role column exists
+CREATE POLICY "match_network_delete_policy" ON public.match_network
+  FOR DELETE USING (
+    posted_by = auth.uid()
+    OR
+    EXISTS (
+      SELECT 1 FROM public.network n
+      WHERE n.id = match_network.network_id
+      AND n.created_by = auth.uid()
+    )
+  );

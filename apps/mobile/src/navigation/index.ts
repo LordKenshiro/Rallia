@@ -3,6 +3,7 @@
  */
 
 import { createNavigationContainerRef } from '@react-navigation/native';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { RootStackParamList, HomeStackParamList, CommunityStackParamList } from './types';
 
 // Navigation ref for use outside NavigationContainer (e.g., ActionsBottomSheet)
@@ -30,6 +31,14 @@ export function navigateFromOutside<T extends keyof HomeStackParamList>(
 
 /**
  * Navigate to a Community stack screen from outside the NavigationContainer.
+ *
+ * Note: We use a type assertion here because React Navigation's TypeScript types
+ * don't properly support generic constraints with nested navigators. This is a
+ * known limitation documented at:
+ * https://reactnavigation.org/docs/typescript/#type-checking-screens
+ *
+ * The assertion is safe because the function signature ensures callers pass
+ * valid screen names and params that match CommunityStackParamList.
  */
 export function navigateToCommunityScreen<T extends keyof CommunityStackParamList>(
   screen: T,
@@ -41,8 +50,19 @@ export function navigateToCommunityScreen<T extends keyof CommunityStackParamLis
       params: {
         screen,
         params,
-      },
+      } as NavigatorScreenParams<CommunityStackParamList>,
     });
+  }
+}
+
+/**
+ * Navigate to PlayerProfile from outside the NavigationContainer.
+ * Use in components like MatchDetailSheet that render outside the navigation tree.
+ * Caller is responsible for auth/onboarding checks (open auth sheet if not signed in or not onboarded).
+ */
+export function navigateToPlayerProfileFromOutside(playerId: string, sportId?: string) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate('PlayerProfile', { playerId, sportId });
   }
 }
 

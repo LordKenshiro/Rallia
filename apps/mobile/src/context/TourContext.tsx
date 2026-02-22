@@ -19,15 +19,18 @@ import React, {
   useRef,
   ReactNode,
 } from 'react';
+import { CopilotProvider, CopilotStep, walkthroughable, useCopilot } from 'react-native-copilot';
 import {
-  CopilotProvider,
-  CopilotStep,
-  walkthroughable,
-  useCopilot,
-} from 'react-native-copilot';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar, InteractionManager } from 'react-native';
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  StatusBar,
+  InteractionManager,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '../hooks';
 import { COLORS } from '@rallia/shared-constants';
 import { tourService, TourId, TourStatus } from '@rallia/shared-services';
 import { Logger } from '@rallia/shared-services';
@@ -168,9 +171,7 @@ const CustomTooltip: React.FC<TooltipProps> = ({ labels }) => {
           accessibilityLabel={isLastStep ? finishLabel : nextLabel}
           accessibilityRole="button"
         >
-          <Text style={tooltipStyles.nextButtonText}>
-            {isLastStep ? finishLabel : nextLabel}
-          </Text>
+          <Text style={tooltipStyles.nextButtonText}>{isLastStep ? finishLabel : nextLabel}</Text>
         </TouchableOpacity>
       </View>
 
@@ -275,7 +276,7 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
   const [wasSkipped, setWasSkipped] = useState(false);
   // Track if tour has actually started (was visible at least once)
   const [tourHasStarted, setTourHasStarted] = useState(false);
-  
+
   // Store visible in ref to prevent causing re-renders in context consumers
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
@@ -304,7 +305,7 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
         setActiveTourId(tourId);
         setWasSkipped(false); // Reset skip flag when starting new tour
         setTourHasStarted(false); // Reset - will be set to true when visible becomes true
-        
+
         // Use InteractionManager to wait for all interactions/animations to complete
         // Then add additional delay for layout stabilization across different devices
         // This ensures all CopilotStep elements have been properly laid out and measured
@@ -390,7 +391,7 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
   // Ref to track tourHasStarted to avoid dependency loop
   const tourHasStartedRef = useRef(tourHasStarted);
   tourHasStartedRef.current = tourHasStarted;
-  
+
   // Ref to store completeTour to avoid dependency issues
   const completeTourRef = useRef(completeTour);
   useEffect(() => {
@@ -411,23 +412,23 @@ const TourProviderInner: React.FC<TourProviderInnerProps> = ({ children }) => {
   useEffect(() => {
     // Prevent re-entry
     if (isProcessingCompletionRef.current) return;
-    
+
     if (!visible && activeTourId && tourHasStartedRef.current) {
       isProcessingCompletionRef.current = true;
-      
+
       // Tour ended after being shown, mark as completed
       completeTourRef.current(activeTourId);
-      
+
       // Show completion modal only for main_navigation tour and only if not skipped
       if (activeTourId === 'main_navigation' && !wasSkipped) {
         setLastCompletedTourId(activeTourId);
         setShowCompletionModal(true);
       }
-      
+
       setActiveTourId(null);
       setWasSkipped(false);
       setTourHasStarted(false);
-      
+
       // Reset the flag after state updates have been processed
       setTimeout(() => {
         isProcessingCompletionRef.current = false;
@@ -481,18 +482,18 @@ interface TourProviderProps {
 
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const insets = useSafeAreaInsets();
-  
+
   // Calculate the correct vertical offset for Android
   // On Android with translucent status bar:
   // - measure() returns coordinates from top of window (below status bar)
   // - But the Modal in copilot renders from top of screen (including status bar)
   // - So we need to ADD the status bar height as offset
-  // 
+  //
   // On iOS:
   // - measure() returns coordinates including safe area
   // - No adjustment needed
   const androidStatusBarHeight = StatusBar.currentHeight || 0;
-  
+
   // Use negative offset on Android to move highlight UP to match the actual element
   // The safe area top inset is more accurate than StatusBar.currentHeight on many devices
   // We use the larger of the two values to ensure proper offset
@@ -554,7 +555,7 @@ export { CopilotStep, walkthroughable };
  * Create walkthroughable View with collapsable={false} for reliable Android measurement.
  * The collapsable prop prevents Android from optimizing away view groups which can affect
  * the accuracy of measure() calls used by react-native-copilot.
- * 
+ *
  * We wrap the native View to always include collapsable={false}.
  */
 const CollapsableView = React.forwardRef<View, React.ComponentProps<typeof View>>((props, ref) => (

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Animated,
   ScrollView,
   Dimensions,
   KeyboardAvoidingView,

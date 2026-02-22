@@ -26,7 +26,6 @@ import {
   secondary,
   accent,
   neutral,
-  status,
   base,
   duration,
 } from '@rallia/design-system';
@@ -40,6 +39,7 @@ import {
   deriveMatchStatus,
   type DerivedMatchStatus,
 } from '@rallia/shared-utils';
+import { TranslationKey } from '@rallia/shared-translations';
 
 // =============================================================================
 // TIER-BASED GRADIENT PALETTES (using design system tokens)
@@ -50,8 +50,9 @@ import {
  * - mostWanted: Court booked + high reputation creator (90%+) → accent/gold
  * - readyToPlay: Court booked only → secondary/coral
  * - regular: Default → primary/teal
+ * - expired: Match started but not full (disabled appearance) → neutral/gray
  */
-type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular';
+type MatchTier = 'mostWanted' | 'readyToPlay' | 'regular' | 'expired';
 
 /**
  * Threshold for "high reputation" creator (percentage 0-100)
@@ -119,6 +120,19 @@ const TIER_PALETTES = {
       accentEnd: primary[300], // #5eead4
     },
   },
+  // Expired - neutral/gray palette (disabled, past matches)
+  expired: {
+    light: {
+      background: neutral[100], // Light gray background
+      accentStart: neutral[400], // Gray accent
+      accentEnd: neutral[300], // Lighter gray
+    },
+    dark: {
+      background: neutral[900], // Dark gray background
+      accentStart: neutral[500], // Gray accent
+      accentEnd: neutral[400], // Slightly lighter gray
+    },
+  },
 } as const;
 
 // =============================================================================
@@ -131,6 +145,8 @@ const GRADIENT_STRIP_HEIGHT = 4;
 
 // Slot sizes
 const SLOT_SIZE = 32;
+const CHIP_BG_ALPHA_LIGHT = '15';
+const CHIP_BG_ALPHA_DARK = '30';
 
 /**
  * Most Wanted colors using design system accent scale
@@ -168,7 +184,7 @@ export interface MatchCardProps {
   /** Whether dark mode is enabled */
   isDark: boolean;
   /** Translation function */
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   /** Current locale for date/time formatting */
   locale: string;
   /** Current user's player ID (to determine owner/participant status) */
@@ -186,9 +202,6 @@ interface ThemeColors {
   primaryLight: string;
   secondary: string;
   secondaryLight: string;
-  statusOpen: string;
-  statusFull: string;
-  statusCompleted: string;
   slotEmpty: string;
   slotEmptyBorder: string;
   avatarPlaceholder: string;
@@ -222,7 +235,7 @@ function getRelativeTimeDisplay(
   endTime: string,
   timezone: string,
   locale: string,
-  t: (key: string, options?: TranslationOptions) => string
+  t: (key: TranslationKey, options?: TranslationOptions) => string
 ): { label: string; isUrgent: boolean } {
   const tz = timezone || 'UTC';
 
@@ -254,7 +267,7 @@ function getRelativeTimeDisplay(
 /**
  * Get location display string
  */
-function getLocationDisplay(match: MatchWithDetails, t: (key: string) => string): string {
+function getLocationDisplay(match: MatchWithDetails, t: (key: TranslationKey) => string): string {
   if (match.facility?.name) {
     return match.facility.name;
   }
@@ -276,6 +289,7 @@ function getCourtDisplay(match: MatchWithDetails): string | null {
 
 /**
  * Calculate player slots info - only counts joined participants
+ * Note: Creator is now included in joined participants with is_host=true
  */
 function getParticipantInfo(match: MatchWithDetails): {
   current: number;
@@ -284,60 +298,62 @@ function getParticipantInfo(match: MatchWithDetails): {
 } {
   const total = match.format === 'doubles' ? 4 : 2;
   // Only count joined participants (not requested, pending, waitlisted, left, etc.)
+  // Creator is now included as a joined participant with is_host=true
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
-  const current = joinedParticipants.length + 1; // +1 for creator
+  const current = joinedParticipants.length;
   const spotsLeft = Math.max(0, total - current);
   return { current, total, spotsLeft };
 }
 
+function getFeedbackWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): { isWithinFeedbackWindow: boolean; isPastFeedbackWindow: boolean } {
+  // Use the existing timezone-aware utility to get time difference from end time
+  // This properly handles timezone conversion and midnight-spanning matches
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // If endTimeDiffMs > 0, match hasn't ended yet
+  if (endTimeDiffMs > 0) {
+    return { isWithinFeedbackWindow: false, isPastFeedbackWindow: false };
+  }
+
+  // Match has ended - endTimeDiffMs is negative (time since end)
+  const timeSinceEndMs = Math.abs(endTimeDiffMs);
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+
+  const isWithinFeedbackWindow = timeSinceEndMs < fortyEightHoursMs;
+  const isPastFeedbackWindow = timeSinceEndMs >= fortyEightHoursMs;
+
+  return { isWithinFeedbackWindow, isPastFeedbackWindow };
+}
+
 /**
- * Get status info for badges
- * Uses derived status instead of denormalized status field
+ * Check if we're within the check-in window (10 minutes before start until end)
+ * Uses timezone-aware date utilities to properly handle timezones.
  */
-function getStatusInfo(
-  derivedStatus: DerivedMatchStatus,
-  participantInfo: { current: number; total: number },
-  colors: ThemeColors,
-  t: (key: string) => string
-): { label: string; bgColor: string; textColor: string; glowColor: string } {
-  if (derivedStatus === 'completed') {
-    return {
-      label: t('match.status.completed'),
-      bgColor: colors.statusCompleted,
-      textColor: base.white,
-      glowColor: colors.statusCompleted,
-    };
-  }
-  if (derivedStatus === 'cancelled') {
-    return {
-      label: t('match.status.cancelled'),
-      bgColor: neutral[400],
-      textColor: base.white,
-      glowColor: neutral[400],
-    };
-  }
-  if (derivedStatus === 'in_progress') {
-    return {
-      label: t('match.status.inProgress'),
-      bgColor: colors.statusFull, // Orange for in-progress
-      textColor: base.white,
-      glowColor: colors.statusFull,
-    };
-  }
-  if (participantInfo.current >= participantInfo.total) {
-    return {
-      label: t('match.status.full'),
-      bgColor: colors.statusFull,
-      textColor: base.white,
-      glowColor: colors.statusFull,
-    };
-  }
-  return {
-    label: t('match.status.open'),
-    bgColor: colors.statusOpen,
-    textColor: base.white,
-    glowColor: colors.statusOpen,
-  };
+function getCheckInWindowStatus(
+  matchDate: string,
+  startTime: string,
+  endTime: string,
+  timezone: string
+): boolean {
+  // Get time difference from start time
+  const startTimeDiffMs = getTimeDifferenceFromNow(matchDate, startTime, timezone);
+  // Get time difference from end time
+  const endTimeDiffMs = getMatchEndTimeDifferenceFromNow(matchDate, startTime, endTime, timezone);
+
+  // Check-in window: 10 minutes before start until end
+  const tenMinutesMs = 10 * 60 * 1000;
+
+  // startTimeDiffMs > 0 means start is in the future
+  // We want: now >= (start - 10min) AND now < end
+  // Which means: startTimeDiffMs <= 10min AND endTimeDiffMs > 0
+  const isWithinCheckInWindow = startTimeDiffMs <= tenMinutesMs && endTimeDiffMs > 0;
+
+  return isWithinCheckInWindow;
 }
 
 // =============================================================================
@@ -379,16 +395,52 @@ interface PlayerSlotsProps {
   participantInfo: { current: number; total: number; spotsLeft: number };
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
+  /** Current user's player ID to check if they're invited */
+  currentPlayerId?: string;
 }
 
 /**
  * Visual player slot indicators showing filled/empty positions
  */
-const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, colors, isDark, t }) => {
-  const creatorProfile = match.created_by_player?.profile;
+const PlayerSlots: React.FC<PlayerSlotsProps> = ({
+  match,
+  participantInfo,
+  colors,
+  isDark,
+  t,
+  currentPlayerId,
+}) => {
   // Only include joined participants
   const joinedParticipants = match.participants?.filter(p => p.status === 'joined') ?? [];
+
+  // Identify host and other participants using is_host flag
+  const hostParticipant = joinedParticipants.find(p => p.is_host);
+  const otherParticipants = joinedParticipants.filter(p => !p.is_host);
+
+  // Check if current user has been invited (pending status)
+  const isInvited = currentPlayerId
+    ? match.participants?.some(
+        p =>
+          (p.player_id === currentPlayerId || p.player?.id === currentPlayerId) &&
+          p.status === 'pending'
+      )
+    : false;
+
+  // Check if current user is the creator/host (to show pending requests count)
+  const isCreator = currentPlayerId
+    ? hostParticipant?.player_id === currentPlayerId ||
+      match.created_by_player?.id === currentPlayerId ||
+      match.created_by === currentPlayerId
+    : false;
+
+  // Count pending join requests (for creators only)
+  const pendingRequestsCount = isCreator
+    ? (match.participants?.filter(p => p.status === 'requested').length ?? 0)
+    : 0;
+
+  const invitedBadgeColor = isDark ? primary[400] : primary[500];
+  const pendingBadgeColor = isDark ? secondary[400] : secondary[500];
 
   // Build slots array
   const slots: Array<{
@@ -397,18 +449,19 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
     isHost: boolean;
   }> = [];
 
-  // First slot is always the host/creator
-  // Normalize URL to use current environment's Supabase URL
+  // First slot is always the host
+  // Use host participant's profile, fallback to created_by_player for backwards compatibility
+  const hostProfile = hostParticipant?.player?.profile ?? match.created_by_player?.profile;
   slots.push({
     filled: true,
-    avatarUrl: getProfilePictureUrl(creatorProfile?.profile_picture_url),
+    avatarUrl: getProfilePictureUrl(hostProfile?.profile_picture_url),
     isHost: true,
   });
 
-  // Add participant slots (only joined participants)
+  // Add participant slots (only non-host joined participants)
   // Normalize URLs to use current environment's Supabase URL
   for (let i = 0; i < participantInfo.total - 1; i++) {
-    const participant = joinedParticipants[i];
+    const participant = otherParticipants[i];
     slots.push({
       filled: !!participant,
       avatarUrl: getProfilePictureUrl(participant?.player?.profile?.profile_picture_url),
@@ -478,11 +531,55 @@ const PlayerSlots: React.FC<PlayerSlotsProps> = ({ match, participantInfo, color
       <Text
         size="xs"
         weight="medium"
-        color={participantInfo.spotsLeft > 0 ? colors.statusOpen : colors.textMuted}
+        color={participantInfo.spotsLeft > 0 ? colors.primary : colors.textMuted}
         style={styles.spotsText}
       >
         {spotsText}
       </Text>
+      {/* Invited indicator for players with pending status */}
+      {isInvited && (
+        <View
+          style={[
+            styles.invitedBadge,
+            {
+              backgroundColor: `${invitedBadgeColor}${isDark ? '25' : '15'}`,
+              borderColor: invitedBadgeColor,
+            },
+          ]}
+        >
+          <Ionicons
+            name="mail-outline"
+            size={12}
+            color={invitedBadgeColor}
+            style={styles.invitedIcon}
+          />
+          <Text size="xs" weight="semibold" color={invitedBadgeColor}>
+            {t('match.invited')}
+          </Text>
+        </View>
+      )}
+      {/* Pending requests indicator for match creators */}
+      {pendingRequestsCount > 0 && (
+        <View
+          style={[
+            styles.invitedBadge,
+            {
+              backgroundColor: `${pendingBadgeColor}${isDark ? '25' : '15'}`,
+              borderColor: pendingBadgeColor,
+            },
+          ]}
+        >
+          <Ionicons
+            name="person-add-outline"
+            size={12}
+            color={pendingBadgeColor}
+            style={styles.invitedIcon}
+          />
+          <Text size="xs" weight="semibold" color={pendingBadgeColor}>
+            {t('match.pendingRequests', { count: pendingRequestsCount })}
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -506,30 +603,12 @@ const Badge: React.FC<BadgeProps> = ({ label, bgColor, textColor, icon }) => (
   </View>
 );
 
-interface StatusBadgeProps {
-  label: string;
-  bgColor: string;
-  textColor: string;
-  glowColor: string;
-}
-
-/**
- * Status badge with subtle glow effect
- */
-const StatusBadge: React.FC<StatusBadgeProps> = ({ label, bgColor, textColor }) => (
-  <View style={[styles.statusBadge, { backgroundColor: bgColor }]}>
-    <Text size="xs" weight="bold" color={textColor}>
-      {label.toUpperCase()}
-    </Text>
-  </View>
-);
-
 interface CardFooterProps {
   match: MatchWithDetails;
   participantInfo: { current: number; total: number; spotsLeft: number };
   colors: ThemeColors;
   isDark: boolean;
-  t: (key: string, options?: TranslationOptions) => string;
+  t: (key: TranslationKey, options?: TranslationOptions) => string;
   onPress?: () => void;
   currentPlayerId?: string;
 }
@@ -538,14 +617,19 @@ interface CardFooterProps {
  * Footer with CTA button
  *
  * CTA Logic (priority order):
- * 1. Match has ended → "View" (for everyone - no edit/leave allowed)
- * 2. Match has result → "View Results"
- * 3. Owner (match not ended) → "Edit"
- * 4. User has joined (match not ended) → "Leave"
- * 5. User has pending request → "Pending" (disabled)
- * 6. Match is full → "Full" (disabled)
- * 7. Join mode is 'request' → "Ask to Join"
- * 8. Default → "Join"
+ * 1. Check-in CTA (when within check-in window, full game, joined participant, hasn't checked in)
+ * 2. Feedback CTA (when match ended, within 48h window, joined participant, hasn't completed feedback)
+ * 3. Match has ended → "View" (for everyone - no edit/leave allowed)
+ * 4. Match has result → "View Results"
+ * 5. Owner (match not ended) → "Edit"
+ * 6. User has joined (match not ended) → "Leave"
+ * 7. User has pending join request ('requested' status) → "Pending" (disabled)
+ * 8. Match is full → "Join Waitlist"
+ * 9. Join mode is 'request' → "Ask to Join"
+ * 10. Default → "Join"
+ *
+ * Note: Users with 'pending' status (invited by host) see regular CTAs (Join/Ask to Join/Join Waitlist)
+ * so they can accept the invitation through the normal join flow.
  */
 const CardFooter: React.FC<CardFooterProps> = ({
   match,
@@ -559,15 +643,26 @@ const CardFooter: React.FC<CardFooterProps> = ({
   // Check if match is cancelled (use cancelled_at instead of status)
   const isCancelled = !!match.cancelled_at;
 
-  // Check if match has ended (end_time has passed in match's timezone)
-  // Account for matches that span midnight (e.g., 11 PM - 1 AM)
-  const matchEndDiff = getMatchEndTimeDifferenceFromNow(
+  // Derive match status from data (not from status field)
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+
+  // Check if match has started (start_time has passed in match's timezone)
+  // Once started, players can no longer join, leave, or edit the match
+  const matchStartDiff = getTimeDifferenceFromNow(
     match.match_date,
     match.start_time,
-    match.end_time,
     match.timezone
   );
-  const hasMatchEnded = matchEndDiff < 0;
+  const hasMatchStarted = matchStartDiff < 0;
 
   // Derive match state from data (not from status field)
   const isFull = participantInfo.spotsLeft === 0;
@@ -585,89 +680,174 @@ const CardFooter: React.FC<CardFooterProps> = ({
     : undefined;
 
   const hasJoined = userParticipant?.status === 'joined';
-  const hasPendingRequest =
-    userParticipant?.status === 'requested' || userParticipant?.status === 'pending';
+  // 'pending' (invited by host) shows "Accept Invitation" CTA
+  const isInvited = userParticipant?.status === 'pending';
+  // 'requested' (user requested to join) shows "Pending" CTA
+  const hasPendingRequest = userParticipant?.status === 'requested';
   const isWaitlisted = userParticipant?.status === 'waitlisted';
 
   // Join mode
   const isRequestMode = match.join_mode === 'request';
 
+  // Feedback window status (48h after end time)
+  const { isWithinFeedbackWindow } = getFeedbackWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+
+  // Check if current player is a joined participant who hasn't completed feedback yet
+  const currentPlayerParticipant = currentPlayerId
+    ? match.participants?.find(
+        p =>
+          (p.player_id === currentPlayerId || p.player?.id === currentPlayerId) &&
+          p.status === 'joined'
+      )
+    : undefined;
+  const playerHasCompletedFeedback = currentPlayerParticipant?.feedback_completed ?? false;
+  const playerNeedsFeedback =
+    hasMatchEnded &&
+    isWithinFeedbackWindow &&
+    currentPlayerParticipant &&
+    !playerHasCompletedFeedback;
+
+  // Check-in window status (10 min before start until end, only for full games)
+  const isWithinCheckInWindow = getCheckInWindowStatus(
+    match.match_date,
+    match.start_time,
+    match.end_time,
+    match.timezone
+  );
+  const playerHasCheckedIn = !!currentPlayerParticipant?.checked_in_at;
+  // Check-in is only available for matches with a confirmed location (facility or custom)
+  // TBD matches don't have a location to check in at
+  const locationAllowsCheckIn =
+    match.location_type === 'facility' || match.location_type === 'custom';
+  const playerNeedsCheckIn =
+    isFull &&
+    isWithinCheckInWindow &&
+    currentPlayerParticipant &&
+    !playerHasCheckedIn &&
+    locationAllowsCheckIn;
+
+  const ctaPositive = isDark ? primary[400] : primary[500];
+  const ctaDestructive = isDark ? secondary[400] : secondary[500];
+  const ctaAccent = isDark ? accent[400] : accent[500];
+  const ctaNeutralBg = isDark ? neutral[700] : neutral[200];
+  const ctaNeutralText = colors.text;
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine button label, style, and icon based on state
   // CTA Color Matrix:
-  // - Join/Ask to Join/Join Waitlist → success green
+  // - Check-in/Feedback/Join/Ask to Join/Join Waitlist → primary
   // - Edit → accent
-  // - Cancel/Leave/Cancelled → error red
-  // - View/View Results → neutral
-  // - Pending → warning
-  // - On Waitlist → warning
+  // - Cancel/Leave/Cancelled → secondary
+  // - View/View Results/Expired → neutral
+  // - Pending/Waitlisted → neutral background + secondary text
   let ctaLabel: string;
   let ctaBgColor: string;
   let ctaTextColor: string;
   let ctaDisabled = false;
-  let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'arrow-forward';
+  let ctaBorderColor: string | null = null;
+  let ctaIcon: keyof typeof Ionicons.glyphMap | null = 'add-circle-outline';
 
-  if (isCancelled) {
+  // Expired match (highest priority) → Always show "View" CTA
+  if (isExpired) {
+    ctaLabel = t('match.cta.view');
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
+    ctaIcon = 'eye-outline';
+  } else if (playerNeedsCheckIn) {
+    ctaLabel = t('matchDetail.checkIn');
+    ctaBgColor = ctaPositive;
+    ctaTextColor = base.white;
+    ctaIcon = 'checkmark-circle-outline';
+  } else if (hasJoined && playerHasCheckedIn && !isInProgress && !hasMatchEnded) {
+    // Participant has checked in but game hasn't started yet → Show "Checked-in" (success green, disabled look)
+    ctaLabel = t('matchDetail.checkedIn');
+    ctaBgColor = `${ctaPositive}${isDark ? '30' : '20'}`;
+    ctaTextColor = ctaPositive;
+    ctaDisabled = true;
+    ctaIcon = 'checkmark-circle';
+  } else if (playerNeedsFeedback) {
+    // Feedback CTA (when match ended and player needs feedback)
+    ctaLabel = t('matchDetail.provideFeedback');
+    ctaBgColor = ctaPositive;
+    ctaTextColor = base.white;
+    ctaIcon = 'star-outline';
+  } else if (isCancelled) {
     // Match is cancelled → Cancelled (danger red, disabled)
     ctaLabel = t('match.cta.cancelled');
-    ctaBgColor = isDark ? `${status.error.DEFAULT}30` : `${status.error.DEFAULT}20`;
-    ctaTextColor = status.error.DEFAULT;
+    ctaBgColor = `${ctaDestructive}${isDark ? '30' : '20'}`;
+    ctaTextColor = ctaDestructive;
     ctaDisabled = true;
     ctaIcon = 'close-circle-outline';
   } else if (hasResult) {
     // Match with results → View Results (neutral)
     ctaLabel = t('match.cta.viewResults');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
-    ctaTextColor = colors.text;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
     ctaIcon = 'eye-outline';
-  } else if (hasMatchEnded) {
-    // Match has ended but no results yet → View (neutral)
+  } else if (hasMatchStarted) {
+    // Match has started but no results yet → View (neutral, no actions allowed)
     ctaLabel = t('match.cta.view');
-    ctaBgColor = isDark ? neutral[700] : neutral[200];
-    ctaTextColor = colors.text;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaNeutralText;
     ctaIcon = 'eye-outline';
   } else if (isOwner) {
     // Owner (match not ended) → Edit
     ctaLabel = t('match.cta.edit');
-    ctaBgColor = isDark ? accent[500] : accent[500];
+    ctaBgColor = ctaAccent;
     ctaTextColor = base.white;
     ctaIcon = 'create-outline';
   } else if (isWaitlisted) {
-    // On Waitlist → warning
+    // On Waitlist → neutral background with secondary emphasis
     ctaLabel = t('match.cta.waitlisted');
-    ctaBgColor = isDark ? `${status.warning.DEFAULT}30` : `${status.warning.DEFAULT}20`;
-    ctaTextColor = status.warning.DEFAULT;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaDestructive;
+    ctaBorderColor = ctaDestructive;
     ctaIcon = 'list-outline';
   } else if (hasJoined) {
     // Leave → danger red
     ctaLabel = t('match.cta.leave');
-    ctaBgColor = status.error.DEFAULT;
+    ctaBgColor = ctaDestructive;
     ctaTextColor = base.white;
-    ctaIcon = 'exit-outline';
+    ctaIcon = 'log-out-outline';
   } else if (hasPendingRequest) {
-    // Pending → warning (disabled)
+    // Pending → neutral background with secondary emphasis (disabled)
     ctaLabel = t('match.cta.pending');
-    ctaBgColor = isDark ? `${status.warning.DEFAULT}30` : `${status.warning.DEFAULT}20`;
-    ctaTextColor = status.warning.DEFAULT;
+    ctaBgColor = ctaNeutralBg;
+    ctaTextColor = ctaDestructive;
+    ctaBorderColor = ctaDestructive;
     ctaDisabled = true;
-    ctaIcon = 'hourglass-outline';
+    ctaIcon = 'close-outline';
+  } else if (isInvited && !isFull && !isRequestMode) {
+    // Invited (pending status) to direct-join match with spots → Accept Invitation (success green)
+    ctaLabel = t('match.cta.acceptInvitation');
+    ctaBgColor = ctaPositive;
+    ctaTextColor = base.white;
+    ctaIcon = 'checkmark-circle-outline';
   } else if (isFull) {
     // Join Waitlist → success green
     ctaLabel = t('match.cta.joinWaitlist');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'list-outline';
   } else if (isRequestMode) {
     // Ask to Join → success green
     ctaLabel = t('match.cta.askToJoin');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
     ctaIcon = 'hand-left-outline';
   } else {
     // Join → success green
     ctaLabel = t('match.cta.join');
-    ctaBgColor = status.success.DEFAULT;
+    ctaBgColor = ctaPositive;
     ctaTextColor = base.white;
-    ctaIcon = 'arrow-forward';
+    ctaIcon = 'add-circle-outline';
   }
 
   return (
@@ -677,6 +857,7 @@ const CardFooter: React.FC<CardFooterProps> = ({
         style={[
           styles.ctaButton,
           { backgroundColor: ctaBgColor },
+          ctaBorderColor && { borderWidth: 1, borderColor: ctaBorderColor },
           ctaDisabled && styles.ctaButtonDisabled,
         ]}
         onPress={onPress}
@@ -706,19 +887,40 @@ const MatchCard: React.FC<MatchCardProps> = ({
   locale,
   currentPlayerId,
 }) => {
+  // Compute participant info early to check for expired state
+  const participantInfo = getParticipantInfo(match);
+  const isFull = participantInfo.spotsLeft === 0;
+
+  // Derive match status to check for expired state
+  const derivedStatus = deriveMatchStatus({
+    cancelled_at: match.cancelled_at,
+    match_date: match.match_date,
+    start_time: match.start_time,
+    end_time: match.end_time,
+    timezone: match.timezone,
+    result: match.result,
+  });
+  const isInProgress = derivedStatus === 'in_progress';
+  const hasMatchEnded = derivedStatus === 'completed';
+
+  // Check if match is expired (started or ended but not full)
+  const isExpired = (isInProgress || hasMatchEnded) && !isFull;
+
   // Determine match tier based on court status and creator reputation
+  // Override with 'expired' tier if match is expired
   const creatorReputationScore = match.created_by_player?.reputation_score;
-  const tier = getMatchTier(match.court_status, creatorReputationScore);
+  const baseTier = getMatchTier(match.court_status, creatorReputationScore);
+  const tier: MatchTier = isExpired ? 'expired' : baseTier;
   const isMostWanted = tier === 'mostWanted';
 
   // Get most wanted colors from design system (for animated glow)
   const mwColors = MOST_WANTED_COLORS[isDark ? 'dark' : 'light'];
 
   // Animated glow effect for most wanted cards - smooth, polished breathing effect
-  const glowAnimation = useRef(new Animated.Value(0)).current;
+  const glowAnimation = useMemo(() => new Animated.Value(0), []);
 
   // Animated pulse effect for urgent matches
-  const urgentPulseAnimation = useRef(new Animated.Value(0)).current;
+  const urgentPulseAnimation = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
     if (isMostWanted) {
@@ -799,6 +1001,11 @@ const MatchCard: React.FC<MatchCardProps> = ({
             accent: isDark ? secondary[400] : secondary[500],
             accentLight: isDark ? secondary[700] : secondary[200],
           };
+        case 'expired':
+          return {
+            accent: isDark ? neutral[500] : neutral[400],
+            accentLight: isDark ? neutral[700] : neutral[300],
+          };
         case 'regular':
         default:
           return {
@@ -824,9 +1031,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
       primaryLight: isDark ? primary[900] : primary[50],
       secondary: isDark ? secondary[400] : secondary[500],
       secondaryLight: isDark ? secondary[900] : secondary[50],
-      statusOpen: status.success.DEFAULT,
-      statusFull: status.warning.DEFAULT,
-      statusCompleted: status.info.DEFAULT,
       slotEmpty: isDark ? neutral[800] : neutral[100],
       slotEmptyBorder: isDark ? neutral[500] : neutral[400], // Better contrast for empty slots
       avatarPlaceholder: isDark ? neutral[700] : neutral[200],
@@ -837,18 +1041,21 @@ const MatchCard: React.FC<MatchCardProps> = ({
     [themeColors, isDark, tierAccentColors]
   );
 
-  // Computed values
-  const participantInfo = getParticipantInfo(match);
-  // Derive status from match attributes instead of using denormalized status field
-  const derivedStatus = deriveMatchStatus({
-    cancelled_at: match.cancelled_at,
-    match_date: match.match_date,
-    start_time: match.start_time,
-    end_time: match.end_time,
-    timezone: match.timezone,
-    result: match.result,
+  const chipAlpha = isDark ? CHIP_BG_ALPHA_DARK : CHIP_BG_ALPHA_LIGHT;
+  const getChipColors = (baseColor: string) => ({
+    bgColor: `${baseColor}${chipAlpha}`,
+    textColor: baseColor,
+    iconColor: baseColor,
   });
-  const statusInfo = getStatusInfo(derivedStatus, participantInfo, colors, t);
+
+  const chipColors = {
+    primary: getChipColors(isDark ? primary[400] : primary[500]),
+    secondary: getChipColors(isDark ? secondary[400] : secondary[500]),
+    accent: getChipColors(isDark ? accent[400] : accent[500]),
+    tier: getChipColors(colors.tierAccent),
+  } as const;
+
+  // Computed values (participantInfo and derivedStatus already computed above for expired check)
   const { label: timeLabel, isUrgent } = getRelativeTimeDisplay(
     match.match_date,
     match.start_time,
@@ -865,6 +1072,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
   // - "isUrgent" (< 3 hours) but not in_progress = starting soon = countdown animation
   const isOngoing = derivedStatus === 'in_progress';
   const isStartingSoon = isUrgent && !isOngoing;
+  const liveColor = isDark ? secondary[400] : secondary[500];
+  const soonColor = isDark ? accent[400] : accent[500];
 
   // Start animation when match is urgent or ongoing
   useEffect(() => {
@@ -944,9 +1153,20 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'courtBooked',
       label: t('match.courtStatus.courtBooked'),
-      bgColor: isDark ? `${mwColors.border}30` : `${mwColors.border}20`,
-      textColor: mwColors.border,
+      bgColor: chipColors.accent.bgColor,
+      textColor: chipColors.accent.textColor,
       icon: 'checkmark-circle',
+    });
+  }
+
+  // Join mode badge (request-based)
+  if (match.join_mode === 'request') {
+    badges.push({
+      key: 'joinMode',
+      label: t('match.joinMode.request'),
+      bgColor: chipColors.secondary.bgColor,
+      textColor: chipColors.secondary.textColor,
+      icon: 'hand-left-outline',
     });
   }
 
@@ -956,20 +1176,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'playerExpectation',
       label: isCompetitive ? t('matchDetail.competitive') : t('matchDetail.casual'),
-      bgColor: isCompetitive
-        ? isDark
-          ? `${accent[400]}30`
-          : `${accent[500]}20`
-        : isDark
-          ? `${primary[400]}30`
-          : `${primary[500]}20`,
-      textColor: isCompetitive
-        ? isDark
-          ? accent[400]
-          : accent[500]
-        : isDark
-          ? primary[400]
-          : primary[500],
+      bgColor: isCompetitive ? chipColors.accent.bgColor : chipColors.primary.bgColor,
+      textColor: isCompetitive ? chipColors.accent.textColor : chipColors.primary.textColor,
       icon: isCompetitive ? 'trophy' : 'happy',
     });
   }
@@ -979,8 +1187,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'cost',
       label: costDisplay,
-      bgColor: match.is_court_free ? `${status.success.DEFAULT}20` : colors.tierAccentLight,
-      textColor: match.is_court_free ? status.success.DEFAULT : colors.tierAccent,
+      bgColor: match.is_court_free ? chipColors.primary.bgColor : chipColors.tier.bgColor,
+      textColor: match.is_court_free ? chipColors.primary.textColor : chipColors.tier.textColor,
       icon: match.is_court_free ? 'checkmark-circle' : 'cash-outline',
     });
   }
@@ -990,8 +1198,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     badges.push({
       key: 'rating',
       label: match.min_rating_score.label,
-      bgColor: colors.tierAccentLight,
-      textColor: colors.tierAccent,
+      bgColor: chipColors.tier.bgColor,
+      textColor: chipColors.tier.textColor,
       icon: 'analytics',
     });
   }
@@ -1027,6 +1235,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {
             backgroundColor: tierPaletteColors.background,
             borderColor: dynamicBorderColor,
+            opacity: isExpired ? 0.7 : 1,
           },
           isMostWanted && styles.premiumCard,
         ]}
@@ -1084,15 +1293,15 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {/* Time & Status row */}
           <View style={styles.topRow}>
             <View style={styles.timeContainer}>
-              {/* "Live" indicator for ongoing matches */}
-              {isOngoing && (
+              {/* "Live" indicator for ongoing matches (not shown when expired) */}
+              {isOngoing && !isExpired && (
                 <View style={styles.liveIndicatorContainer}>
                   {/* Expanding ring that fades out */}
                   <Animated.View
                     style={[
                       styles.liveRing,
                       {
-                        backgroundColor: status.error.DEFAULT,
+                        backgroundColor: liveColor,
                         transform: [{ scale: liveRingScale }],
                         opacity: liveRingOpacity,
                       },
@@ -1103,15 +1312,15 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     style={[
                       styles.liveDot,
                       {
-                        backgroundColor: status.error.DEFAULT,
+                        backgroundColor: liveColor,
                         opacity: liveDotOpacity,
                       },
                     ]}
                   />
                 </View>
               )}
-              {/* Bouncing chevron for starting soon */}
-              {isStartingSoon && (
+              {/* Bouncing chevron for starting soon (not shown when expired) */}
+              {isStartingSoon && !isExpired && (
                 <Animated.View
                   style={[
                     styles.countdownIndicator,
@@ -1121,29 +1330,41 @@ const MatchCard: React.FC<MatchCardProps> = ({
                     },
                   ]}
                 >
-                  <Ionicons name="chevron-forward" size={14} color={status.warning.DEFAULT} />
+                  <Ionicons name="chevron-forward" size={14} color={soonColor} />
                 </Animated.View>
               )}
               <Ionicons
-                name={isOngoing ? 'radio' : isStartingSoon ? 'time' : 'calendar-outline'}
+                name={
+                  isExpired
+                    ? 'close-circle-outline'
+                    : isOngoing
+                      ? 'radio'
+                      : isStartingSoon
+                        ? 'time'
+                        : 'calendar-outline'
+                }
                 size={16}
                 color={
-                  isOngoing
-                    ? status.error.DEFAULT
-                    : isStartingSoon
-                      ? status.warning.DEFAULT
-                      : colors.tierAccent
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.tierAccent
                 }
               />
               <Text
                 size="base"
                 weight="bold"
                 color={
-                  isOngoing
-                    ? status.error.DEFAULT
-                    : isStartingSoon
-                      ? status.warning.DEFAULT
-                      : colors.text
+                  isExpired
+                    ? colors.textMuted
+                    : isOngoing
+                      ? liveColor
+                      : isStartingSoon
+                        ? soonColor
+                        : colors.text
                 }
                 style={styles.timeText}
                 numberOfLines={1}
@@ -1170,6 +1391,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
             colors={colors}
             isDark={isDark}
             t={t}
+            currentPlayerId={currentPlayerId}
           />
 
           {/* Badges row */}
@@ -1313,7 +1535,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     // Subtle shadow for depth
-    shadowColor: '#ef4444',
+    shadowColor: secondary[500],
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -1390,6 +1612,18 @@ const styles = StyleSheet.create({
   },
   spotsText: {
     marginLeft: spacingPixels[2],
+  },
+  invitedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacingPixels[2],
+    paddingHorizontal: spacingPixels[2],
+    paddingVertical: spacingPixels[1],
+    borderRadius: radiusPixels.full,
+    borderWidth: 1,
+  },
+  invitedIcon: {
+    marginRight: spacingPixels[1],
   },
 
   // Badges

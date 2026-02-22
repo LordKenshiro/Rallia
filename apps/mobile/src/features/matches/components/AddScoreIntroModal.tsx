@@ -6,13 +6,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  ImageBackground,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, Button } from '@rallia/shared-components';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,12 +28,7 @@ export function AddScoreIntroModal({
   const { t } = useTranslation();
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent={false}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
         {/* Tennis image background */}
         <ImageBackground
@@ -48,79 +37,69 @@ export function AddScoreIntroModal({
           resizeMode="cover"
         >
           {/* Dark overlay gradient for text readability */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
-            style={styles.overlay}
-          >
+          <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']} style={styles.overlay}>
             {/* Close button */}
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+              <Ionicons name="close-outline" size={28} color="#FFFFFF" />
             </TouchableOpacity>
 
             {/* Content */}
             <View style={styles.content}>
-            {/* Title */}
-            <Text weight="bold" size="2xl" style={styles.title}>
-              {t('addScore.intro.title' as TranslationKey)}
-            </Text>
-
-            {/* Accent line */}
-            <View style={styles.accentLine} />
-
-            {/* Description */}
-            <Text size="base" style={styles.description}>
-              {t('addScore.intro.description' as TranslationKey)}
-            </Text>
-
-            {/* How to add scores */}
-            <Text size="base" style={styles.howToTitle}>
-              {t('addScore.intro.howToTitle' as TranslationKey)}
-            </Text>
-
-            <View style={styles.bulletPoints}>
-              <Text size="base" style={styles.bulletPoint}>
-                • {t('addScore.intro.step1' as TranslationKey)}
+              {/* Title */}
+              <Text weight="bold" size="2xl" style={styles.title}>
+                {t('addScore.intro.title')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • {t('addScore.intro.step2' as TranslationKey)}
+
+              {/* Accent line */}
+              <View style={styles.accentLine} />
+
+              {/* Description */}
+              <Text size="base" style={styles.description}>
+                {t('addScore.intro.description')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • {t('addScore.intro.step3' as TranslationKey)}
+
+              {/* How to add scores */}
+              <Text size="base" style={styles.howToTitle}>
+                {t('addScore.intro.howToTitle')}
               </Text>
-              <Text size="base" style={styles.bulletPoint}>
-                • {t('addScore.intro.step4' as TranslationKey)}
+
+              <View style={styles.bulletPoints}>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step1')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step2')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step3')}
+                </Text>
+                <Text size="base" style={styles.bulletPoint}>
+                  • {t('addScore.intro.step4')}
+                </Text>
+              </View>
+
+              {/* Confirmation note */}
+              <Text size="base" style={styles.confirmationNote}>
+                {t('addScore.intro.confirmationNote')}
               </Text>
             </View>
 
-            {/* Confirmation note */}
-            <Text size="base" style={styles.confirmationNote}>
-              {t('addScore.intro.confirmationNote' as TranslationKey)}
-            </Text>
-          </View>
+            {/* Bottom buttons */}
+            <View style={styles.bottomButtons}>
+              <Button variant="primary" onPress={onAddScore} style={styles.addScoreButton}>
+                {t('addScore.intro.addScoreNow')}
+              </Button>
 
-          {/* Bottom buttons */}
-          <View style={styles.bottomButtons}>
-            <Button
-              variant="primary"
-              onPress={onAddScore}
-              style={styles.addScoreButton}
-            >
-              {t('addScore.intro.addScoreNow' as TranslationKey)}
-            </Button>
-
-            <TouchableOpacity
-              style={styles.neverShowButton}
-              onPress={onNeverShowAgain}
-            >
-              <Text size="base" style={styles.neverShowText}>
-                {t('addScore.intro.neverShowAgain' as TranslationKey)}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity style={styles.neverShowButton} onPress={onNeverShowAgain}>
+                <Text size="base" style={styles.neverShowText}>
+                  {t('addScore.intro.neverShowAgain')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
         </ImageBackground>
       </View>

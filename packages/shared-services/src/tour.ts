@@ -119,10 +119,7 @@ export const tourService = {
         'notifications_screen',
       ];
 
-      const pairs: [string, string][] = tourIds.map(id => [
-        `${STORAGE_PREFIX}${id}`,
-        'false',
-      ]);
+      const pairs: [string, string][] = tourIds.map(id => [`${STORAGE_PREFIX}${id}`, 'false']);
 
       await AsyncStorage.multiSet(pairs);
       Logger.debug('All tours reset');

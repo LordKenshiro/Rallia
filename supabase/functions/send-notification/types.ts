@@ -13,6 +13,7 @@ export type NotificationType =
   | 'match_updated'
   | 'match_starting_soon'
   | 'match_completed'
+  | 'match_new_available'
   | 'player_kicked'
   | 'player_left'
   | 'new_message'
@@ -22,7 +23,67 @@ export type NotificationType =
   | 'reminder'
   | 'payment'
   | 'support'
-  | 'system';
+  | 'system'
+  | 'feedback_request'
+  | 'feedback_reminder'
+  | 'score_confirmation'
+  // Organization staff notifications
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  // Organization member notifications
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement';
+
+// Organization notification types (subset for org-specific handling)
+export type OrgNotificationType =
+  | 'booking_created'
+  | 'booking_cancelled_by_player'
+  | 'booking_modified'
+  | 'new_member_joined'
+  | 'member_left'
+  | 'member_role_changed'
+  | 'payment_received'
+  | 'payment_failed'
+  | 'refund_processed'
+  | 'daily_summary'
+  | 'weekly_report'
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_cancelled_by_org'
+  | 'membership_approved'
+  | 'org_announcement';
+
+// List of organization notification types for checking
+export const ORG_NOTIFICATION_TYPES: OrgNotificationType[] = [
+  'booking_created',
+  'booking_cancelled_by_player',
+  'booking_modified',
+  'new_member_joined',
+  'member_left',
+  'member_role_changed',
+  'payment_received',
+  'payment_failed',
+  'refund_processed',
+  'daily_summary',
+  'weekly_report',
+  'booking_confirmed',
+  'booking_reminder',
+  'booking_cancelled_by_org',
+  'membership_approved',
+  'org_announcement',
+];
 
 export type DeliveryChannel = 'email' | 'push' | 'sms';
 
@@ -50,6 +111,7 @@ export interface NotificationRecord {
   scheduled_at: string | null;
   expires_at: string | null;
   read_at: string | null;
+  organization_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -109,6 +171,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   match_updated: { email: false, push: true, sms: false },
   match_starting_soon: { email: false, push: true, sms: true },
   match_completed: { email: false, push: true, sms: false },
+  match_new_available: { email: false, push: true, sms: false },
   player_kicked: { email: true, push: true, sms: false },
   player_left: { email: false, push: true, sms: false },
   chat: { email: false, push: true, sms: false },
@@ -119,4 +182,42 @@ export const DEFAULT_PREFERENCES: Record<NotificationType, Record<DeliveryChanne
   payment: { email: true, push: true, sms: false },
   support: { email: true, push: false, sms: false },
   system: { email: true, push: false, sms: false },
+  feedback_request: { email: true, push: true, sms: false },
+  feedback_reminder: { email: true, push: true, sms: false },
+  score_confirmation: { email: true, push: true, sms: false },
+  // Organization staff notifications - email only by default
+  booking_created: { email: true, push: false, sms: false },
+  booking_cancelled_by_player: { email: true, push: false, sms: false },
+  booking_modified: { email: true, push: false, sms: false },
+  new_member_joined: { email: true, push: false, sms: false },
+  member_left: { email: true, push: false, sms: false },
+  member_role_changed: { email: true, push: false, sms: false },
+  payment_received: { email: true, push: false, sms: false },
+  payment_failed: { email: true, push: false, sms: true },
+  refund_processed: { email: true, push: false, sms: false },
+  daily_summary: { email: false, push: false, sms: false },
+  weekly_report: { email: true, push: false, sms: false },
+  // Organization member notifications
+  booking_confirmed: { email: true, push: false, sms: false },
+  booking_reminder: { email: true, push: false, sms: true },
+  booking_cancelled_by_org: { email: true, push: false, sms: true },
+  membership_approved: { email: true, push: false, sms: false },
+  org_announcement: { email: true, push: false, sms: false },
 };
+
+/**
+ * Organization info for branded emails
+ */
+export interface OrganizationInfo {
+  id: string;
+  name: string;
+  email: string | null;
+  website: string | null;
+}
+
+/**
+ * Check if a notification type is an organization notification
+ */
+export function isOrgNotification(type: NotificationType): type is OrgNotificationType {
+  return ORG_NOTIFICATION_TYPES.includes(type as OrgNotificationType);
+}

@@ -5,7 +5,7 @@
  * Migrated from PersonalInformationOverlay with theme-aware colors.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -14,23 +14,31 @@ import {
   Modal,
   Image,
   Pressable,
-  ScrollView,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetTextInput,
+  BottomSheetScrollView,
+  type BottomSheetScrollViewMethods,
+} from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, PhoneInput } from '@rallia/shared-components';
+import { Text } from '@rallia/shared-components';
+import { PhoneInput } from '../../../../../components/PhoneInput';
 import { spacingPixels, radiusPixels } from '@rallia/design-system';
-import { OnboardingService, Logger } from '@rallia/shared-services';
 import {
   validateFullName,
   validateUsername,
   lightHaptic,
   selectionHaptic,
 } from '@rallia/shared-utils';
+import { GENDER_VALUES } from '@rallia/shared-types';
+import { supabase } from '@rallia/shared-services';
 import type { TranslationKey } from '@rallia/shared-translations';
+import type { Locale } from '@rallia/shared-translations';
 import type { OnboardingFormData } from '../../../hooks/useOnboardingWizard';
+import { useLocale } from '../../../../../context';
 
 interface ThemeColors {
   background: string;
@@ -56,6 +64,26 @@ interface PersonalInfoStepProps {
   isDark: boolean;
 }
 
+interface FieldErrors {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  phoneNumber?: string;
+}
+
+type ValidationStatus = 'idle' | 'valid' | 'invalid' | 'checking';
+
+const MINIMUM_AGE = 13;
+
+// Calculate minimum date of birth (13 years ago)
+const getMinimumDateOfBirth = (): Date => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - MINIMUM_AGE);
+  return date;
+};
+
 export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   formData,
   onUpdateFormData,
@@ -66,22 +94,34 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(formData.dateOfBirth || new Date(2000, 0, 1));
-  const [genderOptions, setGenderOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Field validation errors
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  // Username uniqueness check state
+  const [usernameStatus, setUsernameStatus] = useState<ValidationStatus>('idle');
+  const [usernameCheckTimeout, setUsernameCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+
   // Refs for keyboard visibility handling
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<BottomSheetScrollViewMethods>(null);
   const firstNameFieldRef = useRef<View>(null);
   const lastNameFieldRef = useRef<View>(null);
   const usernameFieldRef = useRef<View>(null);
   const phoneNumberFieldRef = useRef<View>(null);
+  // Y positions of each field within scroll content (from onLayout), used to scroll only enough to bring field into view
+  const fieldYOffsets = useRef<Record<string, number>>({});
+  const SCROLL_TO_FIELD_TOP_PADDING = 24;
+
+  const minimumDateOfBirth = useMemo(() => getMinimumDateOfBirth(), []);
+  const minimumDateSelectable = useMemo(() => new Date(1900, 0, 1), []);
 
   // Listen for keyboard events to adjust padding dynamically
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const keyboardShowListener = Keyboard.addListener(showEvent, (e) => {
+    const keyboardShowListener = Keyboard.addListener(showEvent, e => {
       setKeyboardHeight(e.endCoordinates.height);
     });
     const keyboardHideListener = Keyboard.addListener(hideEvent, () => {
@@ -94,55 +134,167 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     };
   }, []);
 
-  // Fetch gender options from database
-  useEffect(() => {
-    const fetchGenderOptions = async () => {
-      try {
-        const { data, error } = await OnboardingService.getGenderTypes();
+  // Validation functions
+  const validateFirstName = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'First name is required';
+    }
+    return undefined;
+  };
 
-        if (error) {
-          Logger.error('Failed to fetch gender types from database', error as Error);
-          setGenderOptions([
-            { value: 'male', label: 'Male' },
-            { value: 'female', label: 'Female' },
-            { value: 'other', label: 'Other' },
-            //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-          ]);
-        } else if (data) {
-          setGenderOptions(data);
-        }
-      } catch (error) {
-        Logger.error('Unexpected error fetching gender types', error as Error);
-        setGenderOptions([
-          { value: 'male', label: 'Male' },
-          { value: 'female', label: 'Female' },
-          { value: 'other', label: 'Other' },
-          //{ value: 'prefer_not_to_say', label: 'Prefer not to say' },
-        ]);
+  const validateLastName = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Last name is required';
+    }
+    return undefined;
+  };
+
+  const checkUsernameUniqueness = useCallback(async (username: string) => {
+    if (!username.trim()) return;
+
+    setUsernameStatus('checking');
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      let query = supabase
+        .from('profile')
+        .select('display_name')
+        .ilike('display_name', username.trim());
+
+      if (currentUser) {
+        query = query.neq('id', currentUser.id);
       }
-    };
 
-    fetchGenderOptions();
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error('Username check error:', error);
+        setUsernameStatus('idle');
+      } else if (data) {
+        setUsernameStatus('invalid');
+      } else {
+        setUsernameStatus('valid');
+      }
+    } catch {
+      setUsernameStatus('idle');
+    }
   }, []);
 
+  const validateUsernameField = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Username is required';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    return undefined;
+  };
+
+  const validateDateOfBirth = (date: Date | null): string | undefined => {
+    if (!date) {
+      return 'Date of birth is required';
+    }
+    if (date > minimumDateOfBirth) {
+      return `You must be at least ${MINIMUM_AGE} years old`;
+    }
+    return undefined;
+  };
+
+  const validatePhoneNumber = (value: string): string | undefined => {
+    if (!value.trim()) {
+      return 'Phone number is required';
+    }
+    // Basic phone validation - at least 8 digits
+    const digitsOnly = value.replace(/\D/g, '');
+    if (digitsOnly.length < 8) {
+      return 'Please enter a valid phone number';
+    }
+    return undefined;
+  };
+
+  const clearFieldError = (field: keyof FieldErrors) => {
+    setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
   const handleFirstNameChange = (text: string) => {
-    onUpdateFormData({ firstName: validateFullName(text) });
+    const validatedText = validateFullName(text);
+    onUpdateFormData({ firstName: validatedText });
+    if (fieldErrors.firstName) {
+      clearFieldError('firstName');
+    }
+  };
+
+  const handleFirstNameBlur = () => {
+    const error = validateFirstName(formData.firstName);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, firstName: error }));
+    }
   };
 
   const handleLastNameChange = (text: string) => {
-    onUpdateFormData({ lastName: validateFullName(text) });
+    const validatedText = validateFullName(text);
+    onUpdateFormData({ lastName: validatedText });
+    if (fieldErrors.lastName) {
+      clearFieldError('lastName');
+    }
+  };
+
+  const handleLastNameBlur = () => {
+    const error = validateLastName(formData.lastName);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, lastName: error }));
+    }
   };
 
   const handleUsernameChange = (text: string) => {
-    onUpdateFormData({ username: validateUsername(text) });
+    const validatedText = validateUsername(text);
+    onUpdateFormData({ username: validatedText });
+
+    // Clear errors
+    if (fieldErrors.username) {
+      clearFieldError('username');
+    }
+    setUsernameStatus('idle');
+
+    // Debounced uniqueness check
+    if (usernameCheckTimeout) {
+      clearTimeout(usernameCheckTimeout);
+    }
+
+    if (validatedText.length >= 3) {
+      const timeout = setTimeout(() => {
+        checkUsernameUniqueness(validatedText);
+      }, 500);
+      setUsernameCheckTimeout(timeout);
+    }
+  };
+
+  const handleUsernameBlur = () => {
+    const error = validateUsernameField(formData.username);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, username: error }));
+    }
   };
 
   const handlePhoneNumberChange = useCallback(
     (fullNumber: string, _countryCode: string, _localNumber: string) => {
       onUpdateFormData({ phoneNumber: fullNumber });
+      if (fieldErrors.phoneNumber) {
+        clearFieldError('phoneNumber');
+      }
     },
-    [onUpdateFormData]
+    [onUpdateFormData, fieldErrors.phoneNumber]
   );
+
+  const handlePhoneNumberBlur = () => {
+    const error = validatePhoneNumber(formData.phoneNumber);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, phoneNumber: error }));
+    }
+  };
 
   // Get the current date value for the picker
   const dateValue = formData.dateOfBirth || new Date(2000, 0, 1);
@@ -160,7 +312,14 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
   };
 
   const handleDateDone = () => {
-    onUpdateFormData({ dateOfBirth: tempDate });
+    // Validate age before saving
+    const error = validateDateOfBirth(tempDate);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, dateOfBirth: error }));
+    } else {
+      onUpdateFormData({ dateOfBirth: tempDate });
+      clearFieldError('dateOfBirth');
+    }
     setShowDatePicker(false);
     lightHaptic();
   };
@@ -170,13 +329,35 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     setShowDatePicker(false);
   };
 
+  const { locale: appLocale } = useLocale();
+
   const formatDate = (date: Date | null): string => {
     if (!date) return '';
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    try {
+      return new Intl.DateTimeFormat(appLocale as Locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }).format(date);
+    } catch {
+      // Fallback to US format if Intl not available
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    }
   };
+
+  const scrollToField = useCallback((fieldKey: string) => {
+    const delay = Platform.OS === 'ios' ? 300 : 100;
+    setTimeout(() => {
+      const y = fieldYOffsets.current[fieldKey];
+      if (y !== undefined && scrollViewRef.current) {
+        const targetY = Math.max(0, y - SCROLL_TO_FIELD_TOP_PADDING);
+        scrollViewRef.current.scrollTo({ y: targetY, animated: true });
+      }
+    }, delay);
+  }, []);
 
   return (
     <BottomSheetScrollView
@@ -184,7 +365,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       style={styles.container}
       contentContainerStyle={[
         styles.contentContainer,
-        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : spacingPixels[8] }
+        { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : spacingPixels[8] },
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -192,7 +373,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
     >
       {/* Title */}
       <Text size="xl" weight="bold" color={colors.text} style={styles.title}>
-        {t('onboarding.personalInfoStep.title' as TranslationKey)}
+        {t('onboarding.personalInfoStep.title')}
       </Text>
 
       {/* Profile Picture */}
@@ -207,144 +388,139 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         {formData.profileImage ? (
           <Image source={{ uri: formData.profileImage }} style={styles.profileImage} />
         ) : (
-          <Ionicons name="camera" size={32} color={colors.buttonActive} />
+          <Ionicons name="camera-outline" size={32} color={colors.buttonActive} />
         )}
       </TouchableOpacity>
+      <Text size="sm" color={colors.textSecondary} style={styles.photoLabel}>
+        {formData.profileImage
+          ? t('profile.changePhoto' as TranslationKey)
+          : t('chat.addPhoto' as TranslationKey)}
+      </Text>
 
       {/* First Name */}
-      <View ref={firstNameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={firstNameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.firstName = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.firstName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.firstName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.firstNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.firstName}
           onChangeText={handleFirstNameChange}
-          onFocus={() => {
-            // Scroll to first name field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              firstNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onBlur={handleFirstNameBlur}
+          onFocus={() => scrollToField('firstName')}
           style={[
             styles.input,
             {
               backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
+              borderColor: fieldErrors.firstName ? colors.error : colors.inputBorder,
               color: colors.text,
             },
           ]}
         />
+        {fieldErrors.firstName && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.firstName}
+          </Text>
+        )}
       </View>
 
       {/* Last Name */}
-      <View ref={lastNameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={lastNameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.lastName = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.lastName' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.lastName')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder' as TranslationKey)}
+          placeholder={t('onboarding.personalInfoStep.lastNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={formData.lastName}
           onChangeText={handleLastNameChange}
-          onFocus={() => {
-            // Scroll to last name field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              lastNameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
+          onBlur={handleLastNameBlur}
+          onFocus={() => scrollToField('lastName')}
           style={[
             styles.input,
             {
               backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
+              borderColor: fieldErrors.lastName ? colors.error : colors.inputBorder,
               color: colors.text,
             },
           ]}
         />
+        {fieldErrors.lastName && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.lastName}
+          </Text>
+        )}
       </View>
 
       {/* Username */}
-      <View ref={usernameFieldRef} style={styles.inputContainer}>
+      <View
+        ref={usernameFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.username = e.nativeEvent.layout.y;
+        }}
+      >
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.username' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.username')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <BottomSheetTextInput
-          placeholder={t('onboarding.personalInfoStep.usernamePlaceholder' as TranslationKey)}
-          placeholderTextColor={colors.textMuted}
-          value={formData.username}
-          onChangeText={handleUsernameChange}
-          maxLength={10}
-          onFocus={() => {
-            // Scroll to username field when focused to ensure it's visible above keyboard
-            // Use a delay to allow keyboard animation to start
-            setTimeout(() => {
-              usernameFieldRef.current?.measureLayout(
-                scrollViewRef.current as unknown as number,
-                (x: number, y: number, _width: number, _height: number) => {
-                  // Scroll to show the field with extra padding above it (200px)
-                  scrollViewRef.current?.scrollTo({
-                    y: Math.max(0, y - 200),
-                    animated: true,
-                  });
-                },
-                () => {
-                  // Fallback: scroll to end if measure fails
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }
-              );
-            }, 300);
-          }}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: colors.inputBorder,
-              color: colors.text,
-            },
-          ]}
-        />
+        <View style={styles.inputWithStatus}>
+          <BottomSheetTextInput
+            placeholder={t('onboarding.personalInfoStep.usernamePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={formData.username}
+            onChangeText={handleUsernameChange}
+            onBlur={handleUsernameBlur}
+            maxLength={10}
+            onFocus={() => scrollToField('username')}
+            style={[
+              styles.input,
+              styles.inputWithIcon,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: fieldErrors.username ? colors.error : colors.inputBorder,
+                color: colors.text,
+              },
+            ]}
+          />
+          {usernameStatus === 'checking' && (
+            <ActivityIndicator size="small" color={colors.buttonActive} style={styles.statusIcon} />
+          )}
+          {usernameStatus === 'valid' && (
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.buttonActive}
+              style={styles.statusIcon}
+            />
+          )}
+          {usernameStatus === 'invalid' && (
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.error}
+              style={styles.statusIcon}
+            />
+          )}
+        </View>
         <View style={styles.inputFooter}>
-          <Text size="xs" color={colors.textSecondary}>
-            {t('onboarding.personalInfoStep.usernameHelper' as TranslationKey)}
+          <Text size="xs" color={fieldErrors.username ? colors.error : colors.textSecondary}>
+            {fieldErrors.username || t('onboarding.personalInfoStep.usernameHelper')}
           </Text>
           <Text size="xs" color={colors.textSecondary}>
             {formData.username.length}/10
@@ -355,16 +531,17 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
       {/* Date of Birth */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.dateOfBirth')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
         <TouchableOpacity
           style={[
             styles.input,
             styles.dateInput,
-            { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: fieldErrors.dateOfBirth ? colors.error : colors.inputBorder,
+            },
           ]}
           onPress={() => {
             lightHaptic();
@@ -375,11 +552,14 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
         >
           <Ionicons name="calendar-outline" size={20} color={colors.buttonActive} />
           <Text color={formData.dateOfBirth ? colors.text : colors.textMuted} style={{ flex: 1 }}>
-            {formData.dateOfBirth
-              ? formatDate(formData.dateOfBirth)
-              : t('common.select' as TranslationKey)}
+            {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : t('common.select')}
           </Text>
         </TouchableOpacity>
+        {fieldErrors.dateOfBirth && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.dateOfBirth}
+          </Text>
+        )}
       </View>
 
       {/* iOS Date Picker Modal */}
@@ -401,15 +581,15 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
               <View style={[styles.datePickerHeader, { borderBottomColor: colors.border }]}>
                 <TouchableOpacity onPress={handleDateCancel} style={styles.pickerHeaderButton}>
                   <Text size="base" color={colors.textMuted}>
-                    {t('common.cancel' as TranslationKey)}
+                    {t('common.cancel')}
                   </Text>
                 </TouchableOpacity>
                 <Text size="base" weight="semibold" color={colors.text}>
-                  {t('onboarding.personalInfoStep.dateOfBirth' as TranslationKey)}
+                  {t('onboarding.personalInfoStep.dateOfBirth')}
                 </Text>
                 <TouchableOpacity onPress={handleDateDone} style={styles.pickerHeaderButton}>
                   <Text size="base" weight="semibold" color={colors.buttonActive}>
-                    {t('common.done' as TranslationKey)}
+                    {t('common.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -418,8 +598,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 mode="date"
                 display="spinner"
                 onChange={handleDateChange}
-                maximumDate={new Date()}
-                minimumDate={new Date(1900, 0, 1)}
+                maximumDate={minimumDateOfBirth}
+                minimumDate={minimumDateSelectable}
                 themeVariant={isDark ? 'dark' : 'light'}
                 style={styles.iosPicker}
               />
@@ -435,29 +615,23 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
           mode="date"
           display="default"
           onChange={handleDateChange}
-          maximumDate={new Date()}
-          minimumDate={new Date(1900, 0, 1)}
+          maximumDate={minimumDateOfBirth}
+          minimumDate={minimumDateSelectable}
         />
       )}
 
-      {/* Gender - Horizontal Scrollable Options */}
+      {/* Gender - Full-width Options */}
       <View style={styles.inputContainer}>
         <Text size="sm" weight="semibold" color={colors.text} style={styles.inputLabel}>
-          {t('onboarding.personalInfoStep.gender' as TranslationKey)}{' '}
-          <Text color={colors.error}>
-            {t('onboarding.personalInfoStep.required' as TranslationKey)}
-          </Text>
+          {t('onboarding.personalInfoStep.gender')}{' '}
+          <Text color={colors.error}>{t('onboarding.personalInfoStep.required')}</Text>
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.genderRow}
-        >
-          {genderOptions.map(option => {
-            const isSelected = formData.gender === option.value;
+        <View style={styles.genderRow}>
+          {GENDER_VALUES.map(value => {
+            const isSelected = formData.gender === value;
             return (
               <TouchableOpacity
-                key={option.value}
+                key={value}
                 style={[
                   styles.genderOption,
                   {
@@ -467,7 +641,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                 ]}
                 onPress={() => {
                   selectionHaptic();
-                  onUpdateFormData({ gender: option.value });
+                  onUpdateFormData({ gender: value });
                 }}
                 activeOpacity={0.7}
               >
@@ -476,43 +650,48 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({
                   weight={isSelected ? 'semibold' : 'regular'}
                   color={isSelected ? colors.buttonTextActive : colors.text}
                 >
-                  {option.label}
+                  {t(`profile.genderValues.${value}`)}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
 
       {/* Phone Number */}
-      <View ref={phoneNumberFieldRef} style={styles.inputContainer}>
+      <View
+        ref={phoneNumberFieldRef}
+        style={styles.inputContainer}
+        onLayout={e => {
+          fieldYOffsets.current.phoneNumber = e.nativeEvent.layout.y;
+        }}
+      >
         <PhoneInput
           value={formData.phoneNumber}
           onChangePhone={handlePhoneNumberChange}
-          label={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
-          placeholder={t('onboarding.personalInfoStep.phoneNumber' as TranslationKey)}
+          label={t('onboarding.personalInfoStep.phoneNumber')}
+          placeholder={t('onboarding.personalInfoStep.phoneNumber')}
           required
-          maxLength={15}
-          showCharCount
           colors={{
             text: colors.text,
             textMuted: colors.textMuted,
             textSecondary: colors.textSecondary,
             background: colors.background,
             inputBackground: colors.inputBackground,
-            inputBorder: colors.inputBorder,
+            inputBorder: fieldErrors.phoneNumber ? colors.error : colors.inputBorder,
             primary: colors.buttonActive,
             error: colors.error,
             card: colors.cardBackground,
           }}
-          onFocus={() => {
-            // Scroll to bottom to ensure phone field is visible above keyboard
-            setTimeout(() => {
-              scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-          }}
+          onFocus={() => scrollToField('phoneNumber')}
+          onBlur={handlePhoneNumberBlur}
           TextInputComponent={BottomSheetTextInput}
         />
+        {fieldErrors.phoneNumber && (
+          <Text size="xs" color={colors.error} style={styles.errorText}>
+            {fieldErrors.phoneNumber}
+          </Text>
+        )}
       </View>
     </BottomSheetScrollView>
   );
@@ -548,8 +727,16 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 40,
   },
+  photoLabel: {
+    textAlign: 'center',
+    marginTop: -spacingPixels[4],
+    marginBottom: spacingPixels[6],
+  },
   inputContainer: {
     marginBottom: spacingPixels[3],
+  },
+  errorText: {
+    marginTop: spacingPixels[1],
   },
   inputLabel: {
     marginBottom: spacingPixels[2],
@@ -571,17 +758,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacingPixels[1],
   },
+  inputWithStatus: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputWithIcon: {
+    flex: 1,
+    paddingRight: spacingPixels[10],
+  },
+  statusIcon: {
+    position: 'absolute',
+    right: spacingPixels[3],
+  },
   genderRow: {
     flexDirection: 'row',
     gap: spacingPixels[2],
-    paddingRight: spacingPixels[2],
   },
   genderOption: {
+    flex: 1,
     paddingVertical: spacingPixels[3],
     paddingHorizontal: spacingPixels[4],
     borderRadius: radiusPixels.lg,
     borderWidth: 1,
-    minWidth: 70,
     alignItems: 'center',
   },
   modalOverlay: {

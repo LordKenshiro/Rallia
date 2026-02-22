@@ -3,42 +3,35 @@
  * Bottom sheet for conversation actions (pin, mute, archive, delete)
  */
 
-import React, { memo } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from 'react-native';
+import React, { memo, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
-import { spacingPixels, fontSizePixels, primary, neutral, status } from '@rallia/design-system';
-import type { ConversationPreview } from '@rallia/shared-services';
+import {
+  spacingPixels,
+  fontSizePixels,
+  primary,
+  neutral,
+  status,
+  radiusPixels,
+} from '@rallia/design-system';
 
-interface ConversationActionsSheetProps {
-  visible: boolean;
-  conversation: ConversationPreview | null;
-  onClose: () => void;
-  onTogglePin: () => void;
-  onToggleMute: () => void;
-  onToggleArchive: () => void;
-  onLeave?: () => void;
-}
+function ConversationActionsSheetComponent({ payload }: SheetProps<'conversation-actions'>) {
+  const conversation = payload?.conversation ?? null;
+  const onTogglePin = payload?.onTogglePin;
+  const onToggleMute = payload?.onToggleMute;
+  const onToggleArchive = payload?.onToggleArchive;
+  const onLeave = payload?.onLeave;
 
-function ConversationActionsSheetComponent({
-  visible,
-  conversation,
-  onClose,
-  onTogglePin,
-  onToggleMute,
-  onToggleArchive,
-  onLeave,
-}: ConversationActionsSheetProps) {
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+
+  const handleClose = useCallback(() => {
+    SheetManager.hide('conversation-actions');
+  }, []);
 
   if (!conversation) return null;
 
@@ -48,10 +41,10 @@ function ConversationActionsSheetComponent({
   const isGroup = conversation.conversation_type === 'group';
 
   // Get conversation name for display
-  const conversationName = 
+  const conversationName =
     conversation.conversation_type === 'direct' && conversation.other_participant
       ? `${conversation.other_participant.first_name}${conversation.other_participant.last_name ? ' ' + conversation.other_participant.last_name : ''}`
-      : conversation.title || t('chat.actions.conversation' as any);
+      : conversation.title || t('chat.actions.conversation');
 
   type ActionItem = {
     id: string;
@@ -65,133 +58,134 @@ function ConversationActionsSheetComponent({
   const actions: ActionItem[] = [
     {
       id: 'pin',
-      label: isPinned ? t('chat.actions.unpin' as any) : t('chat.actions.pin' as any),
+      label: isPinned ? t('chat.actions.unpin') : t('chat.actions.pin'),
       icon: isPinned ? 'pin-outline' : 'pin',
       onPress: () => {
-        onTogglePin();
-        onClose();
+        onTogglePin?.();
+        handleClose();
       },
     },
     {
       id: 'mute',
-      label: isMuted ? t('chat.actions.unmute' as any) : t('chat.actions.mute' as any),
+      label: isMuted ? t('chat.actions.unmute') : t('chat.actions.mute'),
       icon: isMuted ? 'notifications' : 'notifications-off',
       onPress: () => {
-        onToggleMute();
-        onClose();
+        onToggleMute?.();
+        handleClose();
       },
     },
     {
       id: 'archive',
-      label: isArchived ? t('chat.actions.unarchive' as any) : t('chat.actions.archive' as any),
+      label: isArchived ? t('chat.actions.unarchive') : t('chat.actions.archive'),
       icon: isArchived ? 'archive-outline' : 'archive',
       onPress: () => {
-        onToggleArchive();
-        onClose();
+        onToggleArchive?.();
+        handleClose();
       },
     },
     {
       id: 'leave',
-      label: t('chat.actions.leaveGroup' as any),
+      label: t('chat.actions.leaveGroup'),
       icon: 'exit',
       onPress: () => {
         onLeave?.();
-        onClose();
+        handleClose();
       },
       destructive: true,
       show: isGroup && !!onLeave,
     },
   ];
 
-  const visibleActions = actions.filter((action) => action.show !== false);
+  const visibleActions = actions.filter(action => action.show !== false);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[
+        styles.sheetBackground,
+        { backgroundColor: isDark ? colors.card : '#FFFFFF' },
+      ]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable 
-          style={[
-            styles.sheet,
-            { backgroundColor: isDark ? colors.card : '#FFFFFF' }
-          ]}
-          onPress={(e) => e.stopPropagation()}
-        >
-          {/* Conversation Name Header */}
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <Text 
-              style={[styles.headerText, { color: colors.text }]}
-              numberOfLines={1}
+      <View style={styles.sheet}>
+        {/* Conversation Name Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerText, { color: colors.text }]} numberOfLines={1}>
+            {conversationName}
+          </Text>
+        </View>
+
+        {/* Actions */}
+        <View style={styles.actionsContainer}>
+          {visibleActions.map((action, index) => (
+            <TouchableOpacity
+              key={action.id}
+              style={[
+                styles.actionItem,
+                index < visibleActions.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border,
+                },
+              ]}
+              onPress={action.onPress}
+              activeOpacity={0.7}
             >
-              {conversationName}
-            </Text>
-          </View>
-
-          {/* Actions */}
-          <View style={styles.actionsContainer}>
-            {visibleActions.map((action, index) => (
-              <TouchableOpacity
-                key={action.id}
+              <Ionicons
+                name={action.icon}
+                size={22}
+                color={action.destructive ? status.error.DEFAULT : primary[500]}
+                style={styles.actionIcon}
+              />
+              <Text
                 style={[
-                  styles.actionItem,
-                  index < visibleActions.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                  styles.actionLabel,
+                  { color: action.destructive ? status.error.DEFAULT : colors.text },
                 ]}
-                onPress={action.onPress}
-                activeOpacity={0.7}
               >
-                <Ionicons
-                  name={action.icon}
-                  size={22}
-                  color={action.destructive ? status.error.DEFAULT : primary[500]}
-                  style={styles.actionIcon}
-                />
-                <Text
-                  style={[
-                    styles.actionLabel,
-                    { color: action.destructive ? status.error.DEFAULT : colors.text },
-                  ]}
-                >
-                  {action.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                {action.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          {/* Cancel Button */}
+        {/* Sticky Footer - Cancel */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.cancelButton, { backgroundColor: isDark ? neutral[800] : neutral[100] }]}
-            onPress={onClose}
+            onPress={handleClose}
             activeOpacity={0.7}
           >
-            <Text style={[styles.cancelText, { color: colors.text }]}>
-              {t('common.cancel' as any)}
+            <Text size="lg" weight="semibold" color={colors.text}>
+              {t('common.cancel')}
             </Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+      </View>
+    </ActionSheet>
   );
 }
 
-export const ConversationActionsSheet = memo(ConversationActionsSheetComponent);
+export const ConversationActionsActionSheet = memo(ConversationActionsSheetComponent);
+
+// Keep old export for backwards compatibility during migration
+export const ConversationActionsSheet = ConversationActionsActionSheet;
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  sheetBackground: {
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
+  },
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
   },
   sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingTop: spacingPixels[4],
-    paddingBottom: spacingPixels[8],
-    paddingHorizontal: spacingPixels[4],
   },
   header: {
+    paddingHorizontal: spacingPixels[5],
     paddingBottom: spacingPixels[3],
     marginBottom: spacingPixels[2],
     borderBottomWidth: 1,
@@ -202,6 +196,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionsContainer: {
+    paddingHorizontal: spacingPixels[4],
     marginBottom: spacingPixels[3],
   },
   actionItem: {
@@ -216,13 +211,18 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: fontSizePixels.base,
   },
-  cancelButton: {
-    borderRadius: 12,
-    paddingVertical: spacingPixels[3],
-    alignItems: 'center',
+  footer: {
+    paddingTop: spacingPixels[4],
+    paddingBottom: spacingPixels[4],
+    borderTopWidth: 1,
   },
-  cancelText: {
-    fontSize: fontSizePixels.base,
-    fontWeight: '600',
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacingPixels[4],
+    paddingVertical: spacingPixels[4],
+    borderRadius: radiusPixels.lg,
+    gap: spacingPixels[2],
   },
 });

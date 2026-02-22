@@ -82,6 +82,8 @@ function getDefaultValues(sportId: string, timezone: string): MatchFormSchemaDat
     minRatingScoreId: undefined,
     preferredOpponentGender: undefined,
     visibility: 'public',
+    visibleInGroups: true,
+    visibleInCommunities: true,
     joinMode: 'direct',
     notes: undefined,
   };
@@ -209,6 +211,8 @@ export function matchToFormData(
       | 'any'
       | undefined,
     visibility: (match.visibility as 'public' | 'private') || 'public',
+    visibleInGroups: match.visible_in_groups ?? true,
+    visibleInCommunities: match.visible_in_communities ?? true,
     joinMode: (match.join_mode as 'direct' | 'request') || 'direct',
     notes: match.notes || undefined,
   };
@@ -379,6 +383,8 @@ export function useMatchForm(options: UseMatchFormOptions): UseMatchFormReturn {
             costSplitType: values.costSplitType,
             estimatedCost: values.estimatedCost,
             visibility: values.visibility,
+            visibleInGroups: values.visibleInGroups,
+            visibleInCommunities: values.visibleInCommunities,
             joinMode: values.joinMode,
             notes: values.notes,
           } as Step3FormData;
@@ -431,6 +437,8 @@ function getStepFields(step: 1 | 2 | 3): (keyof MatchFormSchemaData)[] {
         'costSplitType',
         'estimatedCost',
         'visibility',
+        'visibleInGroups',
+        'visibleInCommunities',
         'joinMode',
         'notes',
       ];

@@ -1,33 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
-import { Overlay, Text, Heading, Button, useToast } from '@rallia/shared-components';
+import ActionSheet, { SheetManager, SheetProps } from 'react-native-actions-sheet';
+import { Text, Button, useToast } from '@rallia/shared-components';
 import { useThemeStyles, useTranslation } from '../../../hooks';
 import { lightHaptic, mediumHaptic } from '@rallia/shared-utils';
-import { 
-  uploadRatingProofFile, 
+import {
+  uploadRatingProofFile,
   validateProofFile,
   getMaxFileSizes,
   getSupportedVideoFormats,
 } from '../../../services/ratingProofUpload';
 import { isBackblazeConfigured, getBackblazeConfigStatus } from '../../../services/backblazeUpload';
 import { Logger, supabase } from '@rallia/shared-services';
-import {
-  spacingPixels,
-  radiusPixels,
-  fontSizePixels,
-} from '@rallia/design-system';
+import { spacingPixels, radiusPixels, fontSizePixels } from '@rallia/design-system';
 
 interface VideoProofOverlayProps {
   visible: boolean;
@@ -38,12 +33,14 @@ interface VideoProofOverlayProps {
 
 const MAX_VIDEO_DURATION_SECONDS = 300; // 5 minutes
 
-const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
-  visible,
-  onClose,
-  onSuccess,
-  playerRatingScoreId,
-}) => {
+export function VideoProofActionSheet({ payload }: SheetProps<'video-proof'>) {
+  const onClose = () => {
+    if (isSubmitting) return;
+    resetForm();
+    SheetManager.hide('video-proof');
+  };
+  const onSuccess = payload?.onSuccess;
+  const playerRatingScoreId = payload?.playerRatingScoreId || '';
   const { colors } = useThemeStyles();
   const { t } = useTranslation();
   const toast = useToast();
@@ -67,18 +64,21 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
     setUploadProgress(0);
   };
 
-  const handleClose = () => {
-    if (isSubmitting) return;
-    resetForm();
-    onClose();
-  };
+  // Reset form when sheet closes
+  useEffect(() => {
+    return () => {
+      if (!isSubmitting) {
+        resetForm();
+      }
+    };
+  }, [isSubmitting]);
 
   const handleVideoSelected = (
     uri: string,
     fileName: string,
     fileSize: number,
     mimeType: string,
-    duration?: number,
+    duration?: number
   ) => {
     // Validate file
     const validation = validateProofFile(fileName, fileSize, 'video');
@@ -176,7 +176,9 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
 
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
@@ -205,8 +207,8 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
       if (result.success) {
         toast.success(t('profile.ratingProofs.upload.success'));
         resetForm();
-        onSuccess();
-        onClose();
+        onSuccess?.();
+        SheetManager.hide('video-proof');
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -234,24 +236,41 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
   const supportedFormats = getSupportedVideoFormats().join(', ').toUpperCase();
 
   return (
-    <Overlay visible={visible} onClose={handleClose} type="bottom">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
+    <ActionSheet
+      gestureEnabled
+      containerStyle={[styles.sheetBackground, { backgroundColor: colors.card }]}
+      indicatorStyle={[styles.handleIndicator, { backgroundColor: colors.border }]}
+    >
+      <View style={styles.modalContent}>
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerCenter}>
+            <Text
+              weight="semibold"
+              size="lg"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {t('profile.ratingProofs.proofTypes.video.title')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} disabled={isSubmitting}>
+            <Ionicons name="close-outline" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Content */}
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.container}
+          style={styles.scrollContent}
+          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
+          <View style={styles.iconHeaderContainer}>
             <View style={[styles.iconHeader, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name="videocam-outline" size={32} color={colors.primary} />
             </View>
-            <Heading level={3} color={colors.text} style={styles.title}>
-              {t('profile.ratingProofs.proofTypes.video.title')}
-            </Heading>
             <Text size="sm" color={colors.textMuted} style={styles.subtitle}>
               {t('profile.ratingProofs.proofTypes.video.description')}
             </Text>
@@ -340,7 +359,7 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
                   onPress={handleRemoveVideo}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="close" size={20} color="#fff" />
+                  <Ionicons name="close-outline" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
               <View style={styles.videoInfo}>
@@ -375,7 +394,11 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
             <TextInput
               style={[
                 styles.textInput,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={title}
               onChangeText={setTitle}
@@ -396,7 +419,11 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
               style={[
                 styles.textInput,
                 styles.textArea,
-                { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text },
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
               ]}
               value={description}
               onChangeText={setDescription}
@@ -409,7 +436,10 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
               editable={!isSubmitting}
             />
           </View>
+        </ScrollView>
 
+        {/* Sticky Footer */}
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           {/* Upload Progress */}
           {isSubmitting && (
             <View style={styles.progressContainer}>
@@ -422,14 +452,12 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
                 />
               </View>
               <Text size="xs" color={colors.textMuted} style={styles.progressText}>
-                {uploadProgress < 100 
+                {uploadProgress < 100
                   ? `${t('profile.ratingProofs.upload.uploading')} ${uploadProgress}%`
                   : t('profile.ratingProofs.upload.processing')}
               </Text>
             </View>
           )}
-
-          {/* Submit Button */}
           <Button
             variant="primary"
             onPress={handleSubmit}
@@ -439,8 +467,13 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
             {isSubmitting ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text size="base" weight="semibold" color={colors.primaryForeground} style={styles.loadingText}>
-                  {uploadProgress < 100 
+                <Text
+                  size="base"
+                  weight="semibold"
+                  color={colors.primaryForeground}
+                  style={styles.loadingText}
+                >
+                  {uploadProgress < 100
                     ? t('profile.ratingProofs.upload.uploading')
                     : t('profile.ratingProofs.upload.processing')}
                 </Text>
@@ -449,25 +482,82 @@ const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
               t('profile.ratingProofs.form.submit')
             )}
           </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Overlay>
+        </View>
+      </View>
+    </ActionSheet>
   );
+}
+
+// Keep old export for backwards compatibility during migration
+const VideoProofOverlay: React.FC<VideoProofOverlayProps> = ({
+  visible,
+  onClose,
+  onSuccess,
+  playerRatingScoreId,
+}) => {
+  useEffect(() => {
+    if (visible) {
+      SheetManager.show('video-proof', {
+        payload: {
+          onSuccess,
+          playerRatingScoreId,
+        },
+      });
+    }
+  }, [visible, onSuccess, playerRatingScoreId]);
+
+  useEffect(() => {
+    if (!visible) {
+      SheetManager.hide('video-proof');
+    }
+  }, [visible]);
+
+  return null;
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
+  sheetBackground: {
     flex: 1,
-    maxHeight: '90%',
+    borderTopLeftRadius: radiusPixels['2xl'],
+    borderTopRightRadius: radiusPixels['2xl'],
   },
-  scrollView: {
+  handleIndicator: {
+    width: spacingPixels[10],
+    height: 4,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  modalContent: {
     flex: 1,
-  },
-  container: {
-    paddingHorizontal: spacingPixels[4],
-    paddingBottom: spacingPixels[6],
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacingPixels[4],
+    borderBottomWidth: 1,
+    position: 'relative',
+    minHeight: 56,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacingPixels[12],
+  },
+  closeButton: {
+    padding: spacingPixels[1],
+    position: 'absolute',
+    right: spacingPixels[4],
+    zIndex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: spacingPixels[4],
+    paddingBottom: spacingPixels[6],
+  },
+  iconHeaderContainer: {
     alignItems: 'center',
     marginBottom: spacingPixels[4],
   },
@@ -571,8 +661,12 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 80,
   },
+  footer: {
+    padding: spacingPixels[4],
+    borderTopWidth: 1,
+  },
   progressContainer: {
-    marginBottom: spacingPixels[4],
+    marginBottom: spacingPixels[3],
   },
   progressBar: {
     height: 6,
@@ -588,7 +682,7 @@ const styles = StyleSheet.create({
     marginTop: spacingPixels[2],
   },
   submitButton: {
-    marginTop: spacingPixels[2],
+    width: '100%',
   },
   loadingContainer: {
     flexDirection: 'row',

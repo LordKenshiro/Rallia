@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useFocusEffect } from '@react-navigation/native';
@@ -17,6 +11,7 @@ import { supabase, Logger } from '@rallia/shared-services';
 import { usePlayPreferences, useFavoriteFacilities } from '@rallia/shared-hooks';
 import { MATCH_DURATION_ENUM_LABELS } from '@rallia/shared-types';
 import { useThemeStyles, useTranslation, type TranslationKey } from '../hooks';
+import { useSport } from '../context';
 import { useUserLocation } from '../hooks/useUserLocation';
 import {
   spacingPixels,
@@ -55,12 +50,7 @@ const getCertificationColors = (status: 'self_declared' | 'certified' | 'dispute
 
 import { mediumHaptic, selectionHaptic } from '@rallia/shared-utils';
 import { withTimeout, getNetworkErrorMessage } from '../utils/networkTimeout';
-import TennisRatingOverlay from '../features/onboarding/components/overlays/TennisRatingOverlay';
-import PickleballRatingOverlay from '../features/onboarding/components/overlays/PickleballRatingOverlay';
-import PeerRatingRequestOverlay from '../features/sport-profile/components/PeerRatingRequestOverlay';
-import ReferenceRequestOverlay from '../features/sport-profile/components/ReferenceRequestOverlay';
-import { TennisPreferencesOverlay } from '../features/sport-profile/components/TennisPreferencesOverlay';
-import { PickleballPreferencesOverlay } from '../features/sport-profile/components/PickleballPreferencesOverlay';
+import { SheetManager } from 'react-native-actions-sheet';
 import { CertificationSection } from '../features/ratings/components';
 
 type SportProfileRouteProp = RouteProp<RootStackParamList, 'SportProfile'>;
@@ -92,6 +82,7 @@ const SportProfile = () => {
   const { sportId, sportName } = route.params;
   const { colors, isDark } = useThemeStyles();
   const { t } = useTranslation();
+  const { refetch: refetchSportContext } = useSport();
   const toast = useToast();
   const { location } = useUserLocation();
 
@@ -113,7 +104,9 @@ const SportProfile = () => {
   // Current-level proofs count (proofs matching current rating) - used for certification
   const [currentLevelProofsCount, setCurrentLevelProofsCount] = useState(0);
   const [referencesCount, setReferencesCount] = useState(0);
-  const [certificationStatus, setCertificationStatus] = useState<'self_declared' | 'certified' | 'disputed'>('self_declared');
+  const [certificationStatus, setCertificationStatus] = useState<
+    'self_declared' | 'certified' | 'disputed'
+  >('self_declared');
   const [peerEvaluationAverage, setPeerEvaluationAverage] = useState<number | undefined>(undefined);
   const [peerEvaluationCount, setPeerEvaluationCount] = useState<number>(0);
   const [preferences, setPreferences] = useState<PreferencesInfo>({
@@ -123,14 +116,13 @@ const SportProfile = () => {
     playingStyle: null,
     playAttributes: null,
   });
-  const [showTennisRatingOverlay, setShowTennisRatingOverlay] = useState(false);
-  const [showPickleballRatingOverlay, setShowPickleballRatingOverlay] = useState(false);
-  const [showPeerRatingRequestOverlay, setShowPeerRatingRequestOverlay] = useState(false);
-  const [showReferenceRequestOverlay, setShowReferenceRequestOverlay] = useState(false);
-  const [showPreferencesOverlay, setShowPreferencesOverlay] = useState(false);
 
   // Fetch user's favorite facilities
-  const { favorites: favoriteFacilities, loading: loadingFavorites, refetch: refetchFavorites } = useFavoriteFacilities(userId);
+  const {
+    favorites: favoriteFacilities,
+    loading: loadingFavorites,
+    refetch: refetchFavorites,
+  } = useFavoriteFacilities(userId);
 
   useEffect(() => {
     fetchSportProfileData();
@@ -140,18 +132,18 @@ const SportProfile = () => {
   // Refresh proof counts when returning to this screen
   const refreshProofCounts = useCallback(async () => {
     if (!playerRatingScoreId || !ratingInfo?.ratingScoreId) return;
-    
+
     // Fetch all proofs for this player_rating_score (total count)
     const { data: proofs, error } = await supabase
       .from('rating_proof')
       .select('rating_score_id')
       .eq('player_rating_score_id', playerRatingScoreId)
       .eq('is_active', true);
-    
+
     if (!error && proofs) {
       // Total count: all proofs for this sport
       setTotalProofsCount(proofs.length);
-      
+
       // Current-level count: only proofs matching current rating_score_id
       const currentLevelCount = proofs.filter(
         p => p.rating_score_id === ratingInfo.ratingScoreId
@@ -242,47 +234,54 @@ const SportProfile = () => {
       if (playerSportData) {
         setIsActive(playerSportData.is_active || false);
         setPlayerSportId(playerSportData.id);
-        
+
         // Fetch play style and attributes from junction tables
         const [playStyleResult, playAttributesResult] = await Promise.all([
           supabase
             .from('player_sport_play_style')
-            .select(`
+            .select(
+              `
               play_style:play_style_id (
                 id,
                 name,
                 description
               )
-            `)
+            `
+            )
             .eq('player_sport_id', playerSportData.id)
             .maybeSingle(),
           supabase
             .from('player_sport_play_attribute')
-            .select(`
+            .select(
+              `
               play_attribute:play_attribute_id (
                 id,
                 name,
                 description,
                 category
               )
-            `)
+            `
+            )
             .eq('player_sport_id', playerSportData.id),
         ]);
 
         // Extract play style name
-        const playStyleName = (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
-        
+        const playStyleName =
+          (playStyleResult.data?.play_style as { name?: string } | null)?.name || null;
+
         // Extract play attribute names
-        const playAttributeNames = playAttributesResult.data
-          ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
-          .filter((name): name is string => !!name) || null;
+        const playAttributeNames =
+          playAttributesResult.data
+            ?.map(item => (item.play_attribute as { name?: string } | null)?.name)
+            .filter((name): name is string => !!name) || null;
 
         setPreferences(prev => ({
           ...prev,
           matchDuration: playerSportData.preferred_match_duration || null,
           matchType: playerSportData.preferred_match_type || null,
           playingStyle: playStyleName,
-          playAttributes: playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
+          playAttributes:
+            playAttributeNames && playAttributeNames.length > 0 ? playAttributeNames : null,
         }));
       } else {
         setIsActive(false);
@@ -367,7 +366,7 @@ const SportProfile = () => {
           let totalCount = 0;
           let currentLevelCount = 0;
           const currentRatingScoreId = newRatingInfo.ratingScoreId;
-          
+
           if (ratingData.id) {
             // Fetch all proofs with their rating_score_id
             const { data: proofs, error: proofsError } = await supabase
@@ -375,12 +374,12 @@ const SportProfile = () => {
               .select('rating_score_id')
               .eq('player_rating_score_id', ratingData.id)
               .eq('is_active', true);
-            
+
             if (!proofsError && proofs) {
               // Total proofs count (for "Rating Proof" button in My Rating section)
               totalCount = proofs.length;
               setTotalProofsCount(totalCount);
-              
+
               // Current-level proofs count (proofs that match current rating_score_id)
               // Used for certification logic
               currentLevelCount = proofs.filter(
@@ -486,8 +485,8 @@ const SportProfile = () => {
         return itemSportId === sportId && source === 'self_reported';
       });
 
-      Logger.debug('existing_rating_check', { 
-        sportId, 
+      Logger.debug('existing_rating_check', {
+        sportId,
         existingId: existingSelfReportedRating?.id,
         existingRatingScoreId: existingSelfReportedRating?.rating_score_id,
       });
@@ -495,11 +494,11 @@ const SportProfile = () => {
       if (existingSelfReportedRating) {
         // UPDATE the existing record instead of deleting it
         // This preserves the player_rating_score_id and keeps all proofs linked!
-        Logger.debug('updating_existing_rating', { 
-          existingId: existingSelfReportedRating.id, 
+        Logger.debug('updating_existing_rating', {
+          existingId: existingSelfReportedRating.id,
           newRatingScoreId: ratingScoreId,
         });
-        
+
         const updateResult = await withTimeout(
           (async () =>
             supabase
@@ -522,10 +521,10 @@ const SportProfile = () => {
           });
           throw updateResult.error;
         }
-        
-        Logger.info('rating_updated', { 
-          ratingId: existingSelfReportedRating.id, 
-          ratingScoreId, 
+
+        Logger.info('rating_updated', {
+          ratingId: existingSelfReportedRating.id,
+          ratingScoreId,
           sportId,
         });
       } else {
@@ -550,15 +549,15 @@ const SportProfile = () => {
           });
           throw insertResult.error;
         }
-        
+
         Logger.info('rating_inserted', { ratingScoreId, sportId });
       }
 
       Logger.info('rating_save_complete', { ratingScoreId, sportId, sourceType: 'self_reported' });
 
       // Close overlays first
-      setShowTennisRatingOverlay(false);
-      setShowPickleballRatingOverlay(false);
+      SheetManager.hide('tennis-rating');
+      SheetManager.hide('pickleball-rating');
 
       // Clear current rating state to force refresh
       setRatingInfo(null);
@@ -604,6 +603,33 @@ const SportProfile = () => {
         return;
       }
 
+      // Check if user is trying to deactivate their last active sport
+      if (!newValue && playerSportId) {
+        const { count, error: countError } = await withTimeout(
+          (async () =>
+            supabase
+              .from('player_sport')
+              .select('id', { count: 'exact', head: true })
+              .eq('player_id', user.id)
+              .eq('is_active', true))(),
+          10000,
+          'Failed to check active sports - connection timeout'
+        );
+
+        if (countError) {
+          Logger.error('Failed to count active sports', countError as Error, {
+            playerId: user.id,
+          });
+          throw countError;
+        }
+
+        // If user only has 1 active sport (this one), prevent deactivation
+        if (count !== null && count <= 1) {
+          Alert.alert(t('alerts.cannotDeactivate'), t('alerts.mustHaveOneSport'));
+          return;
+        }
+      }
+
       if (playerSportId) {
         // Entry exists: Update is_active field
         const updateResult = await withTimeout(
@@ -626,6 +652,9 @@ const SportProfile = () => {
           : t('alerts.sportDeactivated', { sport: sportName });
 
         toast.success(message);
+
+        // Refresh SportContext to update userSports across the app
+        refetchSportContext();
 
         // Refresh data if activated
         if (newValue) {
@@ -661,6 +690,9 @@ const SportProfile = () => {
           const message = t('alerts.sportAdded', { sport: sportName });
           toast.success(message);
 
+          // Refresh SportContext to update userSports across the app
+          refetchSportContext();
+
           // Refresh data to load ratings and preferences
           await fetchSportProfileData();
         } else {
@@ -681,8 +713,8 @@ const SportProfile = () => {
     if (!duration) return t('profile.notSet');
 
     // Use translation keys for enum values
-    const translationKey = `profile.preferences.durations.${duration}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.durations.${duration}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -708,8 +740,8 @@ const SportProfile = () => {
     if (!type) return t('profile.notSet');
 
     // Use translation keys for match types
-    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.matchTypes.${type.toLowerCase()}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -724,8 +756,8 @@ const SportProfile = () => {
     if (!style) return t('profile.notSet');
 
     // Use translation keys for play styles
-    const translationKey = `profile.preferences.playStyles.${style}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playStyles.${style}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -738,8 +770,8 @@ const SportProfile = () => {
 
   const formatPlayAttribute = (attribute: string): string => {
     // Use translation keys for play attributes
-    const translationKey = `profile.preferences.playAttributes.${attribute}`;
-    const translated = t(translationKey as TranslationKey);
+    const translationKey = `profile.preferences.playAttributes.${attribute}` as TranslationKey;
+    const translated = t(translationKey);
 
     // If translation exists (not the same as key), use it
     if (translated !== translationKey) {
@@ -761,8 +793,6 @@ const SportProfile = () => {
 
       // For now, just show a success message
       toast.success(t('alerts.peerRatingRequestsSent', { count: selectedPlayerIds.length }));
-
-      setShowPeerRatingRequestOverlay(false);
     } catch (error) {
       Logger.error('Failed to send peer rating requests', error as Error, {
         count: selectedPlayerIds.length,
@@ -770,6 +800,17 @@ const SportProfile = () => {
       });
       toast.error(t('alerts.failedToSendPeerRatingRequests'));
     }
+  };
+
+  // Helper to open peer rating request sheet
+  const openPeerRatingRequestSheet = () => {
+    SheetManager.show('peer-rating-request', {
+      payload: {
+        currentUserId: userId,
+        sportId,
+        onSendRequests: handleSendPeerRatingRequests,
+      },
+    });
   };
 
   const handleSendReferenceRequests = async (selectedPlayerIds: string[]) => {
@@ -808,7 +849,7 @@ const SportProfile = () => {
         toast.success(t('alerts.referenceRequestsSent', { count: selectedPlayerIds.length }));
       }
 
-      setShowReferenceRequestOverlay(false);
+      SheetManager.hide('reference-request');
     } catch (error) {
       Logger.error('Failed to send reference requests', error as Error, {
         count: selectedPlayerIds.length,
@@ -865,12 +906,10 @@ const SportProfile = () => {
 
         if (playStyleData) {
           // Insert new play style
-          await supabase
-            .from('player_sport_play_style')
-            .insert({
-              player_sport_id: playerSportId,
-              play_style_id: playStyleData.id,
-            });
+          await supabase.from('player_sport_play_style').insert({
+            player_sport_id: playerSportId,
+            play_style_id: playStyleData.id,
+          });
         }
       } else {
         // If no play style selected, delete any existing
@@ -902,9 +941,7 @@ const SportProfile = () => {
             play_attribute_id: attr.id,
           }));
 
-          await supabase
-            .from('player_sport_play_attribute')
-            .insert(attributeInserts);
+          await supabase.from('player_sport_play_attribute').insert(attributeInserts);
         }
       }
 
@@ -918,7 +955,11 @@ const SportProfile = () => {
       }));
 
       // Close overlay
-      setShowPreferencesOverlay(false);
+      SheetManager.hide('tennis-preferences');
+      SheetManager.hide('pickleball-preferences');
+
+      // Refetch favorites
+      refetchFavorites();
 
       // Show success message
       toast.success(t('alerts.preferencesUpdated'));
@@ -937,22 +978,77 @@ const SportProfile = () => {
         <View style={styles.loadingContainer}>
           {/* Sport Profile Skeleton */}
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Skeleton width={180} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={180}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, flexDirection: 'row', gap: 12 }}>
-              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width={80} height={40} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width={80}
+                height={40}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width={80}
+                height={40}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
-            <Skeleton width={120} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-            <Skeleton width="100%" height={60} borderRadius={12} backgroundColor={colors.cardBackground} highlightColor={colors.border} style={{ marginTop: 12 }} />
+            <Skeleton
+              width={120}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
+            <Skeleton
+              width="100%"
+              height={60}
+              borderRadius={12}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+              style={{ marginTop: 12 }}
+            />
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, marginTop: 16 }]}>
-            <Skeleton width={150} height={18} borderRadius={4} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+            <Skeleton
+              width={150}
+              height={18}
+              borderRadius={4}
+              backgroundColor={colors.cardBackground}
+              highlightColor={colors.border}
+            />
             <View style={{ marginTop: 12, gap: 8 }}>
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
-              <Skeleton width="100%" height={48} borderRadius={8} backgroundColor={colors.cardBackground} highlightColor={colors.border} />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
+              <Skeleton
+                width="100%"
+                height={48}
+                borderRadius={8}
+                backgroundColor={colors.cardBackground}
+                highlightColor={colors.border}
+              />
             </View>
           </View>
         </View>
@@ -1046,9 +1142,21 @@ const SportProfile = () => {
                 onPress={() => {
                   // Determine which overlay to show based on sport name
                   if (sportName.toLowerCase() === 'tennis') {
-                    setShowTennisRatingOverlay(true);
+                    SheetManager.show('tennis-rating', {
+                      payload: {
+                        mode: 'edit',
+                        initialRating: ratingInfo?.ratingScoreId,
+                        onSave: handleSaveRating,
+                      },
+                    });
                   } else if (sportName.toLowerCase() === 'pickleball') {
-                    setShowPickleballRatingOverlay(true);
+                    SheetManager.show('pickleball-rating', {
+                      payload: {
+                        mode: 'edit',
+                        initialRating: ratingInfo?.ratingScoreId,
+                        onSave: handleSaveRating,
+                      },
+                    });
                   }
                 }}
               >
@@ -1063,15 +1171,20 @@ const SportProfile = () => {
                   <View style={styles.ratingDisplay}>
                     <View
                       style={[
-                        styles.ratingBadgeLarge, 
-                        { 
+                        styles.ratingBadgeLarge,
+                        {
                           backgroundColor: getCertificationColors(certificationStatus).background,
                           borderWidth: 2,
                           borderColor: getCertificationColors(certificationStatus).border,
-                        }
+                        },
                       ]}
                     >
-                      <Text style={[styles.ratingLevelText, { color: getCertificationColors(certificationStatus).text }]}>
+                      <Text
+                        style={[
+                          styles.ratingLevelText,
+                          { color: getCertificationColors(certificationStatus).text },
+                        ]}
+                      >
                         {ratingInfo.displayLabel}
                       </Text>
                       <Text style={[styles.ratingTypeText, { color: colors.textMuted }]}>
@@ -1135,7 +1248,7 @@ const SportProfile = () => {
                         border: colors.border,
                         background: colors.background,
                       }}
-                      leftIcon={<Ionicons name="people" size={16} color={colors.primary} />}
+                      leftIcon={<Ionicons name="people-outline" size={16} color={colors.primary} />}
                     >
                       {t('profile.rating.references', { count: referencesCount })}
                     </Button>
@@ -1174,18 +1287,32 @@ const SportProfile = () => {
                     peerEvaluationCount={peerEvaluationCount}
                     ratingSystemName={ratingInfo.ratingTypeName}
                     isOwnProfile={true}
-                    onRequestReference={() => setShowReferenceRequestOverlay(true)}
+                    onRequestReference={() => {
+                      SheetManager.show('reference-request', {
+                        payload: {
+                          currentUserId: userId,
+                          sportId,
+                          currentUserRatingScore: ratingInfo?.scoreValue,
+                          currentUserRatingScoreId: playerRatingScoreId || undefined,
+                          ratingSystemCode: ratingInfo?.ratingTypeName?.toUpperCase(),
+                          onSendRequests: handleSendReferenceRequests,
+                        },
+                      });
+                    }}
                     onManageProofs={handleManageProofs}
                     canRequestReferences={
                       ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
                         ? ratingInfo.scoreValue >= 3.0
                         : ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR'
-                        ? ratingInfo.scoreValue >= 3.5
-                        : true
+                          ? ratingInfo.scoreValue >= 3.5
+                          : true
                     }
                     minimumLevel={
-                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP' ? 3.0 :
-                      ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR' ? 3.5 : undefined
+                      ratingInfo.ratingTypeName?.toUpperCase() === 'NTRP'
+                        ? 3.0
+                        : ratingInfo.ratingTypeName?.toUpperCase() === 'DUPR'
+                          ? 3.5
+                          : undefined
                     }
                     currentLevel={ratingInfo.scoreValue}
                   />
@@ -1215,7 +1342,47 @@ const SportProfile = () => {
                 style={styles.editIconButton}
                 onPress={() => {
                   selectionHaptic();
-                  setShowPreferencesOverlay(true);
+                  if (sportName.toLowerCase() === 'tennis') {
+                    SheetManager.show('tennis-preferences', {
+                      payload: {
+                        onSave: handleSavePreferences,
+                        initialPreferences: {
+                          matchDuration: preferences.matchDuration || undefined,
+                          matchType: preferences.matchType || undefined,
+                          court: preferences.facilityName || undefined,
+                          playStyle: preferences.playingStyle || undefined,
+                          playAttributes: preferences.playAttributes || undefined,
+                        },
+                        playStyleOptions,
+                        playAttributesByCategory,
+                        loadingPlayOptions,
+                        playerId: userId,
+                        sportId,
+                        latitude: location?.latitude ?? null,
+                        longitude: location?.longitude ?? null,
+                      },
+                    });
+                  } else if (sportName.toLowerCase() === 'pickleball') {
+                    SheetManager.show('pickleball-preferences', {
+                      payload: {
+                        onSave: handleSavePreferences,
+                        initialPreferences: {
+                          matchDuration: preferences.matchDuration || undefined,
+                          matchType: preferences.matchType || undefined,
+                          court: preferences.facilityName || undefined,
+                          playStyle: preferences.playingStyle || undefined,
+                          playAttributes: preferences.playAttributes || undefined,
+                        },
+                        playStyleOptions,
+                        playAttributesByCategory,
+                        loadingPlayOptions,
+                        playerId: userId,
+                        sportId,
+                        latitude: location?.latitude ?? null,
+                        longitude: location?.longitude ?? null,
+                      },
+                    });
+                  }
                 }}
               >
                 <Ionicons name="create-outline" size={20} color={colors.primary} />
@@ -1252,7 +1419,7 @@ const SportProfile = () => {
                   {loadingFavorites ? (
                     <Skeleton width={120} height={16} />
                   ) : favoriteFacilities.length > 0 ? (
-                    favoriteFacilities.map((fav) => (
+                    favoriteFacilities.map(fav => (
                       <Text
                         key={fav.id}
                         style={[styles.facilityText, { color: colors.text }]}
@@ -1309,97 +1476,6 @@ const SportProfile = () => {
         {/* Bottom Spacing */}
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Tennis Rating Edit Overlay */}
-      <TennisRatingOverlay
-        visible={showTennisRatingOverlay}
-        onClose={() => setShowTennisRatingOverlay(false)}
-        mode="edit"
-        initialRating={ratingInfo?.ratingScoreId}
-        onSave={handleSaveRating}
-      />
-
-      {/* Pickleball Rating Edit Overlay */}
-      <PickleballRatingOverlay
-        visible={showPickleballRatingOverlay}
-        onClose={() => setShowPickleballRatingOverlay(false)}
-        mode="edit"
-        initialRating={ratingInfo?.ratingScoreId}
-        onSave={handleSaveRating}
-      />
-
-      {/* Peer Rating Request Overlay */}
-      <PeerRatingRequestOverlay
-        visible={showPeerRatingRequestOverlay}
-        onClose={() => setShowPeerRatingRequestOverlay(false)}
-        currentUserId={userId}
-        sportId={sportId}
-        onSendRequests={handleSendPeerRatingRequests}
-      />
-
-      {/* Reference Request Overlay */}
-      <ReferenceRequestOverlay
-        visible={showReferenceRequestOverlay}
-        onClose={() => setShowReferenceRequestOverlay(false)}
-        currentUserId={userId}
-        sportId={sportId}
-        currentUserRatingScore={ratingInfo?.scoreValue}
-        currentUserRatingScoreId={playerRatingScoreId || undefined}
-        ratingSystemCode={ratingInfo?.ratingTypeName?.toUpperCase()}
-        onSendRequests={handleSendReferenceRequests}
-      />
-
-      {/* Tennis Preferences Overlay */}
-      {sportName.toLowerCase() === 'tennis' && (
-        <TennisPreferencesOverlay
-          visible={showPreferencesOverlay}
-          onClose={() => {
-            setShowPreferencesOverlay(false);
-            refetchFavorites();
-          }}
-          onSave={handleSavePreferences}
-          initialPreferences={{
-            matchDuration: preferences.matchDuration || undefined,
-            matchType: preferences.matchType || undefined,
-            court: preferences.facilityName || undefined,
-            playStyle: preferences.playingStyle || undefined,
-            playAttributes: preferences.playAttributes || undefined,
-          }}
-          playStyleOptions={playStyleOptions}
-          playAttributesByCategory={playAttributesByCategory}
-          loadingPlayOptions={loadingPlayOptions}
-          playerId={userId}
-          sportId={sportId}
-          latitude={location?.latitude ?? null}
-          longitude={location?.longitude ?? null}
-        />
-      )}
-
-      {/* Pickleball Preferences Overlay */}
-      {sportName.toLowerCase() === 'pickleball' && (
-        <PickleballPreferencesOverlay
-          visible={showPreferencesOverlay}
-          onClose={() => {
-            setShowPreferencesOverlay(false);
-            refetchFavorites();
-          }}
-          onSave={handleSavePreferences}
-          initialPreferences={{
-            matchDuration: preferences.matchDuration || undefined,
-            matchType: preferences.matchType || undefined,
-            court: preferences.facilityName || undefined,
-            playStyle: preferences.playingStyle || undefined,
-            playAttributes: preferences.playAttributes || undefined,
-          }}
-          playStyleOptions={playStyleOptions}
-          playAttributesByCategory={playAttributesByCategory}
-          loadingPlayOptions={loadingPlayOptions}
-          playerId={userId}
-          sportId={sportId}
-          latitude={location?.latitude ?? null}
-          longitude={location?.longitude ?? null}
-        />
-      )}
     </SafeAreaView>
   );
 };
