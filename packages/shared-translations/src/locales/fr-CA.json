@@ -2289,6 +2289,11 @@
       "readyToPlay": "Prêt à jouer",
       "courtBooked": "Terrain Réservé"
     },
+    "tier": {
+      "mostWanted": "Très Convoité",
+      "readyToPlay": "Prêt à Jouer",
+      "mostWantedPlayer": "Joueur Convoité"
+    },
     "cta": {
       "join": "Rejoindre la partie",
       "askToJoin": "Demander à rejoindre",
@@ -2822,7 +2827,7 @@
       "openReservation": "Ouvrir la réservation",
       "confirmBooking": "Confirmer la réservation",
       "didYouBook": "Avez-vous réservé le terrain?",
-      "iBookedThisCourt": "J'ai réservé ce terrain",
+      "iBookedThisCourt": "J'ai réservé!",
       "notYet": "Pas encore",
       "courtBooked": "Terrain réservé!",
       "courtBookedDescription": "Le terrain est marqué comme réservé pour cette partie.",
@@ -2832,7 +2837,7 @@
       "tapToBook": "Appuyez sur un créneau pour réserver",
       "externalBooking": "Vous serez redirigé vers le site de réservation",
       "bookingConfirmTitle": "Confirmation de réservation",
-      "bookingConfirmMessage": "Avez-vous réservé un terrain?",
+      "bookingConfirmMessage": "Avez-vous réservé le terrain?",
       "viewMoreSlots": "Voir plus de créneaux",
       "selectCourt": "Choisir un terrain",
       "courtAvailable": "terrain disponible",
@@ -2861,7 +2866,7 @@
   "home": {
     "welcomeBack": "Bon retour! 👋",
     "yourMatches": "Vos parties",
-    "signInPrompt": "Veuillez vous connecter pour créer et accéder à vos parties",
+    "signInPrompt": "Veuillez vous connecter pour créer et gérer à vos parties",
     "onboardingPrompt": "Complétez votre profil pour créer et accéder à vos parties",
     "completeProfile": "Compléter le profil",
     "user": "Utilisateur",
@@ -5491,11 +5496,11 @@
   "facilityDetail": {
     "tabs": {
       "info": "Info",
-      "availability": "Disponibilité",
+      "availability": "Dispos",
       "matches": "Parties"
     },
     "about": "À propos",
-    "locationContact": "Emplacement et contact",
+    "locationContact": "Emplacement",
     "courts": "Terrains",
     "noCourts": "Aucun terrain disponible pour ce sport",
     "contact": "Contact",
@@ -5515,6 +5520,10 @@
       "community_club": "Club communautaire",
       "other": "Autre"
     },
+    "facilityType": "Type",
+    "access": "Accès",
+    "addressLabel": "Adresse",
+    "distance": "Distance",
     "membersOnly": "Membres seulement",
     "publicAccess": "Accès public",
     "distanceAway": "à {distance}",
@@ -5526,7 +5535,7 @@
     "hideCourts": "Masquer les terrains",
     "noAvailability": {
       "title": "Aucune disponibilité",
-      "description": "Aucun créneau horaire disponible pour les dates sélectionnées. Réessayez plus tard.",
+      "description": "Cet établissement n'a aucun créneau horaire disponible pour le moment.",
       "tryLater": "Revenez plus tard pour de nouvelles disponibilités",
       "tryDifferentDate": "Essayez une autre date"
     },
@@ -5540,7 +5549,17 @@
     "indoor": "Intérieur",
     "outdoor": "Extérieur",
     "lighted": "Éclairé",
+    "surfaceType": {
+      "hard": "Dur",
+      "clay": "Terre battue",
+      "grass": "Gazon",
+      "synthetic": "Synthétique",
+      "carpet": "Tapis",
+      "concrete": "Béton",
+      "asphalt": "Asphalte"
+    },
     "openInMaps": "Ouvrir dans Plans",
+    "facilityImages": "Images du site",
     "noMatches": {
       "title": "Aucune partie à venir",
       "description": "Aucune partie publique n'est prévue à ce site de jeu."
@@ -5563,7 +5582,6 @@
     "lastSpot": "Dernière place!",
     "noSlotsForFilter": "Aucun créneau disponible pour cette période",
     "showAllSlots": "Voir tous les créneaux",
-    "checkExternalBooking": "Voir les réservations externes",
     "matchFilters": {
       "all": "Toutes",
       "open": "Ouvertes",
@@ -5585,6 +5603,7 @@
   "booking": {
     "selectSlot": "Sélectionner un créneau",
     "selectCourt": "Sélectionner un terrain",
+    "selectCourtFirst": "Veuillez d'abord sélectionner un terrain",
     "confirmBooking": "Confirmer la réservation",
     "bookNow": "Réserver",
     "price": "Prix",
@@ -5596,9 +5615,16 @@
     "paidCourtsUnavailable": "{count} terrain(s) payant(s) indisponible(s) pour la réservation en ligne",
     "available": "Disponible",
     "duration": "{hours}h",
+    "error": {
+      "generic": "La réservation a échoué. Veuillez réessayer."
+    },
     "success": {
       "title": "Réservation confirmée",
-      "description": "Votre terrain a été réservé avec succès."
+      "description": "Votre terrain a été réservé avec succès.",
+      "stepTitle": "Réservation confirmée!",
+      "createGamePrompt": "Créer une partie à partir de cette réservation?",
+      "createGame": "Créer une partie",
+      "done": "Terminé"
     },
     "external": {
       "title": "Réservation externe",
@@ -5879,6 +5905,10 @@
       "success": "Réservation annulée avec succès",
       "error": "Échec de l'annulation. Veuillez réessayer."
     },
+    "yourBookings": "Vos réservations",
+    "signInPrompt": "Connectez-vous pour réserver des terrains et gérer vos réservations",
+    "onboardingPrompt": "Complétez votre profil pour réserver des terrains et gérer vos réservations",
+    "completeProfile": "Compléter le profil",
     "facilitiesSection": {
       "title": "Mes réservations",
       "viewAll": "Voir tout",
