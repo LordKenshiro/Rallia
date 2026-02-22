@@ -5437,7 +5437,7 @@
       "matches": "Parties"
     },
     "about": "À propos",
-    "locationContact": "Emplacement et contact",
+    "locationContact": "Emplacement",
     "courts": "Terrains",
     "noCourts": "Aucun terrain disponible pour ce sport",
     "contact": "Contact",
@@ -5457,6 +5457,10 @@
       "community_club": "Club communautaire",
       "other": "Autre"
     },
+    "facilityType": "Type",
+    "access": "Accès",
+    "addressLabel": "Adresse",
+    "distance": "Distance",
     "membersOnly": "Membres seulement",
     "publicAccess": "Accès public",
     "distanceAway": "à {distance}",
@@ -5482,6 +5486,15 @@
     "indoor": "Intérieur",
     "outdoor": "Extérieur",
     "lighted": "Éclairé",
+    "surfaceType": {
+      "hard": "Dur",
+      "clay": "Terre battue",
+      "grass": "Gazon",
+      "synthetic": "Synthétique",
+      "carpet": "Tapis",
+      "concrete": "Béton",
+      "asphalt": "Asphalte"
+    },
     "openInMaps": "Ouvrir dans Plans",
     "noMatches": {
       "title": "Aucune partie à venir",
@@ -5527,6 +5540,7 @@
   "booking": {
     "selectSlot": "Sélectionner un créneau",
     "selectCourt": "Sélectionner un terrain",
+    "selectCourtFirst": "Veuillez d'abord sélectionner un terrain",
     "confirmBooking": "Confirmer la réservation",
     "bookNow": "Réserver",
     "price": "Prix",

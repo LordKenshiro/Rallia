@@ -25,7 +25,12 @@ import {
   usePlayer,
   useCourtAvailability,
 } from '@rallia/shared-hooks';
-import { useThemeStyles, useTranslation, useEffectiveLocation } from '../../../hooks';
+import {
+  useThemeStyles,
+  useTranslation,
+  useEffectiveLocation,
+  useRequireOnboarding,
+} from '../../../hooks';
 import { getSafeAreaEdges } from '../../../utils';
 import { useSport } from '../../../context';
 import { SportIcon } from '../../../components/SportIcon';
@@ -71,6 +76,7 @@ export default function FacilityDetail() {
   const { location } = useEffectiveLocation();
   const { selectedSport } = useSport();
   const { player } = usePlayer();
+  const { isReady: isOnboarded } = useRequireOnboarding();
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<TabKey>('info');
@@ -95,6 +101,7 @@ export default function FacilityDetail() {
     externalProviderId: facility?.external_provider_id ?? null,
     bookingUrlTemplate: facility?.booking_url_template ?? null,
     facilityTimezone: facility?.timezone ?? null,
+    sportName: selectedSport?.name,
     enabled: !!facility,
   });
 
@@ -177,6 +184,31 @@ export default function FacilityDetail() {
       }
     });
   }, [facility]);
+
+  // Contact info
+  const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
+  const phone = primaryContact?.phone;
+  const email = primaryContact?.email;
+  const website = primaryContact?.website;
+  const hasContactInfo = !!(phone || email || website);
+
+  const handleCall = useCallback(() => {
+    if (!phone) return;
+    lightHaptic();
+    Linking.openURL(`tel:${phone}`);
+  }, [phone]);
+
+  const handleEmail = useCallback(() => {
+    if (!email) return;
+    lightHaptic();
+    Linking.openURL(`mailto:${email}`);
+  }, [email]);
+
+  const handleWebsite = useCallback(() => {
+    if (!website) return;
+    lightHaptic();
+    Linking.openURL(website);
+  }, [website]);
 
   // Theme-aware skeleton colors
   const skeletonBg = isDark ? neutral[800] : '#E1E9EE';
@@ -297,10 +329,41 @@ export default function FacilityDetail() {
           isDark ? shadowsNative.sm : shadowsNative.DEFAULT,
         ]}
       >
-        <View style={styles.headerContent}>
-          <Text size="xl" weight="bold" color={colors.text} numberOfLines={2}>
+        <View style={styles.headerTop}>
+          <Text
+            size="xl"
+            weight="bold"
+            color={colors.text}
+            numberOfLines={2}
+            style={styles.headerTitle}
+          >
             {facility.name}
           </Text>
+          {isOnboarded && (
+            <TouchableOpacity
+              onPress={handleToggleFavorite}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[
+                styles.favoriteButton,
+                {
+                  backgroundColor: facilityIsFavorite
+                    ? colors.error + '15'
+                    : isDark
+                      ? neutral[700]
+                      : neutral[100],
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={facilityIsFavorite ? 'heart' : 'heart-outline'}
+                size={22}
+                color={facilityIsFavorite ? colors.error : colors.textMuted}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={styles.headerBottom}>
           <View style={styles.headerMeta}>
             {facility.distance_meters !== null && (
               <View style={[styles.metaBadge, { backgroundColor: primary[500] + '15' }]}>
@@ -326,28 +389,38 @@ export default function FacilityDetail() {
               </View>
             )}
           </View>
+          {hasContactInfo && (
+            <View style={styles.contactActions}>
+              {phone && (
+                <TouchableOpacity
+                  onPress={handleCall}
+                  style={[styles.contactButton, { backgroundColor: primary[500] + '15' }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="call-outline" size={20} color={primary[600]} />
+                </TouchableOpacity>
+              )}
+              {email && (
+                <TouchableOpacity
+                  onPress={handleEmail}
+                  style={[styles.contactButton, { backgroundColor: primary[500] + '15' }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="mail-outline" size={20} color={primary[600]} />
+                </TouchableOpacity>
+              )}
+              {website && (
+                <TouchableOpacity
+                  onPress={handleWebsite}
+                  style={[styles.contactButton, { backgroundColor: primary[500] + '15' }]}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="globe-outline" size={20} color={primary[600]} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
-        <TouchableOpacity
-          onPress={handleToggleFavorite}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={[
-            styles.favoriteButton,
-            {
-              backgroundColor: facilityIsFavorite
-                ? colors.error + '15'
-                : isDark
-                  ? neutral[700]
-                  : neutral[100],
-            },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={facilityIsFavorite ? 'heart' : 'heart-outline'}
-            size={22}
-            color={facilityIsFavorite ? colors.error : colors.textMuted}
-          />
-        </TouchableOpacity>
       </View>
 
       {/* Tab Bar (pill style – matches Communities) */}
@@ -421,7 +494,6 @@ export default function FacilityDetail() {
             <InfoTab
               facility={facility}
               courts={courts}
-              contacts={contacts}
               onOpenInMaps={handleOpenInMaps}
               colors={colors}
               isDark={isDark}
@@ -506,24 +578,31 @@ const styles = StyleSheet.create({
   },
   // Header styles
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
     paddingHorizontal: spacingPixels[4],
     paddingVertical: spacingPixels[4],
     marginHorizontal: spacingPixels[3],
     marginTop: spacingPixels[2],
     borderRadius: radiusPixels.xl,
   },
-  headerContent: {
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
     flex: 1,
     marginRight: spacingPixels[3],
+  },
+  headerBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacingPixels[3],
   },
   headerMeta: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacingPixels[2],
-    marginTop: spacingPixels[3],
   },
   metaBadge: {
     flexDirection: 'row',
@@ -532,6 +611,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacingPixels[2.5],
     paddingVertical: spacingPixels[1.5],
     borderRadius: radiusPixels.full,
+  },
+  contactActions: {
+    flexDirection: 'row',
+    gap: spacingPixels[2],
+  },
+  contactButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radiusPixels.full,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   favoriteButton: {
     width: 44,

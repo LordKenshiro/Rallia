@@ -5435,7 +5435,7 @@
       "matches": "Matches"
     },
     "about": "About",
-    "locationContact": "Location & Contact",
+    "locationContact": "Location",
     "courts": "Courts",
     "noCourts": "No courts available for this sport",
     "contact": "Contact",
@@ -5455,8 +5455,12 @@
       "community_club": "Community Club",
       "other": "Other"
     },
+    "facilityType": "Type",
+    "access": "Access",
+    "addressLabel": "Address",
+    "distance": "Distance",
     "membersOnly": "Members Only",
-    "publicAccess": "Public Access",
+    "publicAccess": "Public",
     "distanceAway": "{distance} away",
     "copied": "Copied to clipboard",
     "copyAddress": "Copy address",
@@ -5480,6 +5484,15 @@
     "indoor": "Indoor",
     "outdoor": "Outdoor",
     "lighted": "Lighted",
+    "surfaceType": {
+      "hard": "Hard Court",
+      "clay": "Clay",
+      "grass": "Grass",
+      "synthetic": "Synthetic",
+      "carpet": "Carpet",
+      "concrete": "Concrete",
+      "asphalt": "Asphalt"
+    },
     "openInMaps": "Open in Maps",
     "noMatches": {
       "title": "No Upcoming Matches",
@@ -5525,6 +5538,7 @@
   "booking": {
     "selectSlot": "Select Time Slot",
     "selectCourt": "Select Court",
+    "selectCourtFirst": "Please select a court first",
     "confirmBooking": "Confirm Booking",
     "bookNow": "Book Now",
     "price": "Price",

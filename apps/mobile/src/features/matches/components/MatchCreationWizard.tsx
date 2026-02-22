@@ -1211,6 +1211,7 @@ export const MatchCreationWizard: React.FC<MatchCreationWizardProps> = ({
               t={t}
               isDark={isDark}
               sportId={selectedSport?.id}
+              sportName={selectedSport?.name}
               deviceTimezone={timezone}
               onSlotBooked={handleSlotBooked}
               preferredFacilityId={preferredFacilityId}

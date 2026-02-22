@@ -79,6 +79,8 @@ interface WhereStepProps {
   t: (key: TranslationKey, options?: TranslationOptions) => string;
   isDark: boolean;
   sportId: string | undefined;
+  /** Sport name for filtering provider availability (e.g., "tennis") */
+  sportName?: string;
   /** Device timezone (fallback when facility doesn't have one) */
   deviceTimezone: string;
   /** Callback when user confirms booking a slot - auto-fills date/time/duration */
@@ -284,6 +286,8 @@ interface FacilityItemProps {
   isDark: boolean;
   /** Whether this is the user's preferred facility */
   isPreferred?: boolean;
+  /** Sport name for filtering provider availability (e.g., "tennis") */
+  sportName?: string;
 }
 
 const FacilityItem: React.FC<FacilityItemProps> = ({
@@ -294,6 +298,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
   t,
   isDark,
   isPreferred = false,
+  sportName,
 }) => {
   // Fetch availability using the unified system (local-first, then external provider)
   const { slotsByDate, isLoading } = useCourtAvailability({
@@ -303,6 +308,7 @@ const FacilityItem: React.FC<FacilityItemProps> = ({
     externalProviderId: facility.external_provider_id,
     bookingUrlTemplate: facility.booking_url_template,
     facilityTimezone: facility.timezone,
+    sportName,
   });
 
   // Determine if slot is actionable (has booking URL or is a local slot)
@@ -611,6 +617,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   t,
   isDark,
   sportId,
+  sportName,
   deviceTimezone,
   onSlotBooked,
   preferredFacilityId,
@@ -1387,6 +1394,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
                       t={t}
                       isDark={isDark}
                       isPreferred={facility.id === preferredFacilityId}
+                      sportName={sportName}
                     />
                   ))}
                   {isFetchingNextPage && (

@@ -614,7 +614,6 @@ export default CourtBookingActionSheet;
 const styles = StyleSheet.create({
   // Sheet base styles
   sheetBackground: {
-    flex: 1,
     borderTopLeftRadius: radiusPixels['2xl'],
     borderTopRightRadius: radiusPixels['2xl'],
   },
@@ -645,7 +644,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   headerCenter: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButton: {
     padding: spacingPixels[1],
