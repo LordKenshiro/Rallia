@@ -9,7 +9,7 @@
       "distribution": "internal",
       "channel": "development",
       "ios": {
-        "image": "macos-sequoia-15.3-xcode-16.2"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
@@ -22,7 +22,7 @@
       "distribution": "internal",
       "channel": "preview",
       "ios": {
-        "image": "macos-sequoia-15.3-xcode-16.2"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
@@ -35,7 +35,7 @@
       "autoIncrement": true,
       "channel": "production",
       "ios": {
-        "image": "macos-sequoia-15.3-xcode-16.2"
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "env": {
         "EXPO_ASC_API_KEY_PATH": "./credentials/asc-api-key.p8",
