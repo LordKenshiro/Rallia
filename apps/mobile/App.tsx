@@ -4,33 +4,31 @@
  * to ensure the supabase client is properly configured before any hooks use it.
  */
 import './src/lib/supabase';
-// import * as Sentry from '@sentry/react-native';
-// import { isRunningInExpoGo } from 'expo';
+import * as Sentry from '@sentry/react-native';
+import { isRunningInExpoGo } from 'expo';
 import Mapbox from '@rnmapbox/maps';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '');
 
-// SENTRY DISABLED - uncomment to re-enable
 // Set up Sentry navigation integration (must be created before Sentry.init)
-// const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
-//   enableTimeToInitialDisplay: !isRunningInExpoGo(),
-// });
-//
-// Sentry.init({
-//   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-//   // Disable in development, active for preview + production builds
-//   enabled: !__DEV__,
-//   tracesSampleRate: 0.2,
-//   replaysOnErrorSampleRate: 1.0,
-//   replaysSessionSampleRate: 0.1,
-//   integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
-//   enableNativeFramesTracking: !isRunningInExpoGo(),
-//   sendDefaultPii: true,
-// });
+const sentryNavigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: !isRunningInExpoGo(),
+});
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
+  integrations: [sentryNavigationIntegration, Sentry.mobileReplayIntegration()],
+  enableNativeFramesTracking: !isRunningInExpoGo(),
+  sendDefaultPii: true,
+});
 
 // Wire up the shared logger's SentryTransport so Logger.error() calls also go to Sentry
-// import { SentryTransport } from '@rallia/shared-services';
-// SentryTransport.configure(Sentry);
+import { SentryTransport } from '@rallia/shared-services';
+SentryTransport.configure(Sentry);
 
 // Global handler for unhandled JS errors outside the React tree
 // (e.g. setTimeout callbacks, event listeners, native module errors)
@@ -44,11 +42,10 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
   // Import Logger lazily to avoid circular dependency at module init
   const { Logger: L } = require('./src/services/logger');
   L.error('Unhandled JS error (global)', error, { isFatal });
-  // SENTRY DISABLED
-  // Sentry captures via SentryTransport through Logger, but also send directly for fatal errors
-  // if (isFatal) {
-  //   Sentry.captureException(error, { level: 'fatal', extra: { isFatal } });
-  // }
+  // Also send directly to Sentry for fatal errors
+  if (isFatal) {
+    Sentry.captureException(error, { level: 'fatal', extra: { isFatal } });
+  }
   previousGlobalHandler(error, isFatal);
 });
 
@@ -88,7 +85,9 @@ import { useBadgeCountSync } from '@rallia/shared-hooks/src/useBadgeCountSync';
 import { ErrorBoundary, ToastProvider, NetworkProvider } from '@rallia/shared-components';
 import type { ErrorBoundaryTranslations } from '@rallia/shared-components';
 import { getLocales } from 'expo-localization';
+import * as Application from 'expo-application';
 import { Logger } from './src/services/logger';
+import { setAnalyticsClient, appOpened, deepLinkOpened } from './src/services/analytics';
 import {
   AuthProvider,
   useAuth,
@@ -114,6 +113,8 @@ import {
   TourProvider,
 } from './src/context';
 import { usePushNotifications, useShakeDetection } from './src/hooks';
+import { usePostHog } from 'posthog-react-native';
+import { PostHogProvider } from './src/providers/PostHogProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { SheetManager, SheetProvider } from 'react-native-actions-sheet';
 import { Sheets } from './src/context/sheets';
@@ -198,6 +199,24 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
   // This updates immediately on mount and every 2 minutes while the app is active
   useUpdateLastSeen(userId);
 
+  // Wire PostHog for analytics service and identify user when authenticated
+  const posthog = usePostHog();
+  useEffect(() => {
+    if (posthog) {
+      setAnalyticsClient(posthog);
+      posthog.register({
+        platform: 'mobile',
+        app_version: Application.nativeApplicationVersion ?? null,
+      });
+    }
+  }, [posthog]);
+
+  useEffect(() => {
+    if (user && posthog) {
+      posthog.identify(user.id, { email: user.email ?? null });
+    }
+  }, [user, posthog]);
+
   // Handle incoming deep link URL
   const handleDeepLink = useCallback(
     (url: string | null) => {
@@ -205,6 +224,7 @@ function AuthenticatedProviders({ children }: PropsWithChildren) {
       const matchId = parseMatchIdFromUrl(url);
       if (matchId) {
         Logger.logNavigation('deep_link_received', { url, matchId });
+        deepLinkOpened({ link_type: 'match' });
         setPendingMatchId(matchId);
       }
     },
@@ -483,8 +503,14 @@ function AppContent() {
   const { theme } = useTheme();
   const { setSplashComplete, isSplashComplete, permissionsHandled } = useOverlay();
   const isCheckingUpdate = useOTAUpdate();
+  const posthog = usePostHog();
   // TEMPORARILY DISABLED: User walkthrough deactivated
   // const { showCompletionModal, dismissCompletionModal, lastCompletedTourId } = useTour();
+
+  // Track app opened event on mount
+  useEffect(() => {
+    appOpened({ cold_start: true });
+  }, []);
 
   // Build a React Navigation theme so the screen container background
   // (including behind the status bar / Dynamic Island) uses the correct color.
@@ -499,13 +525,12 @@ function AppContent() {
     };
   }, [theme]);
 
-  // SENTRY DISABLED
   // Register the navigation container with Sentry for screen tracking
-  // useEffect(() => {
-  //   if (navigationRef.current) {
-  //     sentryNavigationIntegration.registerNavigationContainer(navigationRef);
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (navigationRef.current) {
+      sentryNavigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, []);
 
   return (
     <>
@@ -519,6 +544,12 @@ function AppContent() {
           // refetch when the user navigates back to a screen.
           // Fresh queries (within staleTime) are not affected.
           focusManager.setFocused(true);
+
+          // Track screen views in PostHog
+          const currentRoute = navigationRef.current?.getCurrentRoute();
+          if (currentRoute?.name && posthog) {
+            posthog.screen(currentRoute.name);
+          }
         }}
       >
         <SheetProvider>
@@ -583,62 +614,62 @@ function App() {
     Logger.error('Unhandled app error', error, {
       componentStack: errorInfo.componentStack,
     });
-    // SENTRY DISABLED
     // Also capture in Sentry with component stack context
-    // Sentry.captureException(error, {
-    //   contexts: { react: { componentStack: errorInfo.componentStack } },
-    // });
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: errorInfo.componentStack } },
+    });
   };
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#fafafa' }}>
       <ErrorBoundary onError={handleError} translations={errorBoundaryTranslations}>
         <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
-            <LocaleProvider>
-              <ThemeProvider>
-                <TourProvider>
-                  <NetworkProvider>
-                    <ToastProvider>
-                      <DeepLinkProvider>
-                        <OverlayProvider>
-                          <AuthProvider>
-                            <AuthenticatedProviders>
-                              <ActionsSheetProvider>
-                                <MatchDetailSheetProvider>
-                                  <PlayerInviteSheetProvider>
-                                    <FeedbackSheetProvider>
-                                      <FeedbackReportSheetProvider>
-                                        <StripeProvider
-                                          publishableKey={
-                                            process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-                                          }
-                                          merchantIdentifier="merchant.com.rallia"
-                                        >
-                                          <BottomSheetModalProvider>
-                                            <AppContent />
-                                          </BottomSheetModalProvider>
-                                        </StripeProvider>
-                                      </FeedbackReportSheetProvider>
-                                    </FeedbackSheetProvider>
-                                  </PlayerInviteSheetProvider>
-                                </MatchDetailSheetProvider>
-                              </ActionsSheetProvider>
-                            </AuthenticatedProviders>
-                          </AuthProvider>
-                        </OverlayProvider>
-                      </DeepLinkProvider>
-                    </ToastProvider>
-                  </NetworkProvider>
-                </TourProvider>
-              </ThemeProvider>
-            </LocaleProvider>
-          </QueryClientProvider>
+          <PostHogProvider>
+            <QueryClientProvider client={queryClient}>
+              <LocaleProvider>
+                <ThemeProvider>
+                  <TourProvider>
+                    <NetworkProvider>
+                      <ToastProvider>
+                        <DeepLinkProvider>
+                          <OverlayProvider>
+                            <AuthProvider>
+                              <AuthenticatedProviders>
+                                <ActionsSheetProvider>
+                                  <MatchDetailSheetProvider>
+                                    <PlayerInviteSheetProvider>
+                                      <FeedbackSheetProvider>
+                                        <FeedbackReportSheetProvider>
+                                          <StripeProvider
+                                            publishableKey={
+                                              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
+                                            }
+                                            merchantIdentifier="merchant.com.rallia"
+                                          >
+                                            <BottomSheetModalProvider>
+                                              <AppContent />
+                                            </BottomSheetModalProvider>
+                                          </StripeProvider>
+                                        </FeedbackReportSheetProvider>
+                                      </FeedbackSheetProvider>
+                                    </PlayerInviteSheetProvider>
+                                  </MatchDetailSheetProvider>
+                                </ActionsSheetProvider>
+                              </AuthenticatedProviders>
+                            </AuthProvider>
+                          </OverlayProvider>
+                        </DeepLinkProvider>
+                      </ToastProvider>
+                    </NetworkProvider>
+                  </TourProvider>
+                </ThemeProvider>
+              </LocaleProvider>
+            </QueryClientProvider>
+          </PostHogProvider>
         </SafeAreaProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }
 
-// SENTRY DISABLED
-export default App; // Sentry.wrap(App);
+export default Sentry.wrap(App);
